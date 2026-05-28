@@ -1,0 +1,4 @@
+USE rpg_lite_drakonys;
+
+ALTER TABLE users
+  MODIFY password_hash VARCHAR(255) NOT NULL;
