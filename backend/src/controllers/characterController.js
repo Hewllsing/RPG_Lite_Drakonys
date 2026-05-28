@@ -1,13 +1,43 @@
 const {
-  getCharacterData
+  getOrCreateCharacterByUserId,
+  updateCharacterByUserId
 } = require('../services/characterService');
 
-function getCharacter(req, res) {
-  const character = getCharacterData();
+async function getCharacter(req, res) {
 
-  res.json(character);
+  try {
+    const character =
+      await getOrCreateCharacterByUserId(
+        req.user.id,
+        req.user.user
+      );
+
+    res.json(character);
+  } catch (error) {
+    res.status(500).json({
+      message: 'Erro ao carregar personagem.'
+    });
+  }
+}
+
+async function updateCharacter(req, res) {
+
+  try {
+    const character =
+      await updateCharacterByUserId(
+        req.user.id,
+        req.body
+      );
+
+    res.json(character);
+  } catch (error) {
+    res.status(500).json({
+      message: 'Erro ao guardar personagem.'
+    });
+  }
 }
 
 module.exports = {
-  getCharacter
+  getCharacter,
+  updateCharacter
 };

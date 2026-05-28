@@ -2,13 +2,19 @@ const {
   getMonstersByZone
 } = require('../services/monsterService');
 
-function getMonsters(req, res) {
+async function getMonsters(req, res) {
 
-  const zone = req.query.zone;
+  try {
+    const zone = req.query.zone;
 
-  const monsters = getMonstersByZone(zone);
+    const monsters = await getMonstersByZone(zone);
 
-  res.json(monsters);
+    res.json(monsters);
+  } catch (error) {
+    res.status(500).json({
+      message: 'Erro ao carregar monstros.'
+    });
+  }
 }
 
 module.exports = {

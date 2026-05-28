@@ -2,9 +2,14 @@ const express = require('express');
 const router = express.Router();
 
 const {
-  getCharacter
+  getCharacter,
+  updateCharacter
 } = require('../controllers/characterController');
+const {
+  requireAuth
+} = require('../middlewares/authMiddleware');
 
-router.get('/', getCharacter);
+router.get('/', requireAuth, getCharacter);
+router.put('/', requireAuth, updateCharacter);
 
 module.exports = router;
