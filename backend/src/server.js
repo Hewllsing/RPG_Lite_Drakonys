@@ -5,12 +5,14 @@ require('dotenv').config();
 const characterRoutes = require('./routes/characterRoutes');
 const monsterRoutes = require('./routes/monsterRoutes');
 const combatRoutes = require('./routes/combatRoutes');
+const authRoutes = require('./routes/authRoutes');
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
+app.use('/api/auth', authRoutes);
 app.use('/api/character', characterRoutes);
 app.use('/api/monsters', monsterRoutes);
 app.use('/api/combat', combatRoutes);

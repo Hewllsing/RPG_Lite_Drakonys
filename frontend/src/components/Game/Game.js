@@ -1,7 +1,10 @@
 
 import { ref, onMounted, onUnmounted } from 'vue';
 
-import { getCharacter } from '../../services/characterService';
+import {
+    getCharacter,
+    saveCharacter
+} from '../../services/characterService';
 import { getMonsters } from '../../services/monsterService';
 import { attackMonster as attackMonsterRequest } from '../../services/combatService';
 
@@ -341,6 +344,13 @@ export default {
             }
         }
 
+        function persistCharacter() {
+
+            saveCharacter(player.value).catch(() => {
+                console.log('Nao foi possivel guardar o personagem.');
+            });
+        }
+
         function startAnimationLoop() {
 
             if (animationInterval) {
@@ -424,6 +434,7 @@ export default {
             player.value.y = newY;
 
             updateCamera();
+            persistCharacter();
         }
 
         function selectTarget(monster) {
@@ -649,6 +660,7 @@ export default {
             });
 
             updateCamera();
+            persistCharacter();
         }
 
         function startMonsterAI() {
@@ -743,6 +755,7 @@ export default {
                 selectedTarget.value = null;
 
                 checkLevelUp();
+                persistCharacter();
             }
         }
 
@@ -764,6 +777,7 @@ export default {
                 player.value.mana = player.value.maxMana;
 
                 console.log('Subiste de level!');
+                persistCharacter();
             }
         }
 
