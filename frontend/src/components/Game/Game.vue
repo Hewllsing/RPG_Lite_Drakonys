@@ -55,7 +55,7 @@
         >
 
           <img
-            :src="goblinSprite"
+            :src="getMonsterSprite(monster)"
             class="monster"
             :class="{
               selected:
