@@ -1,0 +1,233 @@
+.game-container {
+    display: flex;
+    gap: 20px;
+    padding: 20px;
+    background: #111;
+    color: white;
+    min-height: 100vh;
+    font-family: Arial, sans-serif;
+}
+
+.game-viewport {
+    width: 800px;
+    height: 600px;
+    overflow: hidden;
+    border: 2px solid #6d28d9;
+    border-radius: 10px;
+    position: relative;
+}
+
+.game-map {
+    position: relative;
+    width: 4000px;
+    height: 4000px;
+}
+
+.player {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    background: #7c3aed;
+    border-radius: 8px;
+    transition: 0.1s;
+}
+
+.monster {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    background: #22c55e;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.monster.selected {
+    outline: 3px solid red;
+}
+
+.side-panel {
+    width: 260px;
+    background: #1f1f1f;
+    padding: 20px;
+    border-radius: 10px;
+    border: 1px solid #333;
+}
+
+.tile {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+}
+
+.grass {
+    background: #355e3b;
+}
+
+.wall {
+    background: #444;
+}
+
+.tree {
+    background: #14532d;
+}
+
+.water {
+    background: #2563eb;
+}
+
+.tile {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    image-rendering: pixelated;
+}
+
+.player,
+.monster {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    image-rendering: pixelated;
+}
+
+.player-ui {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.status-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.bar-container {
+    position: relative;
+    width: 100px;
+}
+
+.status-bar {
+    width: 100%;
+    image-rendering: pixelated;
+}
+
+.bar-container span {
+    position: absolute;
+    left: 10px;
+    top: -2px;
+    font-size: 12px;
+    color: white;
+}
+
+.target-frame {
+    background: #18181b;
+    border: 2px solid #3f3f46;
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.hotbar {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.skill-wrapper {
+    position: relative;
+    width: 40px;
+    height: 40px;
+}
+
+.skill-slot {
+    width: 40px;
+    height: 40px;
+    image-rendering: pixelated;
+}
+
+.skill-icon {
+    position: absolute;
+    left: 4px;
+    top: 4px;
+    width: 32px;
+    height: 32px;
+    image-rendering: pixelated;
+}
+
+.skill-key {
+    position: absolute;
+    bottom: -12px;
+    left: 12px;
+    font-size: 10px;
+    color: white;
+}
+
+.monster-hp-container {
+    position: absolute;
+    top: -8px;
+    left: 0;
+    width: 40px;
+    height: 5px;
+    background: #111;
+    border: 1px solid #000;
+}
+
+.monster-hp-fill {
+    height: 100%;
+    background: #ef4444;
+}
+
+.floating-text {
+    position: absolute;
+    color: #ef4444;
+    font-weight: bold;
+    pointer-events: none;
+    animation: floatDamage 1s ease-out forwards;
+}
+
+@keyframes floatDamage {
+
+    0% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateY(-30px);
+    }
+}
+
+.monster-wrapper {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+}
+
+.monster {
+    width: 40px;
+    height: 40px;
+    image-rendering: pixelated;
+}
+
+.monster.selected {
+    outline: 3px solid red;
+}
+
+.monster-hp-container {
+    position: absolute;
+    top: -10px;
+    left: 100%;
+    transform: translateX(-50%);
+    width: 34px;
+    height: 5px;
+    background: #111;
+    border: 1px solid #000;
+    z-index: 10;
+}
+
+.monster-hp-fill {
+    height: 100%;
+    background: #ef4444;
+}
