@@ -90,6 +90,9 @@ const BLOCKED_TILES = [
     'tree',
     'water'
 ];
+const PLAYER_MOVE_INTERVAL = 170;
+const PLAYER_ATTACK_COOLDOWN = 900;
+const AUTO_COMBAT_INTERVAL = 180;
 
 const gameMap = [
 
@@ -147,7 +150,8 @@ export default {
             direction: 'down',
             moving: false,
             attacking: false,
-            animationFrame: 0
+            animationFrame: 0,
+            lastAttackAt: 0
         });
 
         const monsters = ref([]);
@@ -158,7 +162,11 @@ export default {
 
         let animationInterval = null;
         let monsterAIInterval = null;
+        let playerMovementInterval = null;
+        let autoCombatInterval = null;
         let playerAttackTimeout = null;
+        let playerAttackInProgress = false;
+        const pressedMovementKeys = new Set();
 
         const camera = ref({
             x: 0,
@@ -382,52 +390,67 @@ export default {
             }, 180);
         }
 
-        function movePlayer(dx, dy) {
-
-            player.value.moving = true;
+        function updatePlayerDirection(dx, dy) {
 
             if (dx === 1) {
                 player.value.direction = 'right';
+                return;
             }
 
             if (dx === -1) {
                 player.value.direction = 'left';
+                return;
             }
 
             if (dy === 1) {
                 player.value.direction = 'down';
+                return;
             }
 
             if (dy === -1) {
                 player.value.direction = 'up';
             }
+        }
+
+        function canPlayerMoveTo(x, y) {
+
+            if (
+                x < 0 ||
+                y < 0 ||
+                x >= MAP_WIDTH ||
+                y >= MAP_HEIGHT
+            ) {
+                return false;
+            }
+
+            const tile = gameMap[y][x];
+
+            if (BLOCKED_TILES.includes(tile)) {
+                return false;
+            }
+
+            return !monsters.value.some(
+                monster =>
+                    monster.x === x &&
+                    monster.y === y
+            );
+        }
+
+        function movePlayer(dx, dy) {
+
+            if (dx === 0 && dy === 0) {
+                player.value.moving = false;
+                return false;
+            }
+
+            player.value.moving = true;
+            updatePlayerDirection(dx, dy);
 
             const newX = player.value.x + dx;
             const newY = player.value.y + dy;
 
-            if (
-                newX < 0 ||
-                newY < 0 ||
-                newX >= MAP_WIDTH ||
-                newY >= MAP_HEIGHT
-            ) {
-                return;
-            }
-
-            const tile = gameMap[newY][newX];
-
-            if (BLOCKED_TILES.includes(tile)) {
-                return;
-            }
-
-            if (
-                monsters.value.some(
-                    monster =>
-                        monster.x === newX &&
-                        monster.y === newY
-                )
-            ) {
-                return;
+            if (!canPlayerMoveTo(newX, newY)) {
+                return false;
             }
 
             player.value.x = newX;
@@ -435,10 +458,76 @@ export default {
 
             updateCamera();
             persistCharacter();
+
+            return true;
+        }
+
+        function getMovementVector() {
+
+            const dx =
+                (pressedMovementKeys.has('d') ? 1 : 0) -
+                (pressedMovementKeys.has('a') ? 1 : 0);
+            const dy =
+                (pressedMovementKeys.has('s') ? 1 : 0) -
+                (pressedMovementKeys.has('w') ? 1 : 0);
+
+            return {
+                dx,
+                dy
+            };
+        }
+
+        function movePlayerFromPressedKeys() {
+
+            const {
+                dx,
+                dy
+            } = getMovementVector();
+
+            if (dx === 0 && dy === 0) {
+                player.value.moving = false;
+                return;
+            }
+
+            // Quando duas teclas sao seguradas, tenta a diagonal primeiro.
+            if (movePlayer(dx, dy)) {
+                return;
+            }
+
+            if (dx !== 0 && movePlayer(dx, 0)) {
+                return;
+            }
+
+            if (dy !== 0 && movePlayer(0, dy)) {
+                return;
+            }
+
+            player.value.moving = false;
+        }
+
+        function startPlayerMovementLoop() {
+
+            if (playerMovementInterval) {
+                return;
+            }
+
+            playerMovementInterval = setInterval(() => {
+                movePlayerFromPressedKeys();
+            }, PLAYER_MOVE_INTERVAL);
         }
 
         function selectTarget(monster) {
             selectedTarget.value = monster;
+        }
+
+        function clearTargetIfDead() {
+
+            if (
+                selectedTarget.value &&
+                selectedTarget.value.hp <= 0
+            ) {
+                selectedTarget.value = null;
+            }
         }
 
         function createFloatingText(x, y, text) {
@@ -518,6 +607,103 @@ export default {
             );
 
             return Math.max(distanceX, distanceY);
+        }
+
+        function getDistanceToTarget(target) {
+
+            if (!target) {
+                return Infinity;
+            }
+
+            return Math.max(
+                Math.abs(player.value.x - target.x),
+                Math.abs(player.value.y - target.y)
+            );
+        }
+
+        function stopAutoCombat() {
+
+            if (autoCombatInterval) {
+                clearInterval(autoCombatInterval);
+                autoCombatInterval = null;
+            }
+        }
+
+        function movePlayerTowardsTarget(target) {
+
+            if (!target || target.hp <= 0) {
+                return false;
+            }
+
+            if (getDistanceToTarget(target) <= 1) {
+                return true;
+            }
+
+            const deltaX = target.x - player.value.x;
+            const deltaY = target.y - player.value.y;
+            const stepX =
+                deltaX === 0
+                    ? 0
+                    : deltaX > 0
+                        ? 1
+                        : -1;
+            const stepY =
+                deltaY === 0
+                    ? 0
+                    : deltaY > 0
+                        ? 1
+                        : -1;
+
+            const primaryStep =
+                Math.abs(deltaX) >= Math.abs(deltaY)
+                    ? {
+                        x: stepX,
+                        y: 0
+                    }
+                    : {
+                        x: 0,
+                        y: stepY
+                    };
+            const secondaryStep =
+                Math.abs(deltaX) >= Math.abs(deltaY)
+                    ? {
+                        x: 0,
+                        y: stepY
+                    }
+                    : {
+                        x: stepX,
+                        y: 0
+                    };
+            const steps = [
+                {
+                    x: stepX,
+                    y: stepY
+                },
+                primaryStep,
+                secondaryStep
+            ];
+
+            const nextStep = steps.find(step => {
+
+                if (step.x === 0 && step.y === 0) {
+                    return false;
+                }
+
+                return canPlayerMoveTo(
+                    player.value.x + step.x,
+                    player.value.y + step.y
+                );
+            });
+
+            if (!nextStep) {
+                player.value.moving = false;
+                return false;
+            }
+
+            return movePlayer(
+                nextStep.x,
+                nextStep.y
+            );
         }
 
         function canMonsterMoveTo(x, y) {
@@ -645,6 +831,8 @@ export default {
         function playerDeath() {
 
             // Respawn simples: volta ao ponto inicial com recursos cheios.
+            stopAutoCombat();
+            pressedMovementKeys.clear();
             player.value.x = PLAYER_START_POSITION.x;
             player.value.y = PLAYER_START_POSITION.y;
             player.value.hp =
@@ -700,11 +888,28 @@ export default {
             }, 600);
         }
 
-        async function basicAttack() {
+        async function basicAttack({
+            respectCooldown = false
+        } = {}) {
+
+            if (playerAttackInProgress) {
+                return false;
+            }
+
+            const now = Date.now();
+
+            if (
+                respectCooldown &&
+                now - player.value.lastAttackAt < PLAYER_ATTACK_COOLDOWN
+            ) {
+                return false;
+            }
 
             playPlayerAttackAnimation();
 
-            if (!selectedTarget.value) return;
+            if (!selectedTarget.value) {
+                return false;
+            }
 
             const distanceX = Math.abs(
                 player.value.x - selectedTarget.value.x
@@ -718,45 +923,93 @@ export default {
 
                 console.log('Target muito longe.');
 
+                return false;
+            }
+
+            playerAttackInProgress = true;
+            player.value.lastAttackAt = now;
+
+            try {
+                const result = await attackMonsterRequest(
+                    player.value,
+                    selectedTarget.value
+                );
+
+                selectedTarget.value.hp =
+                    result.monster.hp;
+
+                createFloatingText(
+                    selectedTarget.value.x,
+                    selectedTarget.value.y,
+                    `-${result.damage}`
+                );
+
+                console.log(
+                    `Causaste ${result.damage} de dano`
+                );
+
+                if (result.killed) {
+
+                    console.log(
+                        `Mataste ${selectedTarget.value.name}`
+                    );
+
+                    player.value.xp += result.xpGained;
+
+                    monsters.value =
+                        monsters.value.filter(
+                            m => m.id !== selectedTarget.value.id
+                        );
+
+                    selectedTarget.value = null;
+                    stopAutoCombat();
+
+                    checkLevelUp();
+                    persistCharacter();
+                }
+
+                return true;
+            } finally {
+                playerAttackInProgress = false;
+            }
+        }
+
+        function runAutoCombatStep() {
+
+            clearTargetIfDead();
+
+            if (!selectedTarget.value) {
+                stopAutoCombat();
                 return;
             }
 
-            const result = await attackMonsterRequest(
-                player.value,
-                selectedTarget.value
-            );
-
-            selectedTarget.value.hp =
-                result.monster.hp;
-
-            createFloatingText(
-                selectedTarget.value.x,
-                selectedTarget.value.y,
-                `-${result.damage}`
-            );
-
-            console.log(
-                `Causaste ${result.damage} de dano`
-            );
-
-            if (result.killed) {
-
-                console.log(
-                    `Mataste ${selectedTarget.value.name}`
-                );
-
-                player.value.xp += result.xpGained;
-
-                monsters.value =
-                    monsters.value.filter(
-                        m => m.id !== selectedTarget.value.id
-                    );
-
-                selectedTarget.value = null;
-
-                checkLevelUp();
-                persistCharacter();
+            if (getDistanceToTarget(selectedTarget.value) > 1) {
+                movePlayerTowardsTarget(selectedTarget.value);
+                return;
             }
+
+            player.value.moving = false;
+            basicAttack({
+                respectCooldown: true
+            });
+        }
+
+        function startAutoCombat() {
+
+            if (!selectedTarget.value) {
+                basicAttack();
+                return;
+            }
+
+            runAutoCombatStep();
+
+            if (autoCombatInterval) {
+                return;
+            }
+
+            autoCombatInterval = setInterval(() => {
+                runAutoCombatStep();
+            }, AUTO_COMBAT_INTERVAL);
         }
 
         function checkLevelUp() {
@@ -787,19 +1040,41 @@ export default {
             );
         }
 
-        let playerStopTimeout = null;
-
         function handleKeyDown(event) {
 
             const key = event.key.toLowerCase();
+            const code = event.code.toLowerCase();
+            const movementKeyByCode = {
+                keyw: 'w',
+                keys: 's',
+                keya: 'a',
+                keyd: 'd'
+            };
+            const movementKey =
+                ['w', 's', 'a', 'd'].includes(key)
+                    ? key
+                    : movementKeyByCode[code];
 
-            if (key === 'w') movePlayer(0, -1);
-            if (key === 's') movePlayer(0, 1);
-            if (key === 'a') movePlayer(-1, 0);
-            if (key === 'd') movePlayer(1, 0);
+            if (movementKey) {
+                const wasPressed =
+                    pressedMovementKeys.has(movementKey);
+                pressedMovementKeys.add(movementKey);
+                stopAutoCombat();
+                if (!wasPressed) {
+                    movePlayerFromPressedKeys();
+                }
+                event.preventDefault();
+                return;
+            }
 
-            if (key === ' ') {
-                basicAttack();
+            if (
+                key === ' ' ||
+                key === 'space' ||
+                code === 'space'
+            ) {
+                event.preventDefault();
+                startAutoCombat();
+                return;
             }
 
             if (
@@ -808,14 +1083,37 @@ export default {
             ) {
                 useSkill(key);
             }
+        }
 
-            clearTimeout(playerStopTimeout);
+        function handleKeyUp(event) {
 
-            playerStopTimeout = setTimeout(() => {
+            const key = event.key.toLowerCase();
+            const code = event.code.toLowerCase();
+            const movementKeyByCode = {
+                keyw: 'w',
+                keys: 's',
+                keya: 'a',
+                keyd: 'd'
+            };
+            const movementKey =
+                ['w', 's', 'a', 'd'].includes(key)
+                    ? key
+                    : movementKeyByCode[code];
 
+            if (!movementKey) {
+                return;
+            }
+
+            pressedMovementKeys.delete(movementKey);
+
+            if (pressedMovementKeys.size === 0) {
                 player.value.moving = false;
+            }
+        }
 
-            }, 120);
+        function handleWindowBlur() {
+            pressedMovementKeys.clear();
+            player.value.moving = false;
         }
 
         onMounted(async () => {
@@ -823,6 +1121,14 @@ export default {
             window.addEventListener(
                 'keydown',
                 handleKeyDown
+            );
+            window.addEventListener(
+                'keyup',
+                handleKeyUp
+            );
+            window.addEventListener(
+                'blur',
+                handleWindowBlur
             );
 
             const character =
@@ -858,6 +1164,7 @@ export default {
             }));
 
             startAnimationLoop();
+            startPlayerMovementLoop();
 
             startMonsterAI();
 
@@ -870,6 +1177,14 @@ export default {
                 'keydown',
                 handleKeyDown
             );
+            window.removeEventListener(
+                'keyup',
+                handleKeyUp
+            );
+            window.removeEventListener(
+                'blur',
+                handleWindowBlur
+            );
 
             if (animationInterval) {
                 clearInterval(animationInterval);
@@ -879,12 +1194,16 @@ export default {
                 clearInterval(monsterAIInterval);
             }
 
-            if (playerAttackTimeout) {
-                clearTimeout(playerAttackTimeout);
+            if (playerMovementInterval) {
+                clearInterval(playerMovementInterval);
             }
 
-            if (playerStopTimeout) {
-                clearTimeout(playerStopTimeout);
+            if (autoCombatInterval) {
+                clearInterval(autoCombatInterval);
+            }
+
+            if (playerAttackTimeout) {
+                clearTimeout(playerAttackTimeout);
             }
 
             monsters.value.forEach(monster => {
