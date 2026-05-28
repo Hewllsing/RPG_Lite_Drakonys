@@ -3,9 +3,12 @@ const express = require('express');
 const router = express.Router();
 
 const {
-  attack
+    attack
 } = require('../controllers/combatController');
+const {
+    requireAuth
+} = require('../middlewares/authMiddleware');
 
-router.post('/attack', attack);
+router.post('/attack', requireAuth, attack);
 
 module.exports = router;

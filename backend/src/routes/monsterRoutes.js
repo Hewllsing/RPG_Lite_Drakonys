@@ -5,7 +5,10 @@ const router = express.Router();
 const {
   getMonsters
 } = require('../controllers/monsterController');
+const {
+  requireAuth
+} = require('../middlewares/authMiddleware');
 
-router.get('/', getMonsters);
+router.get('/', requireAuth, getMonsters);
 
 module.exports = router;

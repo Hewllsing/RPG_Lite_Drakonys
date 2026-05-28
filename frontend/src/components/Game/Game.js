@@ -1,7 +1,10 @@
 
 import { ref, onMounted, onUnmounted } from 'vue';
 
-import { getCharacter } from '../../services/characterService';
+import {
+    getCharacter,
+    saveCharacter
+} from '../../services/characterService';
 import { getMonsters } from '../../services/monsterService';
 import { attackMonster as attackMonsterRequest } from '../../services/combatService';
 
@@ -10,22 +13,49 @@ import { attackMonster as attackMonsterRequest } from '../../services/combatServ
 import playerIdleDown from '../../assets/player/player_idle_down.png';
 import playerWalkDown1 from '../../assets/player/player_walk_down_1.png';
 import playerWalkDown2 from '../../assets/player/player_walk_down_2.png';
+import playerAttackDown from '../../assets/player/player_attack_down.png';
 
 import playerIdleUp from '../../assets/player/player_idle_up.png';
 import playerWalkUp1 from '../../assets/player/player_walk_up_1.png';
 import playerWalkUp2 from '../../assets/player/player_walk_up_2.png';
+import playerAttackUp from '../../assets/player/player_attack_up.png';
 
 import playerIdleLeft from '../../assets/player/player_idle_left.png';
 import playerWalkLeft1 from '../../assets/player/player_walk_left_1.png';
 import playerWalkLeft2 from '../../assets/player/player_walk_left_2.png';
+import playerAttackLeft from '../../assets/player/player_attack_left.png';
 
 import playerIdleRight from '../../assets/player/player_idle_right.png';
 import playerWalkRight1 from '../../assets/player/player_walk_right_1.png';
 import playerWalkRight2 from '../../assets/player/player_walk_right_2.png';
+import playerAttackRight from '../../assets/player/player_attack_right.png';
 
 /* MONSTERS */
 
-import goblinSprite from '../../assets/monsters/goblin.png';
+import demonAttack from '../../assets/monsters/demon_attack.png';
+import demonIdle from '../../assets/monsters/demon_idle.png';
+import demonWalk1 from '../../assets/monsters/demon_walk_1.png';
+import demonWalk2 from '../../assets/monsters/demon_walk_2.png';
+
+import elfAttack from '../../assets/monsters/elf_attack.png';
+import elfIdle from '../../assets/monsters/elf_idle.png';
+import elfWalk1 from '../../assets/monsters/elf_walk_1.png';
+import elfWalk2 from '../../assets/monsters/elf_walk_2.png';
+
+import goblinAttack from '../../assets/monsters/goblin_attack.png';
+import goblinIdle from '../../assets/monsters/goblin_idle.png';
+import goblinWalk1 from '../../assets/monsters/goblin_walk_1.png';
+import goblinWalk2 from '../../assets/monsters/goblin_walk_2.png';
+
+import orcAttack from '../../assets/monsters/orc_attack.png';
+import orcIdle from '../../assets/monsters/orc_idle.png';
+import orcWalk1 from '../../assets/monsters/orc_walk_1.png';
+import orcWalk2 from '../../assets/monsters/orc_walk_2.png';
+
+import skeletonAttack from '../../assets/monsters/skeleton_attack.png';
+import skeletonIdle from '../../assets/monsters/skeleton_idle.png';
+import skeletonWalk1 from '../../assets/monsters/skeleton_walk_1.png';
+import skeletonWalk2 from '../../assets/monsters/skeleton_walk_2.png';
 
 /* TILES */
 
@@ -116,6 +146,7 @@ export default {
             dexterity: 5,
             direction: 'down',
             moving: false,
+            attacking: false,
             animationFrame: 0
         });
 
@@ -127,6 +158,7 @@ export default {
 
         let animationInterval = null;
         let monsterAIInterval = null;
+        let playerAttackTimeout = null;
 
         const camera = ref({
             x: 0,
@@ -171,6 +203,7 @@ export default {
 
             down: {
                 idle: playerIdleDown,
+                attack: playerAttackDown,
                 walk: [
                     playerWalkDown1,
                     playerWalkDown2
@@ -179,6 +212,7 @@ export default {
 
             up: {
                 idle: playerIdleUp,
+                attack: playerAttackUp,
                 walk: [
                     playerWalkUp1,
                     playerWalkUp2
@@ -187,6 +221,7 @@ export default {
 
             left: {
                 idle: playerIdleLeft,
+                attack: playerAttackLeft,
                 walk: [
                     playerWalkLeft1,
                     playerWalkLeft2
@@ -195,9 +230,58 @@ export default {
 
             right: {
                 idle: playerIdleRight,
+                attack: playerAttackRight,
                 walk: [
                     playerWalkRight1,
                     playerWalkRight2
+                ]
+            }
+        };
+
+        const monsterSprites = {
+
+            demon: {
+                idle: demonIdle,
+                attack: demonAttack,
+                walk: [
+                    demonWalk1,
+                    demonWalk2
+                ]
+            },
+
+            elf: {
+                idle: elfIdle,
+                attack: elfAttack,
+                walk: [
+                    elfWalk1,
+                    elfWalk2
+                ]
+            },
+
+            goblin: {
+                idle: goblinIdle,
+                attack: goblinAttack,
+                walk: [
+                    goblinWalk1,
+                    goblinWalk2
+                ]
+            },
+
+            orc: {
+                idle: orcIdle,
+                attack: orcAttack,
+                walk: [
+                    orcWalk1,
+                    orcWalk2
+                ]
+            },
+
+            skeleton: {
+                idle: skeletonIdle,
+                attack: skeletonAttack,
+                walk: [
+                    skeletonWalk1,
+                    skeletonWalk2
                 ]
             }
         };
@@ -207,6 +291,10 @@ export default {
             const direction =
                 playerSprites[player.value.direction];
 
+            if (player.value.attacking) {
+                return direction.attack;
+            }
+
             if (!player.value.moving) {
                 return direction.idle;
             }
@@ -214,6 +302,29 @@ export default {
             return direction.walk[
                 player.value.animationFrame
             ];
+        }
+
+        function getMonsterSprite(monster) {
+
+            const spriteKey =
+                monster.spriteKey ||
+                monster.race?.toLowerCase() ||
+                'goblin';
+            const sprites =
+                monsterSprites[spriteKey] ||
+                monsterSprites.goblin;
+
+            if (monster.attacking) {
+                return sprites.attack;
+            }
+
+            if (monster.moving) {
+                return sprites.walk[
+                    monster.animationFrame || 0
+                ];
+            }
+
+            return sprites.idle;
         }
 
         function updateCamera() {
@@ -233,6 +344,13 @@ export default {
             }
         }
 
+        function persistCharacter() {
+
+            saveCharacter(player.value).catch(() => {
+                console.log('Nao foi possivel guardar o personagem.');
+            });
+        }
+
         function startAnimationLoop() {
 
             if (animationInterval) {
@@ -248,6 +366,18 @@ export default {
                             ? 1
                             : 0;
                 }
+
+                monsters.value.forEach(monster => {
+
+                    if (!monster.moving) {
+                        return;
+                    }
+
+                    monster.animationFrame =
+                        monster.animationFrame === 0
+                            ? 1
+                            : 0;
+                });
 
             }, 180);
         }
@@ -304,6 +434,7 @@ export default {
             player.value.y = newY;
 
             updateCamera();
+            persistCharacter();
         }
 
         function selectTarget(monster) {
@@ -330,6 +461,50 @@ export default {
                     );
 
             }, 1000);
+        }
+
+        function playPlayerAttackAnimation() {
+
+            player.value.attacking = true;
+
+            if (playerAttackTimeout) {
+                clearTimeout(playerAttackTimeout);
+            }
+
+            playerAttackTimeout = setTimeout(() => {
+
+                player.value.attacking = false;
+
+            }, 220);
+        }
+
+        function stopMonsterMovementAnimation(monster) {
+
+            if (monster.movementStopTimeout) {
+                clearTimeout(monster.movementStopTimeout);
+            }
+
+            monster.movementStopTimeout = setTimeout(() => {
+
+                monster.moving = false;
+
+            }, 240);
+        }
+
+        function playMonsterAttackAnimation(monster) {
+
+            monster.attacking = true;
+            monster.moving = false;
+
+            if (monster.attackAnimationTimeout) {
+                clearTimeout(monster.attackAnimationTimeout);
+            }
+
+            monster.attackAnimationTimeout = setTimeout(() => {
+
+                monster.attacking = false;
+
+            }, 260);
         }
 
         function getDistanceToPlayer(monster) {
@@ -428,6 +603,9 @@ export default {
 
             monster.x += nextStep.x;
             monster.y += nextStep.y;
+            monster.moving = true;
+
+            stopMonsterMovementAnimation(monster);
         }
 
         function attackPlayer(monster) {
@@ -443,6 +621,7 @@ export default {
             }
 
             monster.lastAttackAt = now;
+            playMonsterAttackAnimation(monster);
 
             const damage =
                 monster.damage || monster.level * 4 || 5;
@@ -481,6 +660,7 @@ export default {
             });
 
             updateCamera();
+            persistCharacter();
         }
 
         function startMonsterAI() {
@@ -521,6 +701,8 @@ export default {
         }
 
         async function basicAttack() {
+
+            playPlayerAttackAnimation();
 
             if (!selectedTarget.value) return;
 
@@ -573,6 +755,7 @@ export default {
                 selectedTarget.value = null;
 
                 checkLevelUp();
+                persistCharacter();
             }
         }
 
@@ -594,6 +777,7 @@ export default {
                 player.value.mana = player.value.maxMana;
 
                 console.log('Subiste de level!');
+                persistCharacter();
             }
         }
 
@@ -651,6 +835,7 @@ export default {
                 maxMana: character.maxMana || character.mana || 50,
                 direction: 'down',
                 moving: false,
+                attacking: false,
                 animationFrame: 0
             };
 
@@ -666,7 +851,10 @@ export default {
                 attackRange: monster.attackRange || 1,
                 attackCooldown:
                     monster.attackCooldown || 1600,
-                lastAttackAt: monster.lastAttackAt || 0
+                lastAttackAt: monster.lastAttackAt || 0,
+                moving: false,
+                attacking: false,
+                animationFrame: 0
             }));
 
             startAnimationLoop();
@@ -691,9 +879,24 @@ export default {
                 clearInterval(monsterAIInterval);
             }
 
+            if (playerAttackTimeout) {
+                clearTimeout(playerAttackTimeout);
+            }
+
             if (playerStopTimeout) {
                 clearTimeout(playerStopTimeout);
             }
+
+            monsters.value.forEach(monster => {
+
+                if (monster.movementStopTimeout) {
+                    clearTimeout(monster.movementStopTimeout);
+                }
+
+                if (monster.attackAnimationTimeout) {
+                    clearTimeout(monster.attackAnimationTimeout);
+                }
+            });
         });
 
         return {
@@ -722,9 +925,8 @@ export default {
 
             skillSlot,
 
-            goblinSprite,
-
             getPlayerSprite,
+            getMonsterSprite,
 
             selectTarget
         };
