@@ -22,11 +22,12 @@ export async function getCharacters() {
   return response.data;
 }
 
-export async function createCharacter(name) {
+export async function createCharacter(name, characterClass) {
   const response = await axios.post(
     API_URL,
     {
-      name
+      name,
+      characterClass
     },
     {
       headers: getAuthHeaders()

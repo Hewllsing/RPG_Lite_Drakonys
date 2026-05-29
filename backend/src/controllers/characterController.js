@@ -34,7 +34,8 @@ async function createCharacter(req, res) {
     const character =
       await createCharacterForUser(
         req.user.id,
-        req.body.name
+        req.body.name,
+        req.body.characterClass
       );
 
     res.status(201).json(character);

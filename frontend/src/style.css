@@ -20,7 +20,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -128,7 +129,7 @@ button:disabled {
 
 .character-create {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr 180px auto;
   gap: 12px;
   align-items: end;
   margin-bottom: 16px;
@@ -143,6 +144,7 @@ button:disabled {
 }
 
 .character-create input,
+.character-create select,
 .delete-dialog input {
   width: 100%;
   border: 1px solid #3f3f46;
