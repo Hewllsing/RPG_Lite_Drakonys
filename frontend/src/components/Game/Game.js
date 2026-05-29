@@ -1,86 +1,44 @@
 
-import { ref, onMounted, onUnmounted } from 'vue';
+import {
+    computed,
+    ref,
+    onMounted,
+    onUnmounted
+} from 'vue';
 
 import {
     getCharacter,
     saveCharacter
 } from '../../services/characterService';
-import { getMonsters } from '../../services/monsterService';
 import { attackMonster as attackMonsterRequest } from '../../services/combatService';
-
-/* PLAYER */
-
-import playerIdleDown from '../../assets/player/player_idle_down.png';
-import playerWalkDown1 from '../../assets/player/player_walk_down_1.png';
-import playerWalkDown2 from '../../assets/player/player_walk_down_2.png';
-import playerAttackDown from '../../assets/player/player_attack_down.png';
-
-import playerIdleUp from '../../assets/player/player_idle_up.png';
-import playerWalkUp1 from '../../assets/player/player_walk_up_1.png';
-import playerWalkUp2 from '../../assets/player/player_walk_up_2.png';
-import playerAttackUp from '../../assets/player/player_attack_up.png';
-
-import playerIdleLeft from '../../assets/player/player_idle_left.png';
-import playerWalkLeft1 from '../../assets/player/player_walk_left_1.png';
-import playerWalkLeft2 from '../../assets/player/player_walk_left_2.png';
-import playerAttackLeft from '../../assets/player/player_attack_left.png';
-
-import playerIdleRight from '../../assets/player/player_idle_right.png';
-import playerWalkRight1 from '../../assets/player/player_walk_right_1.png';
-import playerWalkRight2 from '../../assets/player/player_walk_right_2.png';
-import playerAttackRight from '../../assets/player/player_attack_right.png';
-
-/* MONSTERS */
-
-import demonAttack from '../../assets/monsters/demon_attack.png';
-import demonIdle from '../../assets/monsters/demon_idle.png';
-import demonWalk1 from '../../assets/monsters/demon_walk_1.png';
-import demonWalk2 from '../../assets/monsters/demon_walk_2.png';
-
-import elfAttack from '../../assets/monsters/elf_attack.png';
-import elfIdle from '../../assets/monsters/elf_idle.png';
-import elfWalk1 from '../../assets/monsters/elf_walk_1.png';
-import elfWalk2 from '../../assets/monsters/elf_walk_2.png';
-
-import goblinAttack from '../../assets/monsters/goblin_attack.png';
-import goblinIdle from '../../assets/monsters/goblin_idle.png';
-import goblinWalk1 from '../../assets/monsters/goblin_walk_1.png';
-import goblinWalk2 from '../../assets/monsters/goblin_walk_2.png';
-
-import orcAttack from '../../assets/monsters/orc_attack.png';
-import orcIdle from '../../assets/monsters/orc_idle.png';
-import orcWalk1 from '../../assets/monsters/orc_walk_1.png';
-import orcWalk2 from '../../assets/monsters/orc_walk_2.png';
-
-import skeletonAttack from '../../assets/monsters/skeleton_attack.png';
-import skeletonIdle from '../../assets/monsters/skeleton_idle.png';
-import skeletonWalk1 from '../../assets/monsters/skeleton_walk_1.png';
-import skeletonWalk2 from '../../assets/monsters/skeleton_walk_2.png';
-
-/* TILES */
-
-import grassTile from '../../assets/tiles/grass.png';
-import wallTile from '../../assets/tiles/wall.png';
-import treeTile from '../../assets/tiles/tree.png';
-import waterTile from '../../assets/tiles/water.png';
-
-/* UI */
-
-import hpBar from '../../assets/ui/bar_hp.png';
-import mpBar from '../../assets/ui/bar_mp.png';
-import xpBar from '../../assets/ui/bar_xp.png';
-
-import skillSlot from '../../assets/ui/skill_slot.png';
-
-/* SKILLS */
-
-import skillAttack from '../../assets/skills/skill_basic_attack.png';
-import skillFireball from '../../assets/skills/skill_fireball.png';
-import skillHeal from '../../assets/skills/skill_heal.png';
-import skillDash from '../../assets/skills/skill_dash.png';
-import skillPowerStrike from '../../assets/skills/skill_power_strike.png';
-import skillRegeneration from '../../assets/skills/skill_regeneration.png';
-import skillUltimate from '../../assets/skills/skill_ultimate.png';
+import {
+    bossSprites,
+    effectAssets,
+    itemAssets,
+    minimapAssets,
+    monsterSprites,
+    npcAssets,
+    playerSprites,
+    portalAssets,
+    questAssets,
+    rarityFrames,
+    tileImages,
+    uiAssets
+} from '../../data/gameAssets';
+import { createBoss } from '../../data/bosses';
+import {
+    ITEM_DEFINITIONS,
+    STARTER_INVENTORY
+} from '../../data/items';
+import {
+    BLOCKED_TILES,
+    getZoneKeyByName,
+    ZONES
+} from '../../data/maps';
+import { createMonster } from '../../data/monsters';
+import { createNpc } from '../../data/npcs';
+import { createQuestState } from '../../data/quests';
+import { SKILL_DEFINITIONS } from '../../data/skills';
 
 const MAP_WIDTH = 20;
 const MAP_HEIGHT = 15;
@@ -88,11 +46,6 @@ const PLAYER_START_POSITION = {
     x: 5,
     y: 5
 };
-const BLOCKED_TILES = [
-    'wall',
-    'tree',
-    'water'
-];
 const PLAYER_MOVE_INTERVAL = 170;
 const PLAYER_ATTACK_COOLDOWN = 900;
 const MIN_PLAYER_ATTACK_COOLDOWN = 450;
@@ -152,104 +105,6 @@ const ATTRIBUTE_GAIN_BY_POINT = {
     },
     dexterity: {}
 };
-const SKILL_DEFINITIONS = [
-    {
-        id: 'basicAttack',
-        key: '1',
-        icon: skillAttack,
-        name: 'Ataque',
-        manaCost: 0,
-        cooldown: 0
-    },
-    {
-        id: 'fireball',
-        key: '2',
-        icon: skillFireball,
-        name: 'Fireball',
-        manaCost: 18,
-        cooldown: 2800,
-        range: 5
-    },
-    {
-        id: 'heal',
-        key: '3',
-        icon: skillHeal,
-        name: 'Heal',
-        manaCost: 20,
-        cooldown: 6000
-    },
-    {
-        id: 'dash',
-        key: '4',
-        icon: skillDash,
-        name: 'Dash',
-        manaCost: 10,
-        cooldown: 3500,
-        range: 3
-    },
-    {
-        id: 'powerStrike',
-        key: 'Q',
-        icon: skillPowerStrike,
-        name: 'Power Strike',
-        manaCost: 16,
-        cooldown: 4200,
-        range: 1
-    },
-    {
-        id: 'regeneration',
-        key: 'E',
-        icon: skillRegeneration,
-        name: 'Regeneration',
-        manaCost: 26,
-        cooldown: 14000
-    },
-    {
-        id: 'ultimate',
-        key: 'R',
-        icon: skillUltimate,
-        name: 'Ultimate',
-        manaCost: 45,
-        cooldown: 22000,
-        range: 5,
-        radius: 2
-    }
-];
-
-const gameMap = [
-
-    ['wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall'],
-
-    ['wall', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'wall'],
-
-    ['wall', 'grass', 'grass', 'tree', 'tree', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'wall'],
-
-    ['wall', 'grass', 'grass', 'tree', 'tree', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'wall'],
-
-    ['wall', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'water', 'water', 'water', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'wall'],
-
-    ['wall', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'water', 'water', 'water', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'wall'],
-
-    ['wall', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'wall'],
-
-    ['wall', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'wall'],
-
-    ['wall', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'wall'],
-
-    ['wall', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'wall'],
-
-    ['wall', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'wall'],
-
-    ['wall', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'wall'],
-
-    ['wall', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'wall'],
-
-    ['wall', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'wall'],
-
-    ['wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall']
-
-];
-
 export default {
 
     props: {
@@ -308,12 +163,22 @@ export default {
             y: 0
         });
 
-        const tileImages = {
-            grass: grassTile,
-            wall: wallTile,
-            tree: treeTile,
-            water: waterTile
-        };
+        const currentZoneKey = ref('goblinForest');
+        const activeZone = computed(
+            () => ZONES[currentZoneKey.value] || ZONES.goblinForest
+        );
+        const gameMap = computed(() => activeZone.value.map);
+        const npcs = ref([]);
+        const portals = ref([]);
+        const quests = ref(createQuestState());
+        const inventory = ref(
+            STARTER_INVENTORY.map(item => ({
+                ...item
+            }))
+        );
+        const gold = ref(25);
+        const activeNpc = ref(null);
+        const zoneBanner = ref(null);
 
         const skillBar = SKILL_DEFINITIONS;
         const skillCooldowns = ref(
@@ -322,93 +187,6 @@ export default {
                 return cooldowns;
             }, {})
         );
-
-        const playerSprites = {
-
-            down: {
-                idle: playerIdleDown,
-                attack: playerAttackDown,
-                walk: [
-                    playerWalkDown1,
-                    playerWalkDown2
-                ]
-            },
-
-            up: {
-                idle: playerIdleUp,
-                attack: playerAttackUp,
-                walk: [
-                    playerWalkUp1,
-                    playerWalkUp2
-                ]
-            },
-
-            left: {
-                idle: playerIdleLeft,
-                attack: playerAttackLeft,
-                walk: [
-                    playerWalkLeft1,
-                    playerWalkLeft2
-                ]
-            },
-
-            right: {
-                idle: playerIdleRight,
-                attack: playerAttackRight,
-                walk: [
-                    playerWalkRight1,
-                    playerWalkRight2
-                ]
-            }
-        };
-
-        const monsterSprites = {
-
-            demon: {
-                idle: demonIdle,
-                attack: demonAttack,
-                walk: [
-                    demonWalk1,
-                    demonWalk2
-                ]
-            },
-
-            elf: {
-                idle: elfIdle,
-                attack: elfAttack,
-                walk: [
-                    elfWalk1,
-                    elfWalk2
-                ]
-            },
-
-            goblin: {
-                idle: goblinIdle,
-                attack: goblinAttack,
-                walk: [
-                    goblinWalk1,
-                    goblinWalk2
-                ]
-            },
-
-            orc: {
-                idle: orcIdle,
-                attack: orcAttack,
-                walk: [
-                    orcWalk1,
-                    orcWalk2
-                ]
-            },
-
-            skeleton: {
-                idle: skeletonIdle,
-                attack: skeletonAttack,
-                walk: [
-                    skeletonWalk1,
-                    skeletonWalk2
-                ]
-            }
-        };
 
         function getPlayerSprite() {
 
@@ -435,8 +213,14 @@ export default {
                 monster.race?.toLowerCase() ||
                 'goblin';
             const sprites =
-                monsterSprites[spriteKey] ||
+                (monster.isBoss
+                    ? bossSprites[spriteKey]
+                    : monsterSprites[spriteKey]) ||
                 monsterSprites.goblin;
+
+            if (monster.dead) {
+                return sprites.dead || sprites.idle;
+            }
 
             if (monster.attacking) {
                 return sprites.attack;
@@ -473,6 +257,294 @@ export default {
             saveCharacter(props.characterId, player.value).catch(() => {
                 console.log('Nao foi possivel guardar o personagem.');
             });
+        }
+
+        function getMapWidth() {
+
+            return gameMap.value[0]?.length || MAP_WIDTH;
+        }
+
+        function getMapHeight() {
+
+            return gameMap.value.length || MAP_HEIGHT;
+        }
+
+        function getZoneName() {
+
+            return activeZone.value.name;
+        }
+
+        function loadZoneEntities(zoneKey) {
+
+            const zone = ZONES[zoneKey] || ZONES.goblinForest;
+
+            currentZoneKey.value = zone.key;
+            portals.value = zone.portals || [];
+            npcs.value = (zone.npcs || []).map(npc =>
+                createNpc(npc.type, npc.x, npc.y)
+            );
+
+            const zoneMonsters = (zone.monsters || []).map(
+                (monster, index) =>
+                    createMonster(
+                        monster.type,
+                        monster.x,
+                        monster.y,
+                        `${zone.key}-${index}`
+                    )
+            );
+
+            if (zone.boss) {
+                zoneMonsters.push(
+                    createBoss(
+                        zone.boss.type,
+                        zone.boss.x,
+                        zone.boss.y
+                    )
+                );
+            }
+
+            monsters.value = zoneMonsters;
+        }
+
+        function transitionToZone(zoneKey) {
+
+            const zone = ZONES[zoneKey];
+
+            if (!zone) {
+                return;
+            }
+
+            // Troca de zona centralizada para manter mapa, entidades e HUD em sincronia.
+            stopAutoCombat();
+            selectedTarget.value = null;
+            loadZoneEntities(zoneKey);
+
+            player.value.x = zone.playerStart.x;
+            player.value.y = zone.playerStart.y;
+            player.value.currentZone = zone.name;
+            player.value.moving = false;
+
+            zoneBanner.value = {
+                name: zone.name,
+                theme: zone.theme,
+                image: zone.assets?.banner
+            };
+
+            updateQuestProgress('explore', zone.key);
+            updateCamera();
+            persistCharacter();
+
+            setTimeout(() => {
+                zoneBanner.value = null;
+            }, 1200);
+        }
+
+        function checkPortalCollision() {
+
+            const portal = portals.value.find(
+                item =>
+                    item.x === player.value.x &&
+                    item.y === player.value.y
+            );
+
+            if (portal) {
+                transitionToZone(portal.to);
+            }
+        }
+
+        function interactNpc(npc) {
+
+            activeNpc.value = npc;
+
+            if (npc.type === 'healer') {
+                player.value.hp = player.value.maxHp;
+                player.value.mana = player.value.maxMana;
+                createFloatingText(
+                    player.value.x,
+                    player.value.y,
+                    '+Full',
+                    'heal'
+                );
+                persistCharacter();
+            }
+
+            updateQuestProgress('talk', npc.type);
+        }
+
+        function closeNpcDialog() {
+
+            activeNpc.value = null;
+        }
+
+        function updateQuestProgress(objectiveType, targetType, amount = 1) {
+
+            quests.value = quests.value.map(quest => {
+
+                if (
+                    quest.objectiveType !== objectiveType ||
+                    !quest.targetTypes.includes(targetType) ||
+                    quest.status === 'complete'
+                ) {
+                    return quest;
+                }
+
+                const progress = Math.min(
+                    quest.required,
+                    quest.progress + amount
+                );
+
+                return {
+                    ...quest,
+                    progress,
+                    status:
+                        progress >= quest.required
+                            ? 'complete'
+                            : 'inProgress'
+                };
+            });
+        }
+
+        function getVisibleQuests() {
+
+            return quests.value.filter(
+                quest =>
+                    quest.zone === currentZoneKey.value ||
+                    quest.status !== 'available'
+            );
+        }
+
+        function getQuestStatusLabel(status) {
+
+            const labels = {
+                available: 'Disponivel',
+                inProgress: 'Em progresso',
+                complete: 'Completa'
+            };
+
+            return labels[status] || status;
+        }
+
+        function getQuestIcon(quest) {
+
+            if (quest.status === 'complete') {
+                return questAssets.completed;
+            }
+
+            if (quest.status === 'inProgress') {
+                return questAssets.inProgress;
+            }
+
+            return questAssets.available;
+        }
+
+        function addItem(itemId, quantity = 1) {
+
+            const definition = ITEM_DEFINITIONS[itemId];
+
+            if (!definition) {
+                return;
+            }
+
+            if (itemId === 'goldCoin') {
+                gold.value += quantity;
+                return;
+            }
+
+            const existingItem = inventory.value.find(
+                item => item.id === itemId
+            );
+
+            if (existingItem) {
+                existingItem.quantity += quantity;
+                return;
+            }
+
+            inventory.value.push({
+                id: itemId,
+                quantity
+            });
+
+            if (itemId === 'demonKey') {
+                updateQuestProgress('collect', 'demonKey');
+            }
+        }
+
+        function addDrops(monster) {
+
+            const drops = monster.drops || [];
+
+            if (monster.gold) {
+                addItem('goldCoin', monster.gold);
+            }
+
+            drops.forEach(itemId => {
+                const chance = itemId === 'goldCoin'
+                    ? 1
+                    : monster.isBoss
+                        ? 0.85
+                        : 0.35;
+
+                if (Math.random() <= chance) {
+                    addItem(itemId);
+                }
+            });
+        }
+
+        function getInventoryItem(item) {
+
+            return ITEM_DEFINITIONS[item.id] || {};
+        }
+
+        function getItemIcon(item) {
+
+            return getInventoryItem(item).icon || itemAssets.goldCoin;
+        }
+
+        function getItemFrame(item) {
+
+            const definition = getInventoryItem(item);
+
+            return rarityFrames[definition.rarity] || rarityFrames.common;
+        }
+
+        function getItemTooltip(item) {
+
+            const definition = getInventoryItem(item);
+
+            return `${definition.name || item.id} - ${definition.rarity || 'common'} - ${definition.type || 'item'}`;
+        }
+
+        function getMinimapStyle(entity) {
+
+            return {
+                left: `${(entity.x / getMapWidth()) * 100}%`,
+                top: `${(entity.y / getMapHeight()) * 100}%`
+            };
+        }
+
+        function getBosses() {
+
+            return monsters.value.filter(
+                monster => monster.isBoss && !monster.dead
+            );
+        }
+
+        function getSkillEffectImage(effect) {
+
+            const map = {
+                fireball: 'fire',
+                heal: 'heal',
+                regeneration: 'heal',
+                dash: 'shadow',
+                'power-shot': 'critical',
+                'power-strike': 'critical',
+                curse: 'shadow',
+                ultimate: 'holy',
+                death: 'death'
+            };
+
+            return effectAssets[map[effect.kind] || effect.kind];
         }
 
         function getAvailableAttributePoints() {
@@ -668,7 +740,7 @@ export default {
 
         function getSkillCooldown(skill) {
 
-            if (skill.id === 'basicAttack') {
+            if (skill.id === 'slash') {
                 return getPlayerAttackCooldown();
             }
 
@@ -681,7 +753,7 @@ export default {
 
         function getSkillLastUsedAt(skill) {
 
-            if (skill.id === 'basicAttack') {
+            if (skill.id === 'slash') {
                 return player.value.lastAttackAt || 0;
             }
 
@@ -746,7 +818,7 @@ export default {
 
         function markSkillUsed(skill) {
 
-            if (skill.id === 'basicAttack') {
+            if (skill.id === 'slash') {
                 return;
             }
 
@@ -861,20 +933,31 @@ export default {
             if (
                 x < 0 ||
                 y < 0 ||
-                x >= MAP_WIDTH ||
-                y >= MAP_HEIGHT
+                x >= getMapWidth() ||
+                y >= getMapHeight()
             ) {
                 return false;
             }
 
-            const tile = gameMap[y][x];
+            const tile = gameMap.value[y]?.[x];
 
             if (BLOCKED_TILES.includes(tile)) {
                 return false;
             }
 
+            if (
+                npcs.value.some(
+                    npc =>
+                        npc.x === x &&
+                        npc.y === y
+                )
+            ) {
+                return false;
+            }
+
             return !monsters.value.some(
                 monster =>
+                    !monster.dead &&
                     monster.x === x &&
                     monster.y === y
             );
@@ -900,6 +983,7 @@ export default {
             player.value.x = newX;
             player.value.y = newY;
 
+            checkPortalCollision();
             updateCamera();
             persistCharacter();
 
@@ -1062,25 +1146,41 @@ export default {
 
         function removeMonsterIfDead(monster, xpMultiplier = 20) {
 
-            if (monster.hp > 0) {
+            if (monster.hp > 0 || monster.dead) {
                 return false;
             }
 
-            player.value.xp +=
-                (Number(monster.level) || 1) * xpMultiplier;
+            monster.dead = true;
+            monster.moving = false;
+            monster.attacking = false;
 
-            monsters.value =
-                monsters.value.filter(
-                    item => item.id !== monster.id
-                );
+            player.value.xp +=
+                monster.xp ||
+                (Number(monster.level) || 1) * xpMultiplier;
+            addDrops(monster);
+            updateQuestProgress('kill', monster.typeKey);
+            createSkillEffect(monster.x, monster.y, 'death', 560);
 
             if (
                 selectedTarget.value &&
                 selectedTarget.value.id === monster.id
             ) {
-                selectedTarget.value = null;
                 stopAutoCombat();
             }
+
+            setTimeout(() => {
+                monsters.value =
+                    monsters.value.filter(
+                        item => item.id !== monster.id
+                    );
+
+                if (
+                    selectedTarget.value &&
+                    selectedTarget.value.id === monster.id
+                ) {
+                    selectedTarget.value = null;
+                }
+            }, 560);
 
             checkLevelUp();
             persistCharacter();
@@ -1317,13 +1417,13 @@ export default {
             if (
                 x < 0 ||
                 y < 0 ||
-                x >= MAP_WIDTH ||
-                y >= MAP_HEIGHT
+                x >= getMapWidth() ||
+                y >= getMapHeight()
             ) {
                 return false;
             }
 
-            const tile = gameMap[y][x];
+            const tile = gameMap.value[y]?.[x];
 
             if (BLOCKED_TILES.includes(tile)) {
                 return false;
@@ -1336,8 +1436,19 @@ export default {
                 return false;
             }
 
+            if (
+                npcs.value.some(
+                    npc =>
+                        npc.x === x &&
+                        npc.y === y
+                )
+            ) {
+                return false;
+            }
+
             return !monsters.value.some(
                 monster =>
+                    !monster.dead &&
                     monster.x === x &&
                     monster.y === y
             );
@@ -1634,17 +1745,9 @@ export default {
                         `Mataste ${selectedTarget.value.name}`
                     );
 
-                    player.value.xp += result.xpGained;
-
-                    monsters.value =
-                        monsters.value.filter(
-                            m => m.id !== selectedTarget.value.id
-                        );
-
-                    selectedTarget.value = null;
-                    stopAutoCombat();
-
-                    checkLevelUp();
+                    selectedTarget.value.xp =
+                        result.xpGained || selectedTarget.value.xp;
+                    removeMonsterIfDead(selectedTarget.value);
                     persistCharacter();
                 }
 
@@ -1890,6 +1993,11 @@ export default {
             persistCharacter();
         }
 
+        function castShadowStep(skill) {
+
+            castDash(skill);
+        }
+
         function castPowerStrike(skill) {
 
             const target = getTargetForSkill(skill);
@@ -1907,6 +2015,55 @@ export default {
             damageMonster(target, damage, {
                 kind: 'critical',
                 damageType: 'physical',
+                xpMultiplier: 24
+            });
+            persistCharacter();
+        }
+
+        function castPowerShot(skill) {
+
+            const target = getTargetForSkill(skill);
+
+            if (!target || !payAndStartSkill(skill)) {
+                return;
+            }
+
+            const damage =
+                20 +
+                (Number(player.value.dexterity) || 0) * 3 +
+                (Number(player.value.level) || 1) * 2;
+
+            createSkillEffect(target.x, target.y, 'power-shot');
+            damageMonster(target, damage, {
+                kind: 'critical',
+                damageType: 'physical',
+                xpMultiplier: 24
+            });
+            persistCharacter();
+        }
+
+        function castCurse(skill) {
+
+            const target = getTargetForSkill(skill);
+
+            if (!target || !payAndStartSkill(skill)) {
+                return;
+            }
+
+            const damage =
+                16 +
+                (Number(player.value.intelligence) || 0) * 2.4 +
+                (Number(player.value.level) || 1) * 2;
+
+            target.damage = Math.max(
+                1,
+                Math.floor((target.damage || 1) * 0.85)
+            );
+
+            createSkillEffect(target.x, target.y, 'curse');
+            damageMonster(target, damage, {
+                kind: 'magic',
+                damageType: 'magical',
                 xpMultiplier: 24
             });
             persistCharacter();
@@ -2007,7 +2164,7 @@ export default {
                 return;
             }
 
-            if (skill.id === 'basicAttack') {
+            if (skill.id === 'slash') {
                 startAutoCombat();
                 return;
             }
@@ -2015,6 +2172,9 @@ export default {
             const actions = {
                 fireball: castFireball,
                 heal: castHeal,
+                shadowStep: castShadowStep,
+                powerShot: castPowerShot,
+                curse: castCurse,
                 dash: castDash,
                 powerStrike: castPowerStrike,
                 regeneration: castRegeneration,
@@ -2134,23 +2294,9 @@ export default {
                 animationFrame: 0
             };
 
-            const zoneMonsters =
-                await getMonsters(
-                    player.value.currentZone
-                );
-
-            monsters.value = zoneMonsters.map(monster => ({
-                ...monster,
-                maxHp: monster.maxHp || monster.hp,
-                agroRange: monster.agroRange || 5,
-                attackRange: monster.attackRange || 1,
-                attackCooldown:
-                    monster.attackCooldown || 1600,
-                lastAttackAt: monster.lastAttackAt || 0,
-                moving: false,
-                attacking: false,
-                animationFrame: 0
-            }));
+            loadZoneEntities(
+                getZoneKeyByName(player.value.currentZone)
+            );
 
             startAnimationLoop();
             startCombatClock();
@@ -2219,10 +2365,20 @@ export default {
             tileSize,
 
             gameMap,
+            currentZoneKey,
+            activeZone,
+            getZoneName,
 
             player,
 
             monsters,
+            npcs,
+            portals,
+            quests,
+            inventory,
+            gold,
+            activeNpc,
+            zoneBanner,
 
             selectedTarget,
 
@@ -2233,14 +2389,13 @@ export default {
             camera,
 
             tileImages,
+            uiAssets,
+            minimapAssets,
+            portalAssets,
+            npcAssets,
+            effectAssets,
 
             skillBar,
-
-            hpBar,
-            mpBar,
-            xpBar,
-
-            skillSlot,
 
             getPlayerSprite,
             getMonsterSprite,
@@ -2266,6 +2421,18 @@ export default {
             getSkillManaCost,
             canPaySkillMana,
             getDistanceToTarget,
+            getVisibleQuests,
+            getQuestStatusLabel,
+            getQuestIcon,
+            getInventoryItem,
+            getItemIcon,
+            getItemFrame,
+            getItemTooltip,
+            getMinimapStyle,
+            getBosses,
+            getSkillEffectImage,
+            interactNpc,
+            closeNpcDialog,
             spendAttributePoint,
             useSkill,
 
