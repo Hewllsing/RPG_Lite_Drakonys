@@ -77,7 +77,7 @@
               left: npc.x * tileSize + 'px',
               top: npc.y * tileSize + 'px'
             }"
-            @click="interactNpc(npc)"
+            @click="openNpcDialog(npc)"
           >
             <span class="entity-name npc-name">{{ npc.name }}</span>
             <img
@@ -477,12 +477,26 @@
           <button
             type="button"
             class="dialog-action"
-            @click="interactNpc(activeNpc)"
+            @click="confirmNpcAction(activeNpc)"
           >
             {{ activeNpc.actionLabel }}
           </button>
         </div>
       </section>
+    </div>
+
+    <div
+      v-if="npcResponse"
+      class="npc-response-toast"
+    >
+      <img
+        :src="npcResponse.portrait"
+        alt=""
+      />
+      <div>
+        <strong>{{ npcResponse.name }}</strong>
+        <span>{{ npcResponse.message }}</span>
+      </div>
     </div>
   </div>
 </template>
