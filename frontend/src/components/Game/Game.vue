@@ -1,272 +1,333 @@
 <template>
-  <div class="game-container">
-
-    <div class="game-viewport">
-
-      <div
-        class="game-map"
-        :style="{
-          transform: `translate(-${camera.x}px, -${camera.y}px)`
-        }"
-      >
-
-        <!-- MAPA -->
-
-        <div
-          v-for="(row, rowIndex) in gameMap"
-          :key="rowIndex"
-        >
-
-          <img
-            v-for="(tile, colIndex) in row"
-            :key="`${rowIndex}-${colIndex}`"
-            class="tile"
-            :src="tileImages[tile]"
-            :style="{
-              left: colIndex * tileSize + 'px',
-              top: rowIndex * tileSize + 'px'
-            }"
-          />
-
+  <div class="game-shell">
+    <section class="game-stage">
+      <header class="zone-header">
+        <div>
+          <span class="eyebrow">Dark Fantasy RPG</span>
+          <h1>{{ getZoneName() }}</h1>
         </div>
+        <div class="resource-pill">
+          <span>Gold</span>
+          <strong>{{ gold }}</strong>
+        </div>
+      </header>
 
-        <!-- PLAYER -->
-
+      <div class="game-viewport">
         <div
-          class="player-wrapper"
-          :style="{
-            left: player.x * tileSize + 'px',
-            top: player.y * tileSize + 'px'
-          }"
+          v-if="zoneBanner"
+          class="zone-banner"
         >
-
-          <div class="player-overhead-bars">
-
-            <div class="player-overhead-bar hp">
-              <div
-                class="player-overhead-fill hp"
-                :style="{
-                  width: getPlayerHpPercent() + '%'
-                }"
-              ></div>
-            </div>
-
-            <div class="player-overhead-bar mp">
-              <div
-                class="player-overhead-fill mp"
-                :style="{
-                  width: getPlayerManaPercent() + '%'
-                }"
-              ></div>
-            </div>
-
+          <img
+            v-if="zoneBanner.image"
+            :src="zoneBanner.image"
+            alt=""
+          />
+          <div>
+            <span>Entrando em</span>
+            <strong>{{ zoneBanner.name }}</strong>
+            <small>{{ zoneBanner.theme }}</small>
           </div>
-
-          <img
-            class="player"
-            :src="getPlayerSprite()"
-          />
-
         </div>
 
-        <!-- MONSTROS -->
-
         <div
-          v-for="monster in monsters"
-          :key="monster.id"
-          class="monster-wrapper"
+          class="game-map"
           :style="{
-            left: monster.x * tileSize + 'px',
-            top: monster.y * tileSize + 'px'
+            transform: `translate(-${camera.x}px, -${camera.y}px)`
           }"
-          @click="selectTarget(monster)"
         >
-
-          <img
-            :src="getMonsterSprite(monster)"
-            class="monster"
-            :class="{
-              selected:
-                selectedTarget?.id === monster.id
-            }"
-          />
-
-          <!-- HP BAR -->
-
-          <div class="monster-hp-container">
-
-            <div
-              class="monster-hp-fill"
+          <template
+            v-for="(row, rowIndex) in gameMap"
+            :key="rowIndex"
+          >
+            <img
+              v-for="(tile, colIndex) in row"
+              :key="`${rowIndex}-${colIndex}`"
+              class="tile"
+              :src="tileImages[tile]"
               :style="{
-                width:
-                  (monster.hp / monster.maxHp) * 100 + '%'
+                left: colIndex * tileSize + 'px',
+                top: rowIndex * tileSize + 'px'
               }"
-            ></div>
+              alt=""
+            />
+          </template>
 
+          <div
+            v-for="portal in portals"
+            :key="`${portal.to}-${portal.x}-${portal.y}`"
+            class="portal-wrapper"
+            :style="{
+              left: portal.x * tileSize + 'px',
+              top: portal.y * tileSize + 'px'
+            }"
+            :title="portal.label"
+          >
+            <img
+              :src="portalAssets[portal.color]"
+              class="portal"
+              alt=""
+            />
           </div>
 
+          <div
+            v-for="npc in npcs"
+            :key="`${npc.type}-${npc.x}-${npc.y}`"
+            class="npc-wrapper"
+            :style="{
+              left: npc.x * tileSize + 'px',
+              top: npc.y * tileSize + 'px'
+            }"
+            @click="interactNpc(npc)"
+          >
+            <span class="entity-name npc-name">{{ npc.name }}</span>
+            <img
+              :src="npc.assets.sprite"
+              class="npc"
+              alt=""
+            />
+          </div>
+
+          <div
+            class="player-wrapper"
+            :style="{
+              left: player.x * tileSize + 'px',
+              top: player.y * tileSize + 'px'
+            }"
+          >
+            <div class="player-overhead-bars">
+              <div class="player-overhead-bar hp">
+                <div
+                  class="player-overhead-fill hp"
+                  :style="{ width: getPlayerHpPercent() + '%' }"
+                ></div>
+              </div>
+              <div class="player-overhead-bar mp">
+                <div
+                  class="player-overhead-fill mp"
+                  :style="{ width: getPlayerManaPercent() + '%' }"
+                ></div>
+              </div>
+            </div>
+
+            <span class="entity-name player-name">{{ player.name }}</span>
+            <img
+              class="player"
+              :src="getPlayerSprite()"
+              alt=""
+            />
+          </div>
+
+          <div
+            v-for="monster in monsters"
+            :key="monster.id"
+            class="monster-wrapper"
+            :class="{ boss: monster.isBoss, dead: monster.dead }"
+            :style="{
+              left: monster.x * tileSize + 'px',
+              top: monster.y * tileSize + 'px'
+            }"
+            @click="selectTarget(monster)"
+          >
+            <span class="entity-name monster-name">{{ monster.name }}</span>
+            <img
+              :src="getMonsterSprite(monster)"
+              class="monster"
+              :class="{ selected: selectedTarget?.id === monster.id }"
+              alt=""
+            />
+            <div class="monster-hp-container">
+              <div
+                class="monster-hp-fill"
+                :style="{ width: (monster.hp / monster.maxHp) * 100 + '%' }"
+              ></div>
+            </div>
+          </div>
+
+          <div
+            v-for="text in floatingTexts"
+            :key="text.id"
+            class="floating-text"
+            :class="text.kind"
+            :style="{
+              left: text.x * tileSize + 'px',
+              top: text.y * tileSize + 'px'
+            }"
+          >
+            {{ text.text }}
+          </div>
+
+          <div
+            v-for="effect in skillEffects"
+            :key="effect.id"
+            class="skill-effect"
+            :class="effect.kind"
+            :style="{
+              left: effect.x * tileSize + 'px',
+              top: effect.y * tileSize + 'px'
+            }"
+          >
+            <img
+              v-if="getSkillEffectImage(effect)"
+              :src="getSkillEffectImage(effect)"
+              alt=""
+            />
+          </div>
         </div>
+      </div>
 
-        <!-- FLOATING DAMAGE -->
-
-        <div
-          v-for="text in floatingTexts"
-          :key="text.id"
-          class="floating-text"
-          :class="text.kind"
-          :style="{
-            left: text.x * tileSize + 'px',
-            top: text.y * tileSize + 'px'
-          }"
+      <div class="hotbar">
+        <button
+          v-for="skill in skillBar"
+          :key="skill.key"
+          type="button"
+          class="skill-wrapper"
+          :class="{ unavailable: !canPaySkillMana(skill) }"
+          :title="`${skill.name} - MP ${getSkillManaCost(skill)} - ${skill.description || ''}`"
+          @click="useSkill(skill.key.toLowerCase())"
         >
-          {{ text.text }}
+          <img
+            :src="skill.icon"
+            class="skill-icon"
+            alt=""
+          />
+          <div
+            v-if="isSkillCoolingDown(skill)"
+            class="skill-cooldown"
+            :style="{ height: getSkillCooldownPercent(skill) + '%' }"
+          ></div>
+          <span
+            v-if="isSkillCoolingDown(skill)"
+            class="skill-cooldown-text"
+          >
+            {{ getSkillCooldownText(skill) }}
+          </span>
+          <span class="skill-key">{{ skill.key }}</span>
+          <span
+            v-if="getSkillManaCost(skill) > 0"
+            class="skill-mana"
+          >
+            {{ getSkillManaCost(skill) }}
+          </span>
+        </button>
+      </div>
+    </section>
+
+    <aside class="player-ui">
+      <section class="ui-panel character-panel">
+        <div class="panel-title-row">
+          <div>
+            <span class="eyebrow">Personagem</span>
+            <h2>{{ player.name }}</h2>
+          </div>
+          <strong class="level-badge">Lv {{ player.level }}</strong>
         </div>
 
-        <!-- SKILL EFFECTS -->
+        <div class="status-bars">
+          <div class="bar-container hp">
+            <div
+              class="status-bar-fill hp"
+              :style="{ width: getPlayerHpPercent() + '%' }"
+            ></div>
+            <span>HP {{ player.hp }}/{{ player.maxHp }}</span>
+          </div>
+          <div class="bar-container mp">
+            <div
+              class="status-bar-fill mp"
+              :style="{ width: getPlayerManaPercent() + '%' }"
+            ></div>
+            <span>MP {{ player.mana }}/{{ player.maxMana }}</span>
+          </div>
+          <div class="bar-container xp">
+            <div
+              class="status-bar-fill xp"
+              :style="{ width: getPlayerXpPercent() + '%' }"
+            ></div>
+            <span>XP {{ player.xp }}/{{ getXpRequiredForNextLevel() }}</span>
+          </div>
+        </div>
+      </section>
 
+      <section
+        class="ui-panel target-frame"
+        :class="{ boss: selectedTarget?.isBoss }"
+      >
+        <div class="panel-title-row">
+          <h3>Target</h3>
+          <span v-if="selectedTarget">{{ getDistanceToTarget(selectedTarget) }}/{{ getBasicAttackRange() }}</span>
+        </div>
         <div
-          v-for="effect in skillEffects"
-          :key="effect.id"
-          class="skill-effect"
-          :class="effect.kind"
-          :style="{
-            left: effect.x * tileSize + 'px',
-            top: effect.y * tileSize + 'px'
-          }"
-        ></div>
-
-      </div>
-
-    </div>
-
-    <!-- UI -->
-
-    <div class="player-ui">
-
-      <h2>{{ player.name }}</h2>
-
-      <!-- STATUS -->
-
-      <div class="status-bars">
-
-        <div class="bar-container hp">
-
+          v-if="selectedTarget"
+          class="target-content"
+        >
           <img
-            :src="hpBar"
-            class="status-bar"
+            :src="getMonsterSprite(selectedTarget)"
+            alt=""
           />
-
-          <div
-            class="status-bar-fill hp"
-            :style="{
-              width: getPlayerHpPercent() + '%'
-            }"
-          ></div>
-
-          <span>
-            HP {{ player.hp }}/{{ player.maxHp }}
-          </span>
-
+          <div>
+            <strong>{{ selectedTarget.name }}</strong>
+            <small>{{ selectedTarget.isBoss ? 'Boss' : selectedTarget.type }}</small>
+            <div class="target-health">
+              <div
+                :style="{ width: (selectedTarget.hp / selectedTarget.maxHp) * 100 + '%' }"
+              ></div>
+            </div>
+            <span>{{ selectedTarget.hp }}/{{ selectedTarget.maxHp }}</span>
+          </div>
         </div>
+        <p v-else class="muted">Nenhum target</p>
+      </section>
 
-        <div class="bar-container mp">
-
+      <section class="ui-panel minimap-panel">
+        <div class="panel-title-row">
+          <h3>Minimap</h3>
+          <span>{{ getZoneName() }}</span>
+        </div>
+        <div class="minimap">
           <img
-            :src="mpBar"
-            class="status-bar"
+            v-if="activeZone.assets?.minimap"
+            :src="activeZone.assets.minimap"
+            alt=""
           />
-
-          <div
-            class="status-bar-fill mp"
-            :style="{
-              width: getPlayerManaPercent() + '%'
-            }"
-          ></div>
-
-          <span>
-            MP {{ player.mana }}/{{ player.maxMana }}
-          </span>
-
+          <span
+            class="minimap-marker player-marker"
+            :style="getMinimapStyle(player)"
+          ></span>
+          <span
+            v-for="npc in npcs"
+            :key="`mini-npc-${npc.type}-${npc.x}`"
+            class="minimap-marker npc-marker"
+            :style="getMinimapStyle(npc)"
+          ></span>
+          <span
+            v-for="portal in portals"
+            :key="`mini-portal-${portal.to}`"
+            class="minimap-marker portal-marker"
+            :style="getMinimapStyle(portal)"
+          ></span>
+          <span
+            v-for="boss in getBosses()"
+            :key="`mini-boss-${boss.id}`"
+            class="minimap-marker boss-marker"
+            :style="getMinimapStyle(boss)"
+          ></span>
+          <span
+            class="minimap-marker party-marker"
+            :style="{ left: '12%', top: '18%' }"
+          ></span>
         </div>
+      </section>
 
-        <div class="bar-container xp">
-
-          <img
-            :src="xpBar"
-            class="status-bar"
-          />
-
-          <div
-            class="status-bar-fill xp"
-            :style="{
-              width: getPlayerXpPercent() + '%'
-            }"
-          ></div>
-
-          <span>
-            LVL {{ player.level }} - XP {{ player.xp }}/{{ getXpRequiredForNextLevel() }}
-          </span>
-
-        </div>
-
-      </div>
-
-      <!-- TARGET -->
-
-      <div class="target-frame">
-
-        <h3>Target</h3>
-
-        <div v-if="selectedTarget">
-
-          <p>
-            {{ selectedTarget.name }}
-          </p>
-
-          <p>
-            HP:
-            {{ selectedTarget.hp }}
-          </p>
-
-          <p>
-            Range:
-            {{ getDistanceToTarget(selectedTarget) }}/{{ getBasicAttackRange() }}
-          </p>
-
-        </div>
-
-        <p v-else>
-          Nenhum target
-        </p>
-
-      </div>
-
-      <!-- ATRIBUTOS -->
-
-      <div class="attributes-frame">
-
+      <section class="ui-panel attributes-frame">
         <div class="attributes-header">
-
           <h3>Atributos</h3>
-
-          <span>
-            {{ getAvailableAttributePoints() }} pts
-          </span>
-
+          <span>{{ getAvailableAttributePoints() }} pts</span>
         </div>
-
         <div class="attribute-row">
-
           <div>
             <strong>Forca</strong>
-            <small>
-              Dano fisico, armadura, vida
-            </small>
-            <span>
-              {{ player.strength }} / Arm {{ getPlayerArmor() }}
-            </span>
+            <small>Dano fisico, armadura, vida</small>
+            <span>{{ player.strength }} / Arm {{ getPlayerArmor() }}</span>
           </div>
-
           <button
             type="button"
             :disabled="getAvailableAttributePoints() <= 0"
@@ -274,22 +335,13 @@
           >
             +
           </button>
-
         </div>
-
         <div class="attribute-row">
-
           <div>
             <strong>Inteligencia</strong>
-            <small>
-              Mana, cooldown, dano magico
-            </small>
-            <span>
-              {{ player.intelligence }} / Mag {{ getPlayerMagicDamage() }}
-              / -{{ getSkillCooldownReduction() }}%
-            </span>
+            <small>Mana, cooldown, dano magico</small>
+            <span>{{ player.intelligence }} / Mag {{ getPlayerMagicDamage() }} / -{{ getSkillCooldownReduction() }}%</span>
           </div>
-
           <button
             type="button"
             :disabled="getAvailableAttributePoints() <= 0"
@@ -297,23 +349,13 @@
           >
             +
           </button>
-
         </div>
-
         <div class="attribute-row">
-
           <div>
             <strong>Destreza</strong>
-            <small>
-              Critico, ataque, precisao, evasao
-            </small>
-            <span>
-              {{ player.dexterity }} / Crit {{ getPlayerCriticalChance() }}%
-              / Acc {{ getPlayerAccuracy() }}%
-              / Eva {{ getPlayerEvasionChance() }}%
-            </span>
+            <small>Critico, ataque, precisao, evasao</small>
+            <span>{{ player.dexterity }} / Crit {{ getPlayerCriticalChance() }}% / Acc {{ getPlayerAccuracy() }}%</span>
           </div>
-
           <button
             type="button"
             :disabled="getAvailableAttributePoints() <= 0"
@@ -321,75 +363,127 @@
           >
             +
           </button>
-
         </div>
-
         <p class="attack-speed-note">
-          {{ getWeaponLabel() }} / {{ getDamageTypeLabel() }}
-          / Range {{ getBasicAttackRange() }}
-          / Dano {{ getBasicAttackDamagePreview() }}
-          / {{ getPlayerAttackCooldown() }}ms
+          {{ getWeaponLabel() }} / {{ getDamageTypeLabel() }} / Range {{ getBasicAttackRange() }} / Dano {{ getBasicAttackDamagePreview() }}
         </p>
+      </section>
+    </aside>
 
-      </div>
-
-      <!-- HOTBAR -->
-
-      <div class="hotbar">
-
-        <div
-          v-for="skill in skillBar"
-          :key="skill.key"
-          class="skill-wrapper"
-          :class="{
-            unavailable: !canPaySkillMana(skill)
-          }"
-          :title="`${skill.name} - MP ${getSkillManaCost(skill)}`"
-          @click="useSkill(skill.key.toLowerCase())"
-        >
-
-          <img
-            :src="skillSlot"
-            class="skill-slot"
-          />
-
-          <img
-            :src="skill.icon"
-            class="skill-icon"
-          />
-
-          <div
-            v-if="isSkillCoolingDown(skill)"
-            class="skill-cooldown"
-            :style="{
-              height: getSkillCooldownPercent(skill) + '%'
-            }"
-          ></div>
-
-          <span
-            v-if="isSkillCoolingDown(skill)"
-            class="skill-cooldown-text"
-          >
-            {{ getSkillCooldownText(skill) }}
-          </span>
-
-          <span class="skill-key">
-            {{ skill.key }}
-          </span>
-
-          <span
-            v-if="getSkillManaCost(skill) > 0"
-            class="skill-mana"
-          >
-            {{ getSkillManaCost(skill) }}
-          </span>
-
+    <aside class="right-ui">
+      <section class="ui-panel inventory-panel">
+        <div class="panel-title-row">
+          <h3>Inventario</h3>
+          <span>{{ inventory.length }} slots</span>
         </div>
+        <div class="inventory-grid">
+          <div
+            v-for="item in inventory"
+            :key="item.id"
+            class="inventory-slot"
+            :title="getItemTooltip(item)"
+          >
+            <img
+              :src="getItemFrame(item)"
+              class="rarity-frame"
+              alt=""
+            />
+            <img
+              :src="getItemIcon(item)"
+              class="item-icon"
+              alt=""
+            />
+            <span>{{ item.quantity }}</span>
+          </div>
+        </div>
+      </section>
 
-      </div>
+      <section class="ui-panel quests-panel">
+        <div class="panel-title-row">
+          <h3>Quests</h3>
+          <span>{{ getVisibleQuests().length }}</span>
+        </div>
+        <div class="quest-list">
+          <article
+            v-for="quest in getVisibleQuests()"
+            :key="quest.id"
+            class="quest-card"
+            :class="quest.status"
+          >
+            <img
+              :src="getQuestIcon(quest)"
+              alt=""
+            />
+            <div>
+              <strong>{{ quest.title }}</strong>
+              <p>{{ quest.description }}</p>
+              <span>{{ quest.progress }}/{{ quest.required }} - {{ getQuestStatusLabel(quest.status) }}</span>
+              <small>{{ quest.reward }}</small>
+            </div>
+          </article>
+        </div>
+      </section>
 
+      <section class="ui-panel skills-panel">
+        <div class="panel-title-row">
+          <h3>Skills</h3>
+          <span>{{ player.characterClass }}</span>
+        </div>
+        <div class="skill-list">
+          <div
+            v-for="skill in skillBar"
+            :key="`skill-info-${skill.id}`"
+            class="skill-info"
+            :title="skill.description"
+          >
+            <img
+              :src="skill.icon"
+              alt=""
+            />
+            <div>
+              <strong>{{ skill.name }}</strong>
+              <span>MP {{ getSkillManaCost(skill) }} / {{ skill.key }}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </aside>
+
+    <div
+      v-if="activeNpc"
+      class="dialog-backdrop"
+      @click.self="closeNpcDialog"
+    >
+      <section class="npc-dialog">
+        <img
+          :src="activeNpc.assets.portrait"
+          class="npc-portrait"
+          alt=""
+        />
+        <div>
+          <div class="panel-title-row">
+            <div>
+              <span class="eyebrow">{{ activeNpc.role }}</span>
+              <h3>{{ activeNpc.name }}</h3>
+            </div>
+            <button
+              type="button"
+              @click="closeNpcDialog"
+            >
+              X
+            </button>
+          </div>
+          <p>{{ activeNpc.dialogue }}</p>
+          <button
+            type="button"
+            class="dialog-action"
+            @click="interactNpc(activeNpc)"
+          >
+            {{ activeNpc.actionLabel }}
+          </button>
+        </div>
+      </section>
     </div>
-
   </div>
 </template>
 
