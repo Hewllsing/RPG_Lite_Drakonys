@@ -51,7 +51,8 @@ CREATE TABLE IF NOT EXISTS characters (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  UNIQUE KEY uq_characters_user_id (user_id),
+  UNIQUE KEY uq_characters_user_name (user_id, name),
+  KEY idx_characters_user_id (user_id),
   CONSTRAINT fk_characters_user
     FOREIGN KEY (user_id)
     REFERENCES users (id)

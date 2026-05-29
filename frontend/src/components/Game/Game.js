@@ -130,7 +130,14 @@ const gameMap = [
 
 export default {
 
-    setup() {
+    props: {
+        characterId: {
+            type: Number,
+            required: true
+        }
+    },
+
+    setup(props) {
 
         const tileSize = 40;
 
@@ -354,7 +361,7 @@ export default {
 
         function persistCharacter() {
 
-            saveCharacter(player.value).catch(() => {
+            saveCharacter(props.characterId, player.value).catch(() => {
                 console.log('Nao foi possivel guardar o personagem.');
             });
         }
@@ -1132,7 +1139,7 @@ export default {
             );
 
             const character =
-                await getCharacter();
+                await getCharacter(props.characterId);
 
             player.value = {
                 ...player.value,
