@@ -63,6 +63,24 @@
             />
           </label>
 
+          <label>
+            Classe
+            <select
+              v-model="characterForm.characterClass"
+              required
+            >
+              <option value="warrior">
+                Warrior
+              </option>
+              <option value="mage">
+                Mage
+              </option>
+              <option value="archer">
+                Archer
+              </option>
+            </select>
+          </label>
+
           <button
             type="submit"
             :disabled="characterLoading"
@@ -86,6 +104,9 @@
           >
             <div>
               <h2>{{ character.name }}</h2>
+              <p>
+                {{ getClassLabel(character.characterClass) }}
+              </p>
               <p>
                 Level {{ character.level }} / {{ character.currentZone }}
               </p>
@@ -277,7 +298,8 @@ export default {
       characterToDelete: null,
       deleteConfirmation: '',
       characterForm: {
-        name: ''
+        name: '',
+        characterClass: 'warrior'
       },
       form: {
         user: '',
@@ -355,13 +377,17 @@ export default {
 
       try {
         const character =
-          await createCharacter(this.characterForm.name);
+          await createCharacter(
+            this.characterForm.name,
+            this.characterForm.characterClass
+          );
 
         this.characters = [
           character,
           ...this.characters
         ];
         this.characterForm.name = '';
+        this.characterForm.characterClass = 'warrior';
       } catch (error) {
         this.characterError =
           error.response?.data?.message ||
@@ -373,6 +399,16 @@ export default {
 
     playCharacter(character) {
       this.selectedCharacter = character;
+    },
+
+    getClassLabel(characterClass) {
+      const labels = {
+        warrior: 'Warrior',
+        mage: 'Mage',
+        archer: 'Archer'
+      };
+
+      return labels[characterClass] || 'Warrior';
     },
 
     backToCharacters() {

@@ -6,6 +6,7 @@ function mapCharacter(row) {
     id: row.id,
     userId: row.user_id,
     name: row.name,
+    characterClass: row.character_class,
     level: row.level,
     xp: row.xp,
     hp: row.hp,
@@ -49,6 +50,60 @@ function validateCharacterName(name) {
   return characterName;
 }
 
+function validateCharacterClass(characterClass) {
+
+  const normalizedClass =
+    characterClass?.trim().toLowerCase();
+  const allowedClasses = [
+    'warrior',
+    'mage',
+    'archer'
+  ];
+
+  if (!allowedClasses.includes(normalizedClass)) {
+    const error = new Error('Classe do personagem invalida.');
+    error.status = 400;
+    throw error;
+  }
+
+  return normalizedClass;
+}
+
+function getClassBaseStats(characterClass) {
+
+  const statsByClass = {
+    warrior: {
+      hp: 120,
+      maxHp: 120,
+      mana: 35,
+      maxMana: 35,
+      strength: 8,
+      intelligence: 3,
+      dexterity: 5
+    },
+    mage: {
+      hp: 80,
+      maxHp: 80,
+      mana: 90,
+      maxMana: 90,
+      strength: 3,
+      intelligence: 9,
+      dexterity: 4
+    },
+    archer: {
+      hp: 95,
+      maxHp: 95,
+      mana: 55,
+      maxMana: 55,
+      strength: 5,
+      intelligence: 4,
+      dexterity: 9
+    }
+  };
+
+  return statsByClass[characterClass];
+}
+
 async function listCharactersByUserId(userId) {
 
   const [characters] = await pool.execute(
@@ -66,9 +121,13 @@ async function listCharactersByUserId(userId) {
   return characters.map(mapCharacter);
 }
 
-async function createCharacterForUser(userId, name) {
+async function createCharacterForUser(userId, name, characterClass = 'warrior') {
 
   const characterName = validateCharacterName(name);
+  const selectedClass =
+    validateCharacterClass(characterClass);
+  const baseStats =
+    getClassBaseStats(selectedClass);
 
   try {
     const [result] = await pool.execute(
@@ -76,6 +135,7 @@ async function createCharacterForUser(userId, name) {
         INSERT INTO characters (
           user_id,
           name,
+          character_class,
           level,
           xp,
           hp,
@@ -93,15 +153,16 @@ async function createCharacterForUser(userId, name) {
         VALUES (
           :userId,
           :name,
+          :characterClass,
           1,
           0,
-          100,
-          100,
-          50,
-          50,
-          5,
-          5,
-          5,
+          :hp,
+          :maxHp,
+          :mana,
+          :maxMana,
+          :strength,
+          :intelligence,
+          :dexterity,
           0,
           'Goblin Forest',
           5,
@@ -110,7 +171,9 @@ async function createCharacterForUser(userId, name) {
       `,
       {
         userId,
-        name: characterName
+        name: characterName,
+        characterClass: selectedClass,
+        ...baseStats
       }
     );
 
