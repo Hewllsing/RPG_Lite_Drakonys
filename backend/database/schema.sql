@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS characters (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
   user_id INT UNSIGNED NOT NULL,
   name VARCHAR(60) NOT NULL,
+  character_class VARCHAR(20) NOT NULL DEFAULT 'warrior',
   level INT UNSIGNED NOT NULL DEFAULT 1,
   xp INT UNSIGNED NOT NULL DEFAULT 0,
   hp INT NOT NULL DEFAULT 100,
@@ -51,7 +52,8 @@ CREATE TABLE IF NOT EXISTS characters (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  UNIQUE KEY uq_characters_user_id (user_id),
+  UNIQUE KEY uq_characters_user_name (user_id, name),
+  KEY idx_characters_user_id (user_id),
   CONSTRAINT fk_characters_user
     FOREIGN KEY (user_id)
     REFERENCES users (id)

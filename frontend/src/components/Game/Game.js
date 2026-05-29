@@ -78,6 +78,9 @@ import skillAttack from '../../assets/skills/skill_basic_attack.png';
 import skillFireball from '../../assets/skills/skill_fireball.png';
 import skillHeal from '../../assets/skills/skill_heal.png';
 import skillDash from '../../assets/skills/skill_dash.png';
+import skillPowerStrike from '../../assets/skills/skill_power_strike.png';
+import skillRegeneration from '../../assets/skills/skill_regeneration.png';
+import skillUltimate from '../../assets/skills/skill_ultimate.png';
 
 const MAP_WIDTH = 20;
 const MAP_HEIGHT = 15;
@@ -92,7 +95,126 @@ const BLOCKED_TILES = [
 ];
 const PLAYER_MOVE_INTERVAL = 170;
 const PLAYER_ATTACK_COOLDOWN = 900;
+const MIN_PLAYER_ATTACK_COOLDOWN = 450;
 const AUTO_COMBAT_INTERVAL = 180;
+const ATTRIBUTE_POINTS_PER_LEVEL = 3;
+const COMBAT_CLOCK_INTERVAL = 80;
+const WEAPON_PROFILES = {
+    warrior: {
+        weaponType: 'sword',
+        weaponLabel: 'Espada',
+        damageType: 'physical',
+        damageLabel: 'Fisico',
+        range: 1,
+        baseDamage: 6,
+        primaryAttribute: 'strength',
+        primaryScale: 2,
+        secondaryAttribute: 'dexterity',
+        secondaryScale: 0.4,
+        accuracyBonus: 0,
+        criticalBonus: 0
+    },
+    mage: {
+        weaponType: 'staff',
+        weaponLabel: 'Cajado',
+        damageType: 'magical',
+        damageLabel: 'Magico',
+        range: 3,
+        baseDamage: 5,
+        primaryAttribute: 'intelligence',
+        primaryScale: 2.2,
+        secondaryAttribute: 'dexterity',
+        secondaryScale: 0.25,
+        accuracyBonus: 2,
+        criticalBonus: 0
+    },
+    archer: {
+        weaponType: 'bow',
+        weaponLabel: 'Arco',
+        damageType: 'physical',
+        damageLabel: 'Fisico',
+        range: 4,
+        baseDamage: 4,
+        primaryAttribute: 'dexterity',
+        primaryScale: 1.7,
+        secondaryAttribute: 'strength',
+        secondaryScale: 0.8,
+        accuracyBonus: 5,
+        criticalBonus: 5
+    }
+};
+const ATTRIBUTE_GAIN_BY_POINT = {
+    strength: {
+        maxHp: 5
+    },
+    intelligence: {
+        maxMana: 8
+    },
+    dexterity: {}
+};
+const SKILL_DEFINITIONS = [
+    {
+        id: 'basicAttack',
+        key: '1',
+        icon: skillAttack,
+        name: 'Ataque',
+        manaCost: 0,
+        cooldown: 0
+    },
+    {
+        id: 'fireball',
+        key: '2',
+        icon: skillFireball,
+        name: 'Fireball',
+        manaCost: 18,
+        cooldown: 2800,
+        range: 5
+    },
+    {
+        id: 'heal',
+        key: '3',
+        icon: skillHeal,
+        name: 'Heal',
+        manaCost: 20,
+        cooldown: 6000
+    },
+    {
+        id: 'dash',
+        key: '4',
+        icon: skillDash,
+        name: 'Dash',
+        manaCost: 10,
+        cooldown: 3500,
+        range: 3
+    },
+    {
+        id: 'powerStrike',
+        key: 'Q',
+        icon: skillPowerStrike,
+        name: 'Power Strike',
+        manaCost: 16,
+        cooldown: 4200,
+        range: 1
+    },
+    {
+        id: 'regeneration',
+        key: 'E',
+        icon: skillRegeneration,
+        name: 'Regeneration',
+        manaCost: 26,
+        cooldown: 14000
+    },
+    {
+        id: 'ultimate',
+        key: 'R',
+        icon: skillUltimate,
+        name: 'Ultimate',
+        manaCost: 45,
+        cooldown: 22000,
+        range: 5,
+        radius: 2
+    }
+];
 
 const gameMap = [
 
@@ -130,7 +252,14 @@ const gameMap = [
 
 export default {
 
-    setup() {
+    props: {
+        characterId: {
+            type: Number,
+            required: true
+        }
+    },
+
+    setup(props) {
 
         const tileSize = 40;
 
@@ -144,9 +273,11 @@ export default {
             maxHp: 100,
             mana: 50,
             maxMana: 50,
+            characterClass: 'warrior',
             strength: 5,
             intelligence: 5,
             dexterity: 5,
+            attributePoints: 0,
             direction: 'down',
             moving: false,
             attacking: false,
@@ -159,13 +290,17 @@ export default {
         const selectedTarget = ref(null);
 
         const floatingTexts = ref([]);
+        const skillEffects = ref([]);
+        const combatClock = ref(Date.now());
 
         let animationInterval = null;
         let monsterAIInterval = null;
         let playerMovementInterval = null;
         let autoCombatInterval = null;
+        let combatClockInterval = null;
         let playerAttackTimeout = null;
         let playerAttackInProgress = false;
+        const regenerationIntervals = [];
         const pressedMovementKeys = new Set();
 
         const camera = ref({
@@ -180,32 +315,13 @@ export default {
             water: waterTile
         };
 
-        const skillBar = [
-
-            {
-                key: '1',
-                icon: skillAttack,
-                name: 'Ataque'
-            },
-
-            {
-                key: '2',
-                icon: skillFireball,
-                name: 'Fireball'
-            },
-
-            {
-                key: '3',
-                icon: skillHeal,
-                name: 'Heal'
-            },
-
-            {
-                key: 'Q',
-                icon: skillDash,
-                name: 'Dash'
-            }
-        ];
+        const skillBar = SKILL_DEFINITIONS;
+        const skillCooldowns = ref(
+            SKILL_DEFINITIONS.reduce((cooldowns, skill) => {
+                cooldowns[skill.id] = 0;
+                return cooldowns;
+            }, {})
+        );
 
         const playerSprites = {
 
@@ -354,9 +470,326 @@ export default {
 
         function persistCharacter() {
 
-            saveCharacter(player.value).catch(() => {
+            saveCharacter(props.characterId, player.value).catch(() => {
                 console.log('Nao foi possivel guardar o personagem.');
             });
+        }
+
+        function getAvailableAttributePoints() {
+
+            return Number(player.value.attributePoints) || 0;
+        }
+
+        function getCharacterClass() {
+
+            return player.value.characterClass || 'warrior';
+        }
+
+        function getWeaponProfile() {
+
+            return (
+                WEAPON_PROFILES[getCharacterClass()] ||
+                WEAPON_PROFILES.warrior
+            );
+        }
+
+        function getWeaponLabel() {
+
+            return getWeaponProfile().weaponLabel;
+        }
+
+        function getDamageTypeLabel() {
+
+            return getWeaponProfile().damageLabel;
+        }
+
+        function getBasicAttackRange() {
+
+            return getWeaponProfile().range;
+        }
+
+        function getPlayerArmor() {
+
+            return Math.floor(
+                (Number(player.value.strength) || 0) * 0.55 +
+                    (Number(player.value.level) || 1) * 0.4
+            );
+        }
+
+        function getPlayerCriticalChance() {
+
+            return Math.min(
+                45,
+                4 +
+                    (Number(player.value.dexterity) || 0) * 1.5 +
+                    getWeaponProfile().criticalBonus
+            );
+        }
+
+        function getPlayerAccuracy() {
+
+            return Math.min(
+                98,
+                76 +
+                    (Number(player.value.dexterity) || 0) * 1.2 +
+                    (Number(player.value.level) || 1) * 0.3 +
+                    getWeaponProfile().accuracyBonus
+            );
+        }
+
+        function getPlayerEvasionChance() {
+
+            return Math.min(
+                35,
+                Math.floor(
+                    3 +
+                        (Number(player.value.dexterity) || 0) * 1.4 +
+                        (Number(player.value.level) || 1) * 0.2
+                )
+            );
+        }
+
+        function getPlayerMagicDamage() {
+
+            return 6 + (Number(player.value.intelligence) || 0) * 2;
+        }
+
+        function getSkillCooldownReduction() {
+
+            return Math.min(
+                35,
+                (Number(player.value.intelligence) || 0) * 2
+            );
+        }
+
+        function getPlayerAttackCooldown() {
+
+            return Math.max(
+                MIN_PLAYER_ATTACK_COOLDOWN,
+                PLAYER_ATTACK_COOLDOWN -
+                    (Number(player.value.dexterity) || 0) * 20
+            );
+        }
+
+        function getPercent(currentValue, maxValue) {
+
+            const current = Number(currentValue) || 0;
+            const max = Number(maxValue) || 1;
+
+            return Math.max(
+                0,
+                Math.min(
+                    100,
+                    Math.round((current / max) * 100)
+                )
+            );
+        }
+
+        function getPlayerHpPercent() {
+
+            return getPercent(
+                player.value.hp,
+                player.value.maxHp
+            );
+        }
+
+        function getPlayerManaPercent() {
+
+            return getPercent(
+                player.value.mana,
+                player.value.maxMana
+            );
+        }
+
+        function getXpRequiredForNextLevel() {
+
+            return (Number(player.value.level) || 1) * 100;
+        }
+
+        function getPlayerXpPercent() {
+
+            return getPercent(
+                player.value.xp,
+                getXpRequiredForNextLevel()
+            );
+        }
+
+        function getBasicAttackDamagePreview() {
+
+            const profile = getWeaponProfile();
+            const primaryValue =
+                Number(player.value[profile.primaryAttribute]) || 0;
+            const secondaryValue =
+                Number(player.value[profile.secondaryAttribute]) || 0;
+            const baseDamage = Math.floor(
+                profile.baseDamage +
+                    primaryValue * profile.primaryScale +
+                    secondaryValue * profile.secondaryScale +
+                    (Number(player.value.level) || 1)
+            );
+            const criticalDamage =
+                Math.floor(baseDamage * 1.5);
+
+            return `${baseDamage}-${criticalDamage}`;
+        }
+
+        function getBasicAttackCooldownPercent() {
+
+            const cooldown = getPlayerAttackCooldown();
+            const lastAttackAt = player.value.lastAttackAt || 0;
+
+            if (!lastAttackAt) {
+                return 0;
+            }
+
+            const elapsed =
+                combatClock.value - lastAttackAt;
+
+            if (elapsed >= cooldown) {
+                return 0;
+            }
+
+            return Math.ceil(
+                ((cooldown - elapsed) / cooldown) * 100
+            );
+        }
+
+        function getBasicAttackCooldownText() {
+
+            const cooldown = getPlayerAttackCooldown();
+            const lastAttackAt = player.value.lastAttackAt || 0;
+            const remaining = Math.max(
+                0,
+                cooldown - (combatClock.value - lastAttackAt)
+            );
+
+            return (remaining / 1000).toFixed(1);
+        }
+
+        function getSkillCooldown(skill) {
+
+            if (skill.id === 'basicAttack') {
+                return getPlayerAttackCooldown();
+            }
+
+            return Math.max(
+                800,
+                skill.cooldown *
+                    (1 - getSkillCooldownReduction() / 100)
+            );
+        }
+
+        function getSkillLastUsedAt(skill) {
+
+            if (skill.id === 'basicAttack') {
+                return player.value.lastAttackAt || 0;
+            }
+
+            return skillCooldowns.value[skill.id] || 0;
+        }
+
+        function getSkillRemainingCooldown(skill) {
+
+            const cooldown = getSkillCooldown(skill);
+            const lastUsedAt = getSkillLastUsedAt(skill);
+
+            if (!lastUsedAt) {
+                return 0;
+            }
+
+            return Math.max(
+                0,
+                cooldown - (combatClock.value - lastUsedAt)
+            );
+        }
+
+        function isSkillCoolingDown(skill) {
+
+            return getSkillRemainingCooldown(skill) > 0;
+        }
+
+        function getSkillCooldownPercent(skill) {
+
+            const remaining =
+                getSkillRemainingCooldown(skill);
+
+            if (remaining <= 0) {
+                return 0;
+            }
+
+            return Math.ceil(
+                (remaining / getSkillCooldown(skill)) * 100
+            );
+        }
+
+        function getSkillCooldownText(skill) {
+
+            const remaining =
+                getSkillRemainingCooldown(skill);
+
+            if (remaining <= 0) {
+                return '';
+            }
+
+            return (remaining / 1000).toFixed(1);
+        }
+
+        function getSkillManaCost(skill) {
+
+            return skill.manaCost || 0;
+        }
+
+        function canPaySkillMana(skill) {
+
+            return player.value.mana >= getSkillManaCost(skill);
+        }
+
+        function markSkillUsed(skill) {
+
+            if (skill.id === 'basicAttack') {
+                return;
+            }
+
+            skillCooldowns.value[skill.id] = Date.now();
+        }
+
+        function getSkillByKey(key) {
+
+            return skillBar.find(
+                skill => skill.key.toLowerCase() === key
+            );
+        }
+
+        function spendAttributePoint(attribute) {
+
+            if (
+                getAvailableAttributePoints() <= 0 ||
+                !ATTRIBUTE_GAIN_BY_POINT[attribute]
+            ) {
+                return;
+            }
+
+            // Gasta um ponto e aplica os ganhos principais do atributo.
+            player.value[attribute] =
+                (Number(player.value[attribute]) || 0) + 1;
+            player.value.attributePoints =
+                getAvailableAttributePoints() - 1;
+
+            if (attribute === 'strength') {
+                player.value.maxHp +=
+                    ATTRIBUTE_GAIN_BY_POINT.strength.maxHp;
+                player.value.hp +=
+                    ATTRIBUTE_GAIN_BY_POINT.strength.maxHp;
+            }
+
+            if (attribute === 'intelligence') {
+                player.value.maxMana +=
+                    ATTRIBUTE_GAIN_BY_POINT.intelligence.maxMana;
+                player.value.mana +=
+                    ATTRIBUTE_GAIN_BY_POINT.intelligence.maxMana;
+            }
+
+            persistCharacter();
         }
 
         function startAnimationLoop() {
@@ -388,6 +821,17 @@ export default {
                 });
 
             }, 180);
+        }
+
+        function startCombatClock() {
+
+            if (combatClockInterval) {
+                return;
+            }
+
+            combatClockInterval = setInterval(() => {
+                combatClock.value = Date.now();
+            }, COMBAT_CLOCK_INTERVAL);
         }
 
         function updatePlayerDirection(dx, dy) {
@@ -530,7 +974,7 @@ export default {
             }
         }
 
-        function createFloatingText(x, y, text) {
+        function createFloatingText(x, y, text, kind = 'damage') {
 
             const id =
                 `${Date.now()}-${Math.random()}`;
@@ -539,7 +983,8 @@ export default {
                 id,
                 x,
                 y,
-                text
+                text,
+                kind
             });
 
             setTimeout(() => {
@@ -550,6 +995,167 @@ export default {
                     );
 
             }, 1000);
+        }
+
+        function createSkillEffect(
+            x,
+            y,
+            kind,
+            duration = 520
+        ) {
+
+            const id =
+                `${Date.now()}-${Math.random()}`;
+
+            skillEffects.value.push({
+                id,
+                x,
+                y,
+                kind
+            });
+
+            setTimeout(() => {
+
+                skillEffects.value =
+                    skillEffects.value.filter(
+                        effect => effect.id !== id
+                    );
+
+            }, duration);
+        }
+
+        function getDamageMitigation(monster, damageType) {
+
+            const race =
+                monster.spriteKey ||
+                monster.race?.toLowerCase() ||
+                'goblin';
+            const defenses = {
+                demon: {
+                    physical: 4,
+                    magical: 3
+                },
+                elf: {
+                    physical: 1,
+                    magical: 2
+                },
+                goblin: {
+                    physical: 0,
+                    magical: 0
+                },
+                orc: {
+                    physical: 3,
+                    magical: 1
+                },
+                skeleton: {
+                    physical: 2,
+                    magical: 2
+                }
+            };
+            const raceDefense =
+                defenses[race] || defenses.goblin;
+
+            return Math.floor(
+                (Number(monster.level) || 1) * 0.5
+            ) + raceDefense[damageType];
+        }
+
+        function removeMonsterIfDead(monster, xpMultiplier = 20) {
+
+            if (monster.hp > 0) {
+                return false;
+            }
+
+            player.value.xp +=
+                (Number(monster.level) || 1) * xpMultiplier;
+
+            monsters.value =
+                monsters.value.filter(
+                    item => item.id !== monster.id
+                );
+
+            if (
+                selectedTarget.value &&
+                selectedTarget.value.id === monster.id
+            ) {
+                selectedTarget.value = null;
+                stopAutoCombat();
+            }
+
+            checkLevelUp();
+            persistCharacter();
+
+            return true;
+        }
+
+        function damageMonster(
+            monster,
+            amount,
+            {
+                kind = 'damage',
+                damageType = 'physical',
+                ignoreMitigation = false,
+                xpMultiplier = 20
+            } = {}
+        ) {
+
+            if (!monster || monster.hp <= 0) {
+                return false;
+            }
+
+            const mitigation =
+                ignoreMitigation
+                    ? 0
+                    : getDamageMitigation(monster, damageType);
+            const damage = Math.max(
+                1,
+                Math.floor(amount) - mitigation
+            );
+
+            monster.hp = Math.max(
+                0,
+                monster.hp - damage
+            );
+
+            createFloatingText(
+                monster.x,
+                monster.y,
+                `-${damage}`,
+                kind
+            );
+
+            removeMonsterIfDead(monster, xpMultiplier);
+
+            return true;
+        }
+
+        function healPlayer(amount, kind = 'heal') {
+
+            const missingHp =
+                player.value.maxHp - player.value.hp;
+            const healed =
+                Math.min(missingHp, Math.floor(amount));
+
+            if (healed <= 0) {
+                createFloatingText(
+                    player.value.x,
+                    player.value.y,
+                    'Cheio',
+                    'heal'
+                );
+                return 0;
+            }
+
+            player.value.hp += healed;
+
+            createFloatingText(
+                player.value.x,
+                player.value.y,
+                `+${healed}`,
+                kind
+            );
+
+            return healed;
         }
 
         function playPlayerAttackAnimation() {
@@ -635,7 +1241,7 @@ export default {
                 return false;
             }
 
-            if (getDistanceToTarget(target) <= 1) {
+            if (getDistanceToTarget(target) <= getBasicAttackRange()) {
                 return true;
             }
 
@@ -809,8 +1415,41 @@ export default {
             monster.lastAttackAt = now;
             playMonsterAttackAnimation(monster);
 
-            const damage =
+            const monsterAccuracy = Math.min(
+                0.95,
+                0.72 + (Number(monster.level) || 1) * 0.015
+            );
+
+            if (Math.random() > monsterAccuracy) {
+                createFloatingText(
+                    player.value.x,
+                    player.value.y,
+                    'Miss',
+                    'miss'
+                );
+                return;
+            }
+
+            if (
+                Math.random() <
+                getPlayerEvasionChance() / 100
+            ) {
+                createFloatingText(
+                    player.value.x,
+                    player.value.y,
+                    'Dodge',
+                    'dodge'
+                );
+                return;
+            }
+
+            // Forca tambem funciona como armadura contra ataques de monstros.
+            const baseDamage =
                 monster.damage || monster.level * 4 || 5;
+            const damage = Math.max(
+                1,
+                baseDamage - getPlayerArmor()
+            );
 
             player.value.hp = Math.max(
                 0,
@@ -820,7 +1459,8 @@ export default {
             createFloatingText(
                 player.value.x,
                 player.value.y,
-                `-${damage}`
+                `-${damage}`,
+                'damage'
             );
 
             if (player.value.hp <= 0) {
@@ -828,10 +1468,19 @@ export default {
             }
         }
 
+        function clearRegenerationIntervals() {
+
+            regenerationIntervals.forEach(interval => {
+                clearInterval(interval);
+            });
+            regenerationIntervals.length = 0;
+        }
+
         function playerDeath() {
 
             // Respawn simples: volta ao ponto inicial com recursos cheios.
             stopAutoCombat();
+            clearRegenerationIntervals();
             pressedMovementKeys.clear();
             player.value.x = PLAYER_START_POSITION.x;
             player.value.y = PLAYER_START_POSITION.y;
@@ -900,7 +1549,8 @@ export default {
 
             if (
                 respectCooldown &&
-                now - player.value.lastAttackAt < PLAYER_ATTACK_COOLDOWN
+                now - player.value.lastAttackAt <
+                    getPlayerAttackCooldown()
             ) {
                 return false;
             }
@@ -919,9 +1569,18 @@ export default {
                 player.value.y - selectedTarget.value.y
             );
 
-            if (distanceX > 1 || distanceY > 1) {
+            if (
+                Math.max(distanceX, distanceY) >
+                getBasicAttackRange()
+            ) {
 
                 console.log('Target muito longe.');
+                createFloatingText(
+                    selectedTarget.value.x,
+                    selectedTarget.value.y,
+                    'Fora',
+                    'miss'
+                );
 
                 return false;
             }
@@ -935,13 +1594,34 @@ export default {
                     selectedTarget.value
                 );
 
+                if (result.outOfRange) {
+                    createFloatingText(
+                        selectedTarget.value.x,
+                        selectedTarget.value.y,
+                        'Fora',
+                        'miss'
+                    );
+                    return false;
+                }
+
                 selectedTarget.value.hp =
                     result.monster.hp;
 
                 createFloatingText(
                     selectedTarget.value.x,
                     selectedTarget.value.y,
-                    `-${result.damage}`
+                    result.dodged
+                        ? 'Dodge'
+                        : result.hit
+                            ? `-${result.damage}${result.critical ? '!' : ''}`
+                            : 'Miss',
+                    result.dodged
+                        ? 'dodge'
+                        : result.critical
+                            ? 'critical'
+                            : result.hit
+                                ? 'damage'
+                                : 'miss'
                 );
 
                 console.log(
@@ -983,7 +1663,10 @@ export default {
                 return;
             }
 
-            if (getDistanceToTarget(selectedTarget.value) > 1) {
+            if (
+                getDistanceToTarget(selectedTarget.value) >
+                getBasicAttackRange()
+            ) {
                 movePlayerTowardsTarget(selectedTarget.value);
                 return;
             }
@@ -1014,19 +1697,26 @@ export default {
 
         function checkLevelUp() {
 
-            const xpRequired =
-                player.value.level * 100;
+            let xpRequired =
+                getXpRequiredForNextLevel();
+            let leveledUp = false;
 
-            if (player.value.xp >= xpRequired) {
-
+            while (player.value.xp >= xpRequired) {
                 player.value.level++;
 
-                player.value.xp = 0;
+                player.value.xp -= xpRequired;
 
-                player.value.maxHp += 10;
+                // A cada level o jogador ganha pontos para distribuir.
+                player.value.attributePoints =
+                    getAvailableAttributePoints() +
+                    ATTRIBUTE_POINTS_PER_LEVEL;
+
+                leveledUp = true;
+                xpRequired = getXpRequiredForNextLevel();
+            }
+
+            if (leveledUp) {
                 player.value.hp = player.value.maxHp;
-
-                player.value.maxMana += 5;
                 player.value.mana = player.value.maxMana;
 
                 console.log('Subiste de level!');
@@ -1034,10 +1724,308 @@ export default {
             }
         }
 
-        function useSkill(key) {
-            console.log(
-                `Usaste a skill da tecla: ${key}`
+        function payAndStartSkill(skill) {
+
+            if (!skill || isSkillCoolingDown(skill)) {
+                return false;
+            }
+
+            if (!canPaySkillMana(skill)) {
+                createFloatingText(
+                    player.value.x,
+                    player.value.y,
+                    'Sem MP',
+                    'miss'
+                );
+                return false;
+            }
+
+            player.value.mana -= getSkillManaCost(skill);
+            markSkillUsed(skill);
+            playPlayerAttackAnimation();
+
+            return true;
+        }
+
+        function getTargetForSkill(skill) {
+
+            if (
+                !selectedTarget.value ||
+                selectedTarget.value.hp <= 0
+            ) {
+                createFloatingText(
+                    player.value.x,
+                    player.value.y,
+                    'Sem target',
+                    'miss'
+                );
+                return null;
+            }
+
+            if (
+                getDistanceToTarget(selectedTarget.value) >
+                skill.range
+            ) {
+                createFloatingText(
+                    selectedTarget.value.x,
+                    selectedTarget.value.y,
+                    'Fora',
+                    'miss'
+                );
+                return null;
+            }
+
+            return selectedTarget.value;
+        }
+
+        function castFireball(skill) {
+
+            const target = getTargetForSkill(skill);
+
+            if (!target || !payAndStartSkill(skill)) {
+                return;
+            }
+
+            const damage =
+                18 +
+                (Number(player.value.intelligence) || 0) * 2.7 +
+                (Number(player.value.level) || 1) * 2;
+
+            createSkillEffect(target.x, target.y, 'fireball');
+            damageMonster(target, damage, {
+                kind: 'magic',
+                damageType: 'magical',
+                xpMultiplier: 22
+            });
+            persistCharacter();
+        }
+
+        function castHeal(skill) {
+
+            if (player.value.hp >= player.value.maxHp) {
+                createFloatingText(
+                    player.value.x,
+                    player.value.y,
+                    'Cheio',
+                    'heal'
+                );
+                return;
+            }
+
+            if (!payAndStartSkill(skill)) {
+                return;
+            }
+
+            const healAmount =
+                24 +
+                (Number(player.value.intelligence) || 0) * 2.2 +
+                (Number(player.value.level) || 1) * 2;
+
+            createSkillEffect(player.value.x, player.value.y, 'heal');
+            healPlayer(healAmount);
+            persistCharacter();
+        }
+
+        function getDirectionVectorByFacing() {
+
+            const vectors = {
+                down: {
+                    x: 0,
+                    y: 1
+                },
+                up: {
+                    x: 0,
+                    y: -1
+                },
+                left: {
+                    x: -1,
+                    y: 0
+                },
+                right: {
+                    x: 1,
+                    y: 0
+                }
+            };
+
+            return vectors[player.value.direction] || vectors.down;
+        }
+
+        function castDash(skill) {
+
+            if (!payAndStartSkill(skill)) {
+                return;
+            }
+
+            const direction = getDirectionVectorByFacing();
+            let moved = false;
+
+            createSkillEffect(player.value.x, player.value.y, 'dash');
+
+            for (let step = 0; step < skill.range; step++) {
+                const nextX =
+                    player.value.x + direction.x;
+                const nextY =
+                    player.value.y + direction.y;
+
+                if (!canPlayerMoveTo(nextX, nextY)) {
+                    break;
+                }
+
+                player.value.x = nextX;
+                player.value.y = nextY;
+                moved = true;
+            }
+
+            if (!moved) {
+                createFloatingText(
+                    player.value.x,
+                    player.value.y,
+                    'Bloq',
+                    'miss'
+                );
+            }
+
+            createSkillEffect(player.value.x, player.value.y, 'dash');
+            updateCamera();
+            persistCharacter();
+        }
+
+        function castPowerStrike(skill) {
+
+            const target = getTargetForSkill(skill);
+
+            if (!target || !payAndStartSkill(skill)) {
+                return;
+            }
+
+            const damage =
+                22 +
+                (Number(player.value.strength) || 0) * 3.2 +
+                (Number(player.value.level) || 1) * 2;
+
+            createSkillEffect(target.x, target.y, 'power-strike');
+            damageMonster(target, damage, {
+                kind: 'critical',
+                damageType: 'physical',
+                xpMultiplier: 24
+            });
+            persistCharacter();
+        }
+
+        function castRegeneration(skill) {
+
+            if (!payAndStartSkill(skill)) {
+                return;
+            }
+
+            let ticks = 0;
+            const healPerTick =
+                7 +
+                Math.floor(
+                    (Number(player.value.intelligence) || 0) * 0.8
+                );
+
+            createSkillEffect(
+                player.value.x,
+                player.value.y,
+                'regeneration'
             );
+
+            const interval = setInterval(() => {
+                ticks++;
+                createSkillEffect(
+                    player.value.x,
+                    player.value.y,
+                    'regeneration',
+                    420
+                );
+                healPlayer(healPerTick, 'regeneration');
+                persistCharacter();
+
+                if (ticks >= 5 || player.value.hp <= 0) {
+                    clearInterval(interval);
+                    const index =
+                        regenerationIntervals.indexOf(interval);
+
+                    if (index !== -1) {
+                        regenerationIntervals.splice(index, 1);
+                    }
+                }
+            }, 1000);
+
+            regenerationIntervals.push(interval);
+            persistCharacter();
+        }
+
+        function castUltimate(skill) {
+
+            const origin =
+                selectedTarget.value &&
+                selectedTarget.value.hp > 0 &&
+                getDistanceToTarget(selectedTarget.value) <= skill.range
+                    ? selectedTarget.value
+                    : player.value;
+
+            if (!payAndStartSkill(skill)) {
+                return;
+            }
+
+            const damage =
+                42 +
+                (Number(player.value.strength) || 0) * 1.2 +
+                (Number(player.value.intelligence) || 0) * 2.4 +
+                (Number(player.value.dexterity) || 0) * 1.2 +
+                (Number(player.value.level) || 1) * 4;
+
+            createSkillEffect(origin.x, origin.y, 'ultimate', 820);
+
+            monsters.value
+                .filter(monster => monster.hp > 0)
+                .filter(monster =>
+                    Math.max(
+                        Math.abs(monster.x - origin.x),
+                        Math.abs(monster.y - origin.y)
+                    ) <= skill.radius
+                )
+                .forEach(monster => {
+                    damageMonster(monster, damage, {
+                        kind: 'critical',
+                        damageType: 'magical',
+                        ignoreMitigation: true,
+                        xpMultiplier: 28
+                    });
+                });
+
+            persistCharacter();
+        }
+
+        function useSkill(key) {
+
+            const skill = getSkillByKey(key);
+
+            if (!skill) {
+                return;
+            }
+
+            if (skill.id === 'basicAttack') {
+                startAutoCombat();
+                return;
+            }
+
+            const actions = {
+                fireball: castFireball,
+                heal: castHeal,
+                dash: castDash,
+                powerStrike: castPowerStrike,
+                regeneration: castRegeneration,
+                ultimate: castUltimate
+            };
+
+            const action = actions[skill.id];
+
+            if (action) {
+                action(skill);
+            }
         }
 
         function handleKeyDown(event) {
@@ -1132,13 +2120,14 @@ export default {
             );
 
             const character =
-                await getCharacter();
+                await getCharacter(props.characterId);
 
             player.value = {
                 ...player.value,
                 ...character,
                 maxHp: character.maxHp || character.hp || 100,
                 maxMana: character.maxMana || character.mana || 50,
+                attributePoints: character.attributePoints || 0,
                 direction: 'down',
                 moving: false,
                 attacking: false,
@@ -1164,6 +2153,7 @@ export default {
             }));
 
             startAnimationLoop();
+            startCombatClock();
             startPlayerMovementLoop();
 
             startMonsterAI();
@@ -1202,9 +2192,15 @@ export default {
                 clearInterval(autoCombatInterval);
             }
 
+            if (combatClockInterval) {
+                clearInterval(combatClockInterval);
+            }
+
             if (playerAttackTimeout) {
                 clearTimeout(playerAttackTimeout);
             }
+
+            clearRegenerationIntervals();
 
             monsters.value.forEach(monster => {
 
@@ -1232,6 +2228,8 @@ export default {
 
             floatingTexts,
 
+            skillEffects,
+
             camera,
 
             tileImages,
@@ -1246,6 +2244,30 @@ export default {
 
             getPlayerSprite,
             getMonsterSprite,
+            getAvailableAttributePoints,
+            getWeaponLabel,
+            getDamageTypeLabel,
+            getBasicAttackRange,
+            getPlayerArmor,
+            getPlayerCriticalChance,
+            getPlayerAccuracy,
+            getPlayerEvasionChance,
+            getPlayerMagicDamage,
+            getSkillCooldownReduction,
+            getPlayerAttackCooldown,
+            getPlayerHpPercent,
+            getPlayerManaPercent,
+            getPlayerXpPercent,
+            getXpRequiredForNextLevel,
+            getBasicAttackDamagePreview,
+            isSkillCoolingDown,
+            getSkillCooldownPercent,
+            getSkillCooldownText,
+            getSkillManaCost,
+            canPaySkillMana,
+            getDistanceToTarget,
+            spendAttributePoint,
+            useSkill,
 
             selectTarget
         };
