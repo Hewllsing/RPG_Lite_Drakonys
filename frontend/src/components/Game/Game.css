@@ -238,6 +238,31 @@
     image-rendering: pixelated;
 }
 
+.skill-cooldown {
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    bottom: 4px;
+    background: rgba(0, 0, 0, 0.62);
+    pointer-events: none;
+    transition: height 0.08s linear;
+    z-index: 2;
+}
+
+.skill-cooldown-text {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 12px;
+    z-index: 3;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+    text-shadow: 0 1px 2px black;
+    pointer-events: none;
+}
+
 .skill-key {
     position: absolute;
     bottom: -12px;
@@ -267,6 +292,20 @@
     font-weight: bold;
     pointer-events: none;
     animation: floatDamage 1s ease-out forwards;
+}
+
+.floating-text.critical {
+    color: #facc15;
+    font-size: 18px;
+    text-shadow: 0 1px 2px black;
+}
+
+.floating-text.miss {
+    color: #e5e7eb;
+}
+
+.floating-text.dodge {
+    color: #38bdf8;
 }
 
 @keyframes floatDamage {

@@ -95,6 +95,51 @@ const PLAYER_ATTACK_COOLDOWN = 900;
 const MIN_PLAYER_ATTACK_COOLDOWN = 450;
 const AUTO_COMBAT_INTERVAL = 180;
 const ATTRIBUTE_POINTS_PER_LEVEL = 3;
+const COMBAT_CLOCK_INTERVAL = 80;
+const WEAPON_PROFILES = {
+    warrior: {
+        weaponType: 'sword',
+        weaponLabel: 'Espada',
+        damageType: 'physical',
+        damageLabel: 'Fisico',
+        range: 1,
+        baseDamage: 6,
+        primaryAttribute: 'strength',
+        primaryScale: 2,
+        secondaryAttribute: 'dexterity',
+        secondaryScale: 0.4,
+        accuracyBonus: 0,
+        criticalBonus: 0
+    },
+    mage: {
+        weaponType: 'staff',
+        weaponLabel: 'Cajado',
+        damageType: 'magical',
+        damageLabel: 'Magico',
+        range: 3,
+        baseDamage: 5,
+        primaryAttribute: 'intelligence',
+        primaryScale: 2.2,
+        secondaryAttribute: 'dexterity',
+        secondaryScale: 0.25,
+        accuracyBonus: 2,
+        criticalBonus: 0
+    },
+    archer: {
+        weaponType: 'bow',
+        weaponLabel: 'Arco',
+        damageType: 'physical',
+        damageLabel: 'Fisico',
+        range: 4,
+        baseDamage: 4,
+        primaryAttribute: 'dexterity',
+        primaryScale: 1.7,
+        secondaryAttribute: 'strength',
+        secondaryScale: 0.8,
+        accuracyBonus: 5,
+        criticalBonus: 5
+    }
+};
 const ATTRIBUTE_GAIN_BY_POINT = {
     strength: {
         maxHp: 5
@@ -162,6 +207,7 @@ export default {
             maxHp: 100,
             mana: 50,
             maxMana: 50,
+            characterClass: 'warrior',
             strength: 5,
             intelligence: 5,
             dexterity: 5,
@@ -178,11 +224,13 @@ export default {
         const selectedTarget = ref(null);
 
         const floatingTexts = ref([]);
+        const combatClock = ref(Date.now());
 
         let animationInterval = null;
         let monsterAIInterval = null;
         let playerMovementInterval = null;
         let autoCombatInterval = null;
+        let combatClockInterval = null;
         let playerAttackTimeout = null;
         let playerAttackInProgress = false;
         const pressedMovementKeys = new Set();
@@ -383,18 +431,49 @@ export default {
             return Number(player.value.attributePoints) || 0;
         }
 
+        function getCharacterClass() {
+
+            return player.value.characterClass || 'warrior';
+        }
+
+        function getWeaponProfile() {
+
+            return (
+                WEAPON_PROFILES[getCharacterClass()] ||
+                WEAPON_PROFILES.warrior
+            );
+        }
+
+        function getWeaponLabel() {
+
+            return getWeaponProfile().weaponLabel;
+        }
+
+        function getDamageTypeLabel() {
+
+            return getWeaponProfile().damageLabel;
+        }
+
+        function getBasicAttackRange() {
+
+            return getWeaponProfile().range;
+        }
+
         function getPlayerArmor() {
 
             return Math.floor(
-                (Number(player.value.strength) || 0) * 0.5
+                (Number(player.value.strength) || 0) * 0.55 +
+                    (Number(player.value.level) || 1) * 0.4
             );
         }
 
         function getPlayerCriticalChance() {
 
             return Math.min(
-                40,
-                (Number(player.value.dexterity) || 0) * 2
+                45,
+                4 +
+                    (Number(player.value.dexterity) || 0) * 1.5 +
+                    getWeaponProfile().criticalBonus
             );
         }
 
@@ -402,7 +481,10 @@ export default {
 
             return Math.min(
                 98,
-                82 + (Number(player.value.dexterity) || 0)
+                76 +
+                    (Number(player.value.dexterity) || 0) * 1.2 +
+                    (Number(player.value.level) || 1) * 0.3 +
+                    getWeaponProfile().accuracyBonus
             );
         }
 
@@ -411,7 +493,9 @@ export default {
             return Math.min(
                 35,
                 Math.floor(
-                    (Number(player.value.dexterity) || 0) * 1.5
+                    3 +
+                        (Number(player.value.dexterity) || 0) * 1.4 +
+                        (Number(player.value.level) || 1) * 0.2
                 )
             );
         }
@@ -436,6 +520,84 @@ export default {
                 PLAYER_ATTACK_COOLDOWN -
                     (Number(player.value.dexterity) || 0) * 20
             );
+        }
+
+        function getBasicAttackDamagePreview() {
+
+            const profile = getWeaponProfile();
+            const primaryValue =
+                Number(player.value[profile.primaryAttribute]) || 0;
+            const secondaryValue =
+                Number(player.value[profile.secondaryAttribute]) || 0;
+            const baseDamage = Math.floor(
+                profile.baseDamage +
+                    primaryValue * profile.primaryScale +
+                    secondaryValue * profile.secondaryScale +
+                    (Number(player.value.level) || 1)
+            );
+            const criticalDamage =
+                Math.floor(baseDamage * 1.5);
+
+            return `${baseDamage}-${criticalDamage}`;
+        }
+
+        function getBasicAttackCooldownPercent() {
+
+            const cooldown = getPlayerAttackCooldown();
+            const lastAttackAt = player.value.lastAttackAt || 0;
+
+            if (!lastAttackAt) {
+                return 0;
+            }
+
+            const elapsed =
+                combatClock.value - lastAttackAt;
+
+            if (elapsed >= cooldown) {
+                return 0;
+            }
+
+            return Math.ceil(
+                ((cooldown - elapsed) / cooldown) * 100
+            );
+        }
+
+        function getBasicAttackCooldownText() {
+
+            const cooldown = getPlayerAttackCooldown();
+            const lastAttackAt = player.value.lastAttackAt || 0;
+            const remaining = Math.max(
+                0,
+                cooldown - (combatClock.value - lastAttackAt)
+            );
+
+            return (remaining / 1000).toFixed(1);
+        }
+
+        function isSkillCoolingDown(skill) {
+
+            return (
+                skill.key === '1' &&
+                getBasicAttackCooldownPercent() > 0
+            );
+        }
+
+        function getSkillCooldownPercent(skill) {
+
+            if (skill.key !== '1') {
+                return 0;
+            }
+
+            return getBasicAttackCooldownPercent();
+        }
+
+        function getSkillCooldownText(skill) {
+
+            if (skill.key !== '1') {
+                return '';
+            }
+
+            return getBasicAttackCooldownText();
         }
 
         function spendAttributePoint(attribute) {
@@ -499,6 +661,17 @@ export default {
                 });
 
             }, 180);
+        }
+
+        function startCombatClock() {
+
+            if (combatClockInterval) {
+                return;
+            }
+
+            combatClockInterval = setInterval(() => {
+                combatClock.value = Date.now();
+            }, COMBAT_CLOCK_INTERVAL);
         }
 
         function updatePlayerDirection(dx, dy) {
@@ -641,7 +814,7 @@ export default {
             }
         }
 
-        function createFloatingText(x, y, text) {
+        function createFloatingText(x, y, text, kind = 'damage') {
 
             const id =
                 `${Date.now()}-${Math.random()}`;
@@ -650,7 +823,8 @@ export default {
                 id,
                 x,
                 y,
-                text
+                text,
+                kind
             });
 
             setTimeout(() => {
@@ -746,7 +920,7 @@ export default {
                 return false;
             }
 
-            if (getDistanceToTarget(target) <= 1) {
+            if (getDistanceToTarget(target) <= getBasicAttackRange()) {
                 return true;
             }
 
@@ -920,6 +1094,21 @@ export default {
             monster.lastAttackAt = now;
             playMonsterAttackAnimation(monster);
 
+            const monsterAccuracy = Math.min(
+                0.95,
+                0.72 + (Number(monster.level) || 1) * 0.015
+            );
+
+            if (Math.random() > monsterAccuracy) {
+                createFloatingText(
+                    player.value.x,
+                    player.value.y,
+                    'Miss',
+                    'miss'
+                );
+                return;
+            }
+
             if (
                 Math.random() <
                 getPlayerEvasionChance() / 100
@@ -927,7 +1116,8 @@ export default {
                 createFloatingText(
                     player.value.x,
                     player.value.y,
-                    'Evadiu'
+                    'Dodge',
+                    'dodge'
                 );
                 return;
             }
@@ -948,7 +1138,8 @@ export default {
             createFloatingText(
                 player.value.x,
                 player.value.y,
-                `-${damage}`
+                `-${damage}`,
+                'damage'
             );
 
             if (player.value.hp <= 0) {
@@ -1048,9 +1239,18 @@ export default {
                 player.value.y - selectedTarget.value.y
             );
 
-            if (distanceX > 1 || distanceY > 1) {
+            if (
+                Math.max(distanceX, distanceY) >
+                getBasicAttackRange()
+            ) {
 
                 console.log('Target muito longe.');
+                createFloatingText(
+                    selectedTarget.value.x,
+                    selectedTarget.value.y,
+                    'Fora',
+                    'miss'
+                );
 
                 return false;
             }
@@ -1064,15 +1264,34 @@ export default {
                     selectedTarget.value
                 );
 
+                if (result.outOfRange) {
+                    createFloatingText(
+                        selectedTarget.value.x,
+                        selectedTarget.value.y,
+                        'Fora',
+                        'miss'
+                    );
+                    return false;
+                }
+
                 selectedTarget.value.hp =
                     result.monster.hp;
 
                 createFloatingText(
                     selectedTarget.value.x,
                     selectedTarget.value.y,
-                    result.hit
-                        ? `-${result.damage}${result.critical ? '!' : ''}`
-                        : 'Miss'
+                    result.dodged
+                        ? 'Dodge'
+                        : result.hit
+                            ? `-${result.damage}${result.critical ? '!' : ''}`
+                            : 'Miss',
+                    result.dodged
+                        ? 'dodge'
+                        : result.critical
+                            ? 'critical'
+                            : result.hit
+                                ? 'damage'
+                                : 'miss'
                 );
 
                 console.log(
@@ -1114,7 +1333,10 @@ export default {
                 return;
             }
 
-            if (getDistanceToTarget(selectedTarget.value) > 1) {
+            if (
+                getDistanceToTarget(selectedTarget.value) >
+                getBasicAttackRange()
+            ) {
                 movePlayerTowardsTarget(selectedTarget.value);
                 return;
             }
@@ -1303,6 +1525,7 @@ export default {
             }));
 
             startAnimationLoop();
+            startCombatClock();
             startPlayerMovementLoop();
 
             startMonsterAI();
@@ -1339,6 +1562,10 @@ export default {
 
             if (autoCombatInterval) {
                 clearInterval(autoCombatInterval);
+            }
+
+            if (combatClockInterval) {
+                clearInterval(combatClockInterval);
             }
 
             if (playerAttackTimeout) {
@@ -1386,6 +1613,9 @@ export default {
             getPlayerSprite,
             getMonsterSprite,
             getAvailableAttributePoints,
+            getWeaponLabel,
+            getDamageTypeLabel,
+            getBasicAttackRange,
             getPlayerArmor,
             getPlayerCriticalChance,
             getPlayerAccuracy,
@@ -1393,6 +1623,11 @@ export default {
             getPlayerMagicDamage,
             getSkillCooldownReduction,
             getPlayerAttackCooldown,
+            getBasicAttackDamagePreview,
+            isSkillCoolingDown,
+            getSkillCooldownPercent,
+            getSkillCooldownText,
+            getDistanceToTarget,
             spendAttributePoint,
 
             selectTarget
