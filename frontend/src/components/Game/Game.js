@@ -99,6 +99,8 @@ const MIN_PLAYER_ATTACK_COOLDOWN = 450;
 const AUTO_COMBAT_INTERVAL = 180;
 const ATTRIBUTE_POINTS_PER_LEVEL = 3;
 const COMBAT_CLOCK_INTERVAL = 80;
+const LOOT_LOG_LIMIT = 6;
+const MONSTER_AI_INTERVAL = 420;
 const WEAPON_PROFILES = {
     warrior: {
         weaponType: 'sword',
@@ -273,6 +275,7 @@ export default {
             maxHp: 100,
             mana: 50,
             maxMana: 50,
+            gold: 0,
             characterClass: 'warrior',
             strength: 5,
             intelligence: 5,
@@ -290,6 +293,7 @@ export default {
         const selectedTarget = ref(null);
 
         const floatingTexts = ref([]);
+        const lootLog = ref([]);
         const skillEffects = ref([]);
         const combatClock = ref(Date.now());
 
@@ -1024,6 +1028,67 @@ export default {
             }, duration);
         }
 
+        function addLootEntry(text) {
+
+            lootLog.value = [
+                {
+                    id: `${Date.now()}-${Math.random()}`,
+                    text
+                },
+                ...lootLog.value
+            ].slice(0, LOOT_LOG_LIMIT);
+        }
+
+        function grantMonsterLoot(monster) {
+
+            const goldMin =
+                Number(monster.lootGoldMin) || 0;
+            const goldMax = Math.max(
+                goldMin,
+                Number(monster.lootGoldMax) || 0
+            );
+            const itemChance =
+                Number(monster.lootItemChance) || 0;
+            const itemName =
+                monster.lootItemName?.trim();
+            const lootMessages = [];
+
+            if (goldMax > 0) {
+                const gold =
+                    goldMin +
+                    Math.floor(
+                        Math.random() *
+                            (goldMax - goldMin + 1)
+                    );
+
+                if (gold > 0) {
+                    player.value.gold =
+                        (Number(player.value.gold) || 0) +
+                        gold;
+                    lootMessages.push(
+                        `${monster.name} deixou ${gold} gold`
+                    );
+                    createFloatingText(
+                        monster.x,
+                        monster.y,
+                        `+${gold}g`,
+                        'loot'
+                    );
+                }
+            }
+
+            if (
+                itemName &&
+                Math.random() * 100 < itemChance
+            ) {
+                lootMessages.push(
+                    `${monster.name} deixou ${itemName}`
+                );
+            }
+
+            lootMessages.forEach(addLootEntry);
+        }
+
         function getDamageMitigation(monster, damageType) {
 
             const race =
@@ -1066,6 +1131,7 @@ export default {
                 return false;
             }
 
+            grantMonsterLoot(monster);
             player.value.xp +=
                 (Number(monster.level) || 1) * xpMultiplier;
 
@@ -1102,6 +1168,8 @@ export default {
             if (!monster || monster.hp <= 0) {
                 return false;
             }
+
+            engageMonster(monster);
 
             const mitigation =
                 ignoreMitigation
@@ -1202,17 +1270,27 @@ export default {
             }, 260);
         }
 
+        function getTileDistance(
+            fromX,
+            fromY,
+            toX,
+            toY
+        ) {
+
+            return Math.max(
+                Math.abs(fromX - toX),
+                Math.abs(fromY - toY)
+            );
+        }
+
         function getDistanceToPlayer(monster) {
 
-            const distanceX = Math.abs(
-                player.value.x - monster.x
+            return getTileDistance(
+                player.value.x,
+                player.value.y,
+                monster.x,
+                monster.y
             );
-
-            const distanceY = Math.abs(
-                player.value.y - monster.y
-            );
-
-            return Math.max(distanceX, distanceY);
         }
 
         function getDistanceToTarget(target) {
@@ -1221,10 +1299,42 @@ export default {
                 return Infinity;
             }
 
-            return Math.max(
-                Math.abs(player.value.x - target.x),
-                Math.abs(player.value.y - target.y)
+            return getTileDistance(
+                player.value.x,
+                player.value.y,
+                target.x,
+                target.y
             );
+        }
+
+        function getDistanceToSpawn(monster) {
+
+            return getTileDistance(
+                monster.x,
+                monster.y,
+                monster.spawnX,
+                monster.spawnY
+            );
+        }
+
+        function getMonsterPreferredRange(monster) {
+
+            const preferredRange = Math.max(
+                1,
+                Number(monster.preferredRange) || 1
+            );
+
+            return Math.min(
+                Math.max(
+                    1,
+                    Number(monster.attackRange) || 1
+                ),
+                preferredRange
+            );
+        }
+
+        function createTileKey(x, y) {
+            return `${x},${y}`;
         }
 
         function stopAutoCombat() {
@@ -1312,7 +1422,14 @@ export default {
             );
         }
 
-        function canMonsterMoveTo(x, y) {
+        function canMonsterMoveTo(
+            x,
+            y,
+            movingMonsterId,
+            {
+                ignorePlayer = false
+            } = {}
+        ) {
 
             if (
                 x < 0 ||
@@ -1330,6 +1447,7 @@ export default {
             }
 
             if (
+                !ignorePlayer &&
                 x === player.value.x &&
                 y === player.value.y
             ) {
@@ -1338,66 +1456,345 @@ export default {
 
             return !monsters.value.some(
                 monster =>
+                    monster.id !== movingMonsterId &&
+                    monster.hp > 0 &&
                     monster.x === x &&
                     monster.y === y
             );
         }
 
-        function moveMonsterTowardsPlayer(monster) {
+        function getOrderedMonsterSteps(
+            fromX,
+            fromY,
+            targetX,
+            targetY
+        ) {
 
-            const deltaX = player.value.x - monster.x;
-            const deltaY = player.value.y - monster.y;
+            return [
+                {
+                    x: 1,
+                    y: 0
+                },
+                {
+                    x: -1,
+                    y: 0
+                },
+                {
+                    x: 0,
+                    y: 1
+                },
+                {
+                    x: 0,
+                    y: -1
+                }
+            ].sort((left, right) => {
 
-            const horizontalStep = {
-                x: deltaX === 0
-                    ? 0
-                    : deltaX > 0
-                        ? 1
-                        : -1,
-                y: 0
-            };
+                const leftDistance =
+                    getTileDistance(
+                        fromX + left.x,
+                        fromY + left.y,
+                        targetX,
+                        targetY
+                    );
+                const rightDistance =
+                    getTileDistance(
+                        fromX + right.x,
+                        fromY + right.y,
+                        targetX,
+                        targetY
+                    );
 
-            const verticalStep = {
-                x: 0,
-                y: deltaY === 0
-                    ? 0
-                    : deltaY > 0
-                        ? 1
-                        : -1
-            };
+                return leftDistance - rightDistance;
+            });
+        }
 
-            const steps =
-                Math.abs(deltaX) >= Math.abs(deltaY)
-                    ? [
-                        horizontalStep,
-                        verticalStep
-                    ]
-                    : [
-                        verticalStep,
-                        horizontalStep
-                    ];
+        function moveMonsterByStep(monster, step) {
 
-            const nextStep = steps.find(step => {
+            if (!step) {
+                return false;
+            }
 
-                if (step.x === 0 && step.y === 0) {
-                    return false;
+            monster.x += step.x;
+            monster.y += step.y;
+            monster.moving = true;
+            stopMonsterMovementAnimation(monster);
+
+            return true;
+        }
+
+        function findMonsterPathStep(
+            monster,
+            targetX,
+            targetY,
+            desiredDistance = 1
+        ) {
+
+            if (
+                getTileDistance(
+                    monster.x,
+                    monster.y,
+                    targetX,
+                    targetY
+                ) <= desiredDistance
+            ) {
+                return null;
+            }
+
+            const queue = [
+                {
+                    x: monster.x,
+                    y: monster.y
+                }
+            ];
+            const visited = new Set([
+                createTileKey(monster.x, monster.y)
+            ]);
+            const parents = new Map();
+            let destination = null;
+
+            while (queue.length > 0) {
+                const current = queue.shift();
+
+                if (
+                    !(
+                        current.x === monster.x &&
+                        current.y === monster.y
+                    ) &&
+                    getTileDistance(
+                        current.x,
+                        current.y,
+                        targetX,
+                        targetY
+                    ) <= desiredDistance
+                ) {
+                    destination = current;
+                    break;
                 }
 
-                return canMonsterMoveTo(
-                    monster.x + step.x,
-                    monster.y + step.y
-                );
-            });
+                getOrderedMonsterSteps(
+                    current.x,
+                    current.y,
+                    targetX,
+                    targetY
+                ).forEach(step => {
 
-            if (!nextStep) {
+                    const nextX = current.x + step.x;
+                    const nextY = current.y + step.y;
+                    const nextKey =
+                        createTileKey(nextX, nextY);
+
+                    if (
+                        visited.has(nextKey) ||
+                        !canMonsterMoveTo(
+                            nextX,
+                            nextY,
+                            monster.id
+                        )
+                    ) {
+                        return;
+                    }
+
+                    visited.add(nextKey);
+                    parents.set(nextKey, current);
+                    queue.push({
+                        x: nextX,
+                        y: nextY
+                    });
+                });
+            }
+
+            if (!destination) {
+                return null;
+            }
+
+            let currentStep = destination;
+            let parent =
+                parents.get(
+                    createTileKey(
+                        destination.x,
+                        destination.y
+                    )
+                );
+
+            while (
+                parent &&
+                !(
+                    parent.x === monster.x &&
+                    parent.y === monster.y
+                )
+            ) {
+                currentStep = parent;
+                parent = parents.get(
+                    createTileKey(
+                        parent.x,
+                        parent.y
+                    )
+                );
+            }
+
+            return {
+                x: currentStep.x - monster.x,
+                y: currentStep.y - monster.y
+            };
+        }
+
+        function moveMonsterTowardsGoal(
+            monster,
+            targetX,
+            targetY,
+            desiredDistance = 1
+        ) {
+
+            const step = findMonsterPathStep(
+                monster,
+                targetX,
+                targetY,
+                desiredDistance
+            );
+
+            if (!step) {
+                return false;
+            }
+
+            return moveMonsterByStep(monster, step);
+        }
+
+        function moveMonsterAwayFromPlayer(monster) {
+
+            const currentDistance =
+                getDistanceToPlayer(monster);
+            const bestStep = [
+                {
+                    x: 1,
+                    y: 0
+                },
+                {
+                    x: -1,
+                    y: 0
+                },
+                {
+                    x: 0,
+                    y: 1
+                },
+                {
+                    x: 0,
+                    y: -1
+                }
+            ]
+                .filter(step =>
+                    canMonsterMoveTo(
+                        monster.x + step.x,
+                        monster.y + step.y,
+                        monster.id
+                    )
+                )
+                .sort((left, right) => {
+
+                    const leftDistance =
+                        getTileDistance(
+                            monster.x + left.x,
+                            monster.y + left.y,
+                            player.value.x,
+                            player.value.y
+                        );
+                    const rightDistance =
+                        getTileDistance(
+                            monster.x + right.x,
+                            monster.y + right.y,
+                            player.value.x,
+                            player.value.y
+                        );
+
+                    return rightDistance - leftDistance;
+                })[0];
+
+            if (!bestStep) {
+                return false;
+            }
+
+            const nextDistance =
+                getTileDistance(
+                    monster.x + bestStep.x,
+                    monster.y + bestStep.y,
+                    player.value.x,
+                    player.value.y
+                );
+
+            if (nextDistance <= currentDistance) {
+                return false;
+            }
+
+            return moveMonsterByStep(monster, bestStep);
+        }
+
+        function moveMonsterToSpawn(monster) {
+
+            if (getDistanceToSpawn(monster) === 0) {
+                monster.returningHome = false;
+                monster.moving = false;
+                return false;
+            }
+
+            const moved =
+                moveMonsterTowardsGoal(
+                    monster,
+                    monster.spawnX,
+                    monster.spawnY,
+                    0
+                );
+
+            if (!moved) {
+                monster.returningHome = false;
+            }
+
+            return moved;
+        }
+
+        function engageMonster(monster) {
+
+            if (!monster || monster.hp <= 0) {
                 return;
             }
 
-            monster.x += nextStep.x;
-            monster.y += nextStep.y;
-            monster.moving = true;
+            monster.isAggro = true;
+            monster.returningHome = false;
+            monster.lastKnownPlayerX =
+                player.value.x;
+            monster.lastKnownPlayerY =
+                player.value.y;
 
-            stopMonsterMovementAnimation(monster);
+            monsters.value.forEach(otherMonster => {
+
+                if (
+                    otherMonster.id === monster.id ||
+                    otherMonster.hp <= 0
+                ) {
+                    return;
+                }
+
+                const assistRange = Math.max(
+                    0,
+                    Number(otherMonster.assistRange) || 0
+                );
+
+                if (
+                    getTileDistance(
+                        otherMonster.x,
+                        otherMonster.y,
+                        monster.x,
+                        monster.y
+                    ) > assistRange
+                ) {
+                    return;
+                }
+
+                otherMonster.isAggro = true;
+                otherMonster.returningHome = false;
+                otherMonster.lastKnownPlayerX =
+                    player.value.x;
+                otherMonster.lastKnownPlayerY =
+                    player.value.y;
+            });
         }
 
         function attackPlayer(monster) {
@@ -1414,6 +1811,16 @@ export default {
 
             monster.lastAttackAt = now;
             playMonsterAttackAnimation(monster);
+
+            if (monster.attackStyle === 'ranged') {
+                createSkillEffect(
+                    player.value.x,
+                    player.value.y,
+                    monster.projectileKind ||
+                        'monster-ranged',
+                    360
+                );
+            }
 
             const monsterAccuracy = Math.min(
                 0.95,
@@ -1494,6 +1901,8 @@ export default {
 
             monsters.value.forEach(monster => {
                 monster.lastAttackAt = Date.now();
+                monster.isAggro = false;
+                monster.returningHome = true;
             });
 
             updateCamera();
@@ -1520,9 +1929,45 @@ export default {
                         monster.agroRange || 5;
                     const attackRange =
                         monster.attackRange || 1;
+                    const leashRange = Math.max(
+                        agroRange + 2,
+                        monster.leashRange || 8
+                    );
+                    const preferredRange =
+                        getMonsterPreferredRange(monster);
+                    const inAgroRange =
+                        distance <= agroRange;
 
-                    // O monstro so reage quando o player entra no raio de agro.
-                    if (distance > agroRange) {
+                    if (inAgroRange) {
+                        engageMonster(monster);
+                    }
+
+                    if (
+                        monster.isAggro &&
+                        (
+                            distance > leashRange ||
+                            getDistanceToSpawn(monster) >
+                                leashRange
+                        )
+                    ) {
+                        monster.isAggro = false;
+                        monster.returningHome = true;
+                    }
+
+                    if (monster.returningHome) {
+                        moveMonsterToSpawn(monster);
+                        return;
+                    }
+
+                    if (!monster.isAggro) {
+                        return;
+                    }
+
+                    if (
+                        monster.attackStyle === 'ranged' &&
+                        distance < preferredRange &&
+                        moveMonsterAwayFromPlayer(monster)
+                    ) {
                         return;
                     }
 
@@ -1531,10 +1976,15 @@ export default {
                         return;
                     }
 
-                    moveMonsterTowardsPlayer(monster);
+                    moveMonsterTowardsGoal(
+                        monster,
+                        player.value.x,
+                        player.value.y,
+                        preferredRange
+                    );
                 });
 
-            }, 600);
+            }, MONSTER_AI_INTERVAL);
         }
 
         async function basicAttack({
@@ -1560,6 +2010,8 @@ export default {
             if (!selectedTarget.value) {
                 return false;
             }
+
+            engageMonster(selectedTarget.value);
 
             const distanceX = Math.abs(
                 player.value.x - selectedTarget.value.x
@@ -1634,6 +2086,7 @@ export default {
                         `Mataste ${selectedTarget.value.name}`
                     );
 
+                    grantMonsterLoot(selectedTarget.value);
                     player.value.xp += result.xpGained;
 
                     monsters.value =
@@ -2146,7 +2599,38 @@ export default {
                 attackRange: monster.attackRange || 1,
                 attackCooldown:
                     monster.attackCooldown || 1600,
+                attackStyle:
+                    monster.attackStyle ||
+                    (
+                        (monster.attackRange || 1) > 1
+                            ? 'ranged'
+                            : 'melee'
+                    ),
+                preferredRange: Math.max(
+                    1,
+                    monster.preferredRange ||
+                        Math.max(
+                            1,
+                            (monster.attackRange || 1) - 1
+                        )
+                ),
+                assistRange: monster.assistRange || 2,
+                leashRange:
+                    monster.leashRange ||
+                    (monster.agroRange || 5) + 3,
+                projectileKind:
+                    monster.projectileKind ||
+                    'monster-ranged',
+                lootGoldMin: monster.lootGoldMin || 0,
+                lootGoldMax: monster.lootGoldMax || 0,
+                lootItemName: monster.lootItemName || '',
+                lootItemChance:
+                    Number(monster.lootItemChance) || 0,
+                spawnX: monster.spawnX ?? monster.x,
+                spawnY: monster.spawnY ?? monster.y,
                 lastAttackAt: monster.lastAttackAt || 0,
+                isAggro: false,
+                returningHome: false,
                 moving: false,
                 attacking: false,
                 animationFrame: 0
@@ -2227,6 +2711,8 @@ export default {
             selectedTarget,
 
             floatingTexts,
+
+            lootLog,
 
             skillEffects,
 

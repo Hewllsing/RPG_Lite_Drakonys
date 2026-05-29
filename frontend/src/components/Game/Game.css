@@ -198,6 +198,48 @@
     border-radius: 8px;
 }
 
+.loot-frame {
+    width: 260px;
+    background: #18181b;
+    border: 2px solid #3f3f46;
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.loot-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.loot-header h3 {
+    margin: 0;
+}
+
+.loot-header span {
+    color: #facc15;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.loot-list {
+    margin: 0;
+    padding-left: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: #e4e4e7;
+    font-size: 12px;
+}
+
+.loot-frame p {
+    margin: 0;
+    color: #a1a1aa;
+    font-size: 12px;
+}
+
 .attributes-frame {
     width: 260px;
     background: #18181b;
@@ -399,6 +441,10 @@
     color: #22c55e;
 }
 
+.floating-text.loot {
+    color: #facc15;
+}
+
 .floating-text.magic {
     color: #fb923c;
 }
@@ -446,6 +492,27 @@
     background: rgba(168, 85, 247, 0.24);
     border: 3px solid #a855f7;
     animation: skillPulse 0.82s ease-out forwards;
+}
+
+.skill-effect.monster-ranged,
+.skill-effect.monster-arrow,
+.skill-effect.monster-shadow {
+    animation: skillPulse 0.36s ease-out forwards;
+}
+
+.skill-effect.monster-ranged {
+    background: rgba(248, 250, 252, 0.22);
+    border: 2px solid #e5e7eb;
+}
+
+.skill-effect.monster-arrow {
+    background: rgba(56, 189, 248, 0.22);
+    border: 2px solid #38bdf8;
+}
+
+.skill-effect.monster-shadow {
+    background: rgba(168, 85, 247, 0.24);
+    border: 2px solid #a855f7;
 }
 
 @keyframes skillPulse {

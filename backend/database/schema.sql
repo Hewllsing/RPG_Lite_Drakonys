@@ -71,6 +71,15 @@ CREATE TABLE IF NOT EXISTS monster_templates (
   agro_range INT NOT NULL,
   attack_range INT NOT NULL,
   attack_cooldown INT NOT NULL,
+  attack_style VARCHAR(20) NOT NULL DEFAULT 'melee',
+  preferred_range INT NOT NULL DEFAULT 1,
+  assist_range INT NOT NULL DEFAULT 2,
+  leash_range INT NOT NULL DEFAULT 9,
+  projectile_kind VARCHAR(30) NULL DEFAULT NULL,
+  loot_gold_min INT NOT NULL DEFAULT 0,
+  loot_gold_max INT NOT NULL DEFAULT 0,
+  loot_item_name VARCHAR(80) NULL DEFAULT NULL,
+  loot_item_chance DECIMAL(5,2) NOT NULL DEFAULT 0,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id)
 );

@@ -241,6 +241,38 @@
 
       </div>
 
+      <div class="loot-frame">
+
+        <div class="loot-header">
+
+          <h3>Loot</h3>
+
+          <span>
+            {{ player.gold || 0 }} gold
+          </span>
+
+        </div>
+
+        <ul
+          v-if="lootLog.length > 0"
+          class="loot-list"
+        >
+
+          <li
+            v-for="entry in lootLog"
+            :key="entry.id"
+          >
+            {{ entry.text }}
+          </li>
+
+        </ul>
+
+        <p v-else>
+          Nenhum loot ainda.
+        </p>
+
+      </div>
+
       <!-- ATRIBUTOS -->
 
       <div class="attributes-frame">
