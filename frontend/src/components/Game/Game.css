@@ -103,8 +103,8 @@
 }
 
 .game-viewport {
-    width: 800px;
-    height: 600px;
+    width: 880px;
+    height: 640px;
     overflow: hidden;
     border: 2px solid #95733a;
     border-radius: 8px;
@@ -150,16 +150,16 @@
 .monster-wrapper,
 .npc-wrapper,
 .portal-wrapper {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
 }
 
 .player,
 .monster,
 .npc,
 .portal {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     display: block;
 }
 
@@ -190,7 +190,7 @@
 .entity-name {
     position: absolute;
     left: 50%;
-    bottom: 68px;
+    bottom: 72px;
     transform: translateX(-50%);
     max-width: 96px;
     padding: 1px 5px;
@@ -219,9 +219,9 @@
 
 .player-overhead-bars {
     position: absolute;
-    left: 3px;
+    left: 4px;
     top: -20px;
-    width: 34px;
+    width: 36px;
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -235,7 +235,7 @@
 }
 
 .player-overhead-bar {
-    width: 34px;
+    width: 36px;
     height: 4px;
 }
 
@@ -265,9 +265,9 @@
 
 .monster-hp-container {
     position: absolute;
-    left: 3px;
+    left: 4px;
     top: -15px;
-    width: 34px;
+    width: 36px;
     height: 5px;
     z-index: 14;
 }
@@ -312,16 +312,16 @@
 }
 
 .skill-effect {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     z-index: 16;
     pointer-events: none;
     animation: skillPulse 0.56s ease-out forwards;
 }
 
 .skill-effect img {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     object-fit: cover;
 }
 
@@ -832,7 +832,7 @@
     }
 
     .game-viewport {
-        width: min(800px, calc(100vw - 36px));
+        width: min(880px, calc(100vw - 36px));
     }
 
     .player-ui,

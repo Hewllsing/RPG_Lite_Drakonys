@@ -42,6 +42,8 @@ import { SKILL_DEFINITIONS } from '../../data/skills';
 
 const MAP_WIDTH = 20;
 const MAP_HEIGHT = 15;
+const VIEWPORT_WIDTH = 880;
+const VIEWPORT_HEIGHT = 640;
 const PLAYER_START_POSITION = {
     x: 5,
     y: 5
@@ -118,7 +120,7 @@ export default {
 
     setup(props) {
 
-        const tileSize = 40;
+        const tileSize = 44;
 
         const player = ref({
             name: 'Hero',
@@ -263,10 +265,10 @@ export default {
         function updateCamera() {
 
             camera.value.x =
-                player.value.x * tileSize - 400;
+                player.value.x * tileSize - VIEWPORT_WIDTH / 2;
 
             camera.value.y =
-                player.value.y * tileSize - 300;
+                player.value.y * tileSize - VIEWPORT_HEIGHT / 2;
 
             if (camera.value.x < 0) {
                 camera.value.x = 0;
