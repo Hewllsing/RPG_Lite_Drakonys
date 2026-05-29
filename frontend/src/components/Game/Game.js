@@ -92,7 +92,18 @@ const BLOCKED_TILES = [
 ];
 const PLAYER_MOVE_INTERVAL = 170;
 const PLAYER_ATTACK_COOLDOWN = 900;
+const MIN_PLAYER_ATTACK_COOLDOWN = 450;
 const AUTO_COMBAT_INTERVAL = 180;
+const ATTRIBUTE_POINTS_PER_LEVEL = 3;
+const ATTRIBUTE_GAIN_BY_POINT = {
+    strength: {
+        maxHp: 5
+    },
+    intelligence: {
+        maxMana: 8
+    },
+    dexterity: {}
+};
 
 const gameMap = [
 
@@ -154,6 +165,7 @@ export default {
             strength: 5,
             intelligence: 5,
             dexterity: 5,
+            attributePoints: 0,
             direction: 'down',
             moving: false,
             attacking: false,
@@ -364,6 +376,98 @@ export default {
             saveCharacter(props.characterId, player.value).catch(() => {
                 console.log('Nao foi possivel guardar o personagem.');
             });
+        }
+
+        function getAvailableAttributePoints() {
+
+            return Number(player.value.attributePoints) || 0;
+        }
+
+        function getPlayerArmor() {
+
+            return Math.floor(
+                (Number(player.value.strength) || 0) * 0.5
+            );
+        }
+
+        function getPlayerCriticalChance() {
+
+            return Math.min(
+                40,
+                (Number(player.value.dexterity) || 0) * 2
+            );
+        }
+
+        function getPlayerAccuracy() {
+
+            return Math.min(
+                98,
+                82 + (Number(player.value.dexterity) || 0)
+            );
+        }
+
+        function getPlayerEvasionChance() {
+
+            return Math.min(
+                35,
+                Math.floor(
+                    (Number(player.value.dexterity) || 0) * 1.5
+                )
+            );
+        }
+
+        function getPlayerMagicDamage() {
+
+            return 6 + (Number(player.value.intelligence) || 0) * 2;
+        }
+
+        function getSkillCooldownReduction() {
+
+            return Math.min(
+                35,
+                (Number(player.value.intelligence) || 0) * 2
+            );
+        }
+
+        function getPlayerAttackCooldown() {
+
+            return Math.max(
+                MIN_PLAYER_ATTACK_COOLDOWN,
+                PLAYER_ATTACK_COOLDOWN -
+                    (Number(player.value.dexterity) || 0) * 20
+            );
+        }
+
+        function spendAttributePoint(attribute) {
+
+            if (
+                getAvailableAttributePoints() <= 0 ||
+                !ATTRIBUTE_GAIN_BY_POINT[attribute]
+            ) {
+                return;
+            }
+
+            // Gasta um ponto e aplica os ganhos principais do atributo.
+            player.value[attribute] =
+                (Number(player.value[attribute]) || 0) + 1;
+            player.value.attributePoints =
+                getAvailableAttributePoints() - 1;
+
+            if (attribute === 'strength') {
+                player.value.maxHp +=
+                    ATTRIBUTE_GAIN_BY_POINT.strength.maxHp;
+                player.value.hp +=
+                    ATTRIBUTE_GAIN_BY_POINT.strength.maxHp;
+            }
+
+            if (attribute === 'intelligence') {
+                player.value.maxMana +=
+                    ATTRIBUTE_GAIN_BY_POINT.intelligence.maxMana;
+                player.value.mana +=
+                    ATTRIBUTE_GAIN_BY_POINT.intelligence.maxMana;
+            }
+
+            persistCharacter();
         }
 
         function startAnimationLoop() {
@@ -816,8 +920,25 @@ export default {
             monster.lastAttackAt = now;
             playMonsterAttackAnimation(monster);
 
-            const damage =
+            if (
+                Math.random() <
+                getPlayerEvasionChance() / 100
+            ) {
+                createFloatingText(
+                    player.value.x,
+                    player.value.y,
+                    'Evadiu'
+                );
+                return;
+            }
+
+            // Forca tambem funciona como armadura contra ataques de monstros.
+            const baseDamage =
                 monster.damage || monster.level * 4 || 5;
+            const damage = Math.max(
+                1,
+                baseDamage - getPlayerArmor()
+            );
 
             player.value.hp = Math.max(
                 0,
@@ -907,7 +1028,8 @@ export default {
 
             if (
                 respectCooldown &&
-                now - player.value.lastAttackAt < PLAYER_ATTACK_COOLDOWN
+                now - player.value.lastAttackAt <
+                    getPlayerAttackCooldown()
             ) {
                 return false;
             }
@@ -948,7 +1070,9 @@ export default {
                 createFloatingText(
                     selectedTarget.value.x,
                     selectedTarget.value.y,
-                    `-${result.damage}`
+                    result.hit
+                        ? `-${result.damage}${result.critical ? '!' : ''}`
+                        : 'Miss'
                 );
 
                 console.log(
@@ -1021,19 +1145,26 @@ export default {
 
         function checkLevelUp() {
 
-            const xpRequired =
+            let xpRequired =
                 player.value.level * 100;
+            let leveledUp = false;
 
-            if (player.value.xp >= xpRequired) {
-
+            while (player.value.xp >= xpRequired) {
                 player.value.level++;
 
-                player.value.xp = 0;
+                player.value.xp -= xpRequired;
 
-                player.value.maxHp += 10;
+                // A cada level o jogador ganha pontos para distribuir.
+                player.value.attributePoints =
+                    getAvailableAttributePoints() +
+                    ATTRIBUTE_POINTS_PER_LEVEL;
+
+                leveledUp = true;
+                xpRequired = player.value.level * 100;
+            }
+
+            if (leveledUp) {
                 player.value.hp = player.value.maxHp;
-
-                player.value.maxMana += 5;
                 player.value.mana = player.value.maxMana;
 
                 console.log('Subiste de level!');
@@ -1146,6 +1277,7 @@ export default {
                 ...character,
                 maxHp: character.maxHp || character.hp || 100,
                 maxMana: character.maxMana || character.mana || 50,
+                attributePoints: character.attributePoints || 0,
                 direction: 'down',
                 moving: false,
                 attacking: false,
@@ -1253,6 +1385,15 @@ export default {
 
             getPlayerSprite,
             getMonsterSprite,
+            getAvailableAttributePoints,
+            getPlayerArmor,
+            getPlayerCriticalChance,
+            getPlayerAccuracy,
+            getPlayerEvasionChance,
+            getPlayerMagicDamage,
+            getSkillCooldownReduction,
+            getPlayerAttackCooldown,
+            spendAttributePoint,
 
             selectTarget
         };

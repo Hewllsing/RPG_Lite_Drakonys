@@ -173,6 +173,95 @@
 
       </div>
 
+      <!-- ATRIBUTOS -->
+
+      <div class="attributes-frame">
+
+        <div class="attributes-header">
+
+          <h3>Atributos</h3>
+
+          <span>
+            {{ getAvailableAttributePoints() }} pts
+          </span>
+
+        </div>
+
+        <div class="attribute-row">
+
+          <div>
+            <strong>Forca</strong>
+            <small>
+              Dano fisico, armadura, vida
+            </small>
+            <span>
+              {{ player.strength }} / Arm {{ getPlayerArmor() }}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            :disabled="getAvailableAttributePoints() <= 0"
+            @click="spendAttributePoint('strength')"
+          >
+            +
+          </button>
+
+        </div>
+
+        <div class="attribute-row">
+
+          <div>
+            <strong>Inteligencia</strong>
+            <small>
+              Mana, cooldown, dano magico
+            </small>
+            <span>
+              {{ player.intelligence }} / Mag {{ getPlayerMagicDamage() }}
+              / -{{ getSkillCooldownReduction() }}%
+            </span>
+          </div>
+
+          <button
+            type="button"
+            :disabled="getAvailableAttributePoints() <= 0"
+            @click="spendAttributePoint('intelligence')"
+          >
+            +
+          </button>
+
+        </div>
+
+        <div class="attribute-row">
+
+          <div>
+            <strong>Destreza</strong>
+            <small>
+              Critico, ataque, precisao, evasao
+            </small>
+            <span>
+              {{ player.dexterity }} / Crit {{ getPlayerCriticalChance() }}%
+              / Acc {{ getPlayerAccuracy() }}%
+              / Eva {{ getPlayerEvasionChance() }}%
+            </span>
+          </div>
+
+          <button
+            type="button"
+            :disabled="getAvailableAttributePoints() <= 0"
+            @click="spendAttributePoint('dexterity')"
+          >
+            +
+          </button>
+
+        </div>
+
+        <p class="attack-speed-note">
+          Ataque basico: {{ getPlayerAttackCooldown() }}ms
+        </p>
+
+      </div>
+
       <!-- HOTBAR -->
 
       <div class="hotbar">
