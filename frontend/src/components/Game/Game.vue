@@ -85,6 +85,7 @@
           v-for="text in floatingTexts"
           :key="text.id"
           class="floating-text"
+          :class="text.kind"
           :style="{
             left: text.x * tileSize + 'px',
             top: text.y * tileSize + 'px'
@@ -163,6 +164,11 @@
           <p>
             HP:
             {{ selectedTarget.hp }}
+          </p>
+
+          <p>
+            Range:
+            {{ getDistanceToTarget(selectedTarget) }}/{{ getBasicAttackRange() }}
           </p>
 
         </div>
@@ -257,7 +263,10 @@
         </div>
 
         <p class="attack-speed-note">
-          Ataque basico: {{ getPlayerAttackCooldown() }}ms
+          {{ getWeaponLabel() }} / {{ getDamageTypeLabel() }}
+          / Range {{ getBasicAttackRange() }}
+          / Dano {{ getBasicAttackDamagePreview() }}
+          / {{ getPlayerAttackCooldown() }}ms
         </p>
 
       </div>
@@ -281,6 +290,21 @@
             :src="skill.icon"
             class="skill-icon"
           />
+
+          <div
+            v-if="isSkillCoolingDown(skill)"
+            class="skill-cooldown"
+            :style="{
+              height: getSkillCooldownPercent(skill) + '%'
+            }"
+          ></div>
+
+          <span
+            v-if="isSkillCoolingDown(skill)"
+            class="skill-cooldown-text"
+          >
+            {{ getSkillCooldownText(skill) }}
+          </span>
 
           <span class="skill-key">
             {{ skill.key }}
