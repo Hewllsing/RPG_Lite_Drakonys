@@ -94,6 +94,19 @@
           {{ text.text }}
         </div>
 
+        <!-- SKILL EFFECTS -->
+
+        <div
+          v-for="effect in skillEffects"
+          :key="effect.id"
+          class="skill-effect"
+          :class="effect.kind"
+          :style="{
+            left: effect.x * tileSize + 'px',
+            top: effect.y * tileSize + 'px'
+          }"
+        ></div>
+
       </div>
 
     </div>
@@ -279,6 +292,11 @@
           v-for="skill in skillBar"
           :key="skill.key"
           class="skill-wrapper"
+          :class="{
+            unavailable: !canPaySkillMana(skill)
+          }"
+          :title="`${skill.name} - MP ${getSkillManaCost(skill)}`"
+          @click="useSkill(skill.key.toLowerCase())"
         >
 
           <img
@@ -308,6 +326,13 @@
 
           <span class="skill-key">
             {{ skill.key }}
+          </span>
+
+          <span
+            v-if="getSkillManaCost(skill) > 0"
+            class="skill-mana"
+          >
+            {{ getSkillManaCost(skill) }}
           </span>
 
         </div>
