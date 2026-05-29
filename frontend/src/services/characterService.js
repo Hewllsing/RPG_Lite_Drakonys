@@ -14,7 +14,7 @@ function getAuthHeaders() {
   };
 }
 
-export async function getCharacter() {
+export async function getCharacters() {
   const response = await axios.get(API_URL, {
     headers: getAuthHeaders()
   });
@@ -22,10 +22,53 @@ export async function getCharacter() {
   return response.data;
 }
 
-export async function saveCharacter(character) {
-  const response = await axios.put(API_URL, character, {
-    headers: getAuthHeaders()
-  });
+export async function createCharacter(name) {
+  const response = await axios.post(
+    API_URL,
+    {
+      name
+    },
+    {
+      headers: getAuthHeaders()
+    }
+  );
+
+  return response.data;
+}
+
+export async function getCharacter(characterId) {
+  const response = await axios.get(
+    `${API_URL}/${characterId}`,
+    {
+      headers: getAuthHeaders()
+    }
+  );
+
+  return response.data;
+}
+
+export async function saveCharacter(characterId, character) {
+  const response = await axios.put(
+    `${API_URL}/${characterId}`,
+    character,
+    {
+      headers: getAuthHeaders()
+    }
+  );
+
+  return response.data;
+}
+
+export async function deleteCharacter(characterId, confirmationName) {
+  const response = await axios.delete(
+    `${API_URL}/${characterId}`,
+    {
+      headers: getAuthHeaders(),
+      data: {
+        confirmationName
+      }
+    }
+  );
 
   return response.data;
 }
