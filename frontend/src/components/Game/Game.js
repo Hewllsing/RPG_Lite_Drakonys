@@ -52,6 +52,8 @@ const MIN_PLAYER_ATTACK_COOLDOWN = 450;
 const AUTO_COMBAT_INTERVAL = 180;
 const ATTRIBUTE_POINTS_PER_LEVEL = 3;
 const COMBAT_CLOCK_INTERVAL = 80;
+const AFK_FARM_DELAY = 30000;
+const AFK_FARM_CHECK_INTERVAL = 1000;
 const WEAPON_PROFILES = {
     warrior: {
         weaponType: 'sword',
@@ -143,6 +145,8 @@ export default {
         const monsters = ref([]);
 
         const selectedTarget = ref(null);
+        const afkFarmEnabled = ref(false);
+        const lastPlayerActivityAt = ref(Date.now());
 
         const floatingTexts = ref([]);
         const skillEffects = ref([]);
@@ -153,6 +157,7 @@ export default {
         let playerMovementInterval = null;
         let autoCombatInterval = null;
         let combatClockInterval = null;
+        let afkFarmInterval = null;
         let playerAttackTimeout = null;
         let playerAttackInProgress = false;
         const regenerationIntervals = [];
@@ -206,6 +211,24 @@ export default {
             return direction.walk[
                 player.value.animationFrame
             ];
+        }
+
+        function disableAfkFarm() {
+
+            afkFarmEnabled.value = false;
+        }
+
+        function markPlayerActivity() {
+
+            lastPlayerActivityAt.value = Date.now();
+            disableAfkFarm();
+        }
+
+        function hasAliveMonsters() {
+
+            return monsters.value.some(
+                monster => !monster.dead && monster.hp > 0
+            );
         }
 
         function getMonsterSprite(monster) {
@@ -318,6 +341,7 @@ export default {
             }
 
             // Troca de zona centralizada para manter mapa, entidades e HUD em sincronia.
+            markPlayerActivity();
             stopAutoCombat();
             selectedTarget.value = null;
             loadZoneEntities(zoneKey);
@@ -357,6 +381,7 @@ export default {
 
         function openNpcDialog(npc) {
 
+            markPlayerActivity();
             activeNpc.value = npc;
         }
 
@@ -412,6 +437,8 @@ export default {
 
         function confirmNpcAction(npc) {
 
+            markPlayerActivity();
+
             if (npc.type === 'healer') {
                 player.value.hp = player.value.maxHp;
                 player.value.mana = player.value.maxMana;
@@ -438,6 +465,7 @@ export default {
 
         function closeNpcDialog() {
 
+            markPlayerActivity();
             activeNpc.value = null;
         }
 
@@ -898,6 +926,8 @@ export default {
 
         function spendAttributePoint(attribute) {
 
+            markPlayerActivity();
+
             if (
                 getAvailableAttributePoints() <= 0 ||
                 !ATTRIBUTE_GAIN_BY_POINT[attribute]
@@ -968,6 +998,48 @@ export default {
             combatClockInterval = setInterval(() => {
                 combatClock.value = Date.now();
             }, COMBAT_CLOCK_INTERVAL);
+        }
+
+        function startAfkFarmLoop() {
+
+            if (afkFarmInterval) {
+                return;
+            }
+
+            afkFarmInterval = setInterval(() => {
+
+                if (
+                    afkFarmEnabled.value ||
+                    activeNpc.value ||
+                    pressedMovementKeys.size > 0 ||
+                    player.value.hp <= 0
+                ) {
+                    return;
+                }
+
+                if (
+                    Date.now() - lastPlayerActivityAt.value <
+                    AFK_FARM_DELAY
+                ) {
+                    return;
+                }
+
+                if (!hasAliveMonsters()) {
+                    return;
+                }
+
+                // AFK farm usa o auto-combate existente para perseguir e atacar.
+                afkFarmEnabled.value = true;
+                createFloatingText(
+                    player.value.x,
+                    player.value.y,
+                    'AFK Farm',
+                    'magic'
+                );
+                startAutoCombat({
+                    userAction: false
+                });
+            }, AFK_FARM_CHECK_INTERVAL);
         }
 
         function updatePlayerDirection(dx, dy) {
@@ -1108,10 +1180,16 @@ export default {
             }, PLAYER_MOVE_INTERVAL);
         }
 
-        function selectTarget(monster) {
+        function selectTarget(monster, {
+            userAction = true
+        } = {}) {
 
             if (!monster || monster.dead || monster.hp <= 0) {
                 return;
+            }
+
+            if (userAction) {
+                markPlayerActivity();
             }
 
             selectedTarget.value = monster;
@@ -1127,7 +1205,10 @@ export default {
                 )[0] || null;
         }
 
-        function ensureAutoCombatTarget() {
+        function ensureAutoCombatTarget({
+            silent = false,
+            userAction = true
+        } = {}) {
 
             clearTargetIfDead();
 
@@ -1138,6 +1219,10 @@ export default {
             const nearestMonster = findNearestMonster();
 
             if (!nearestMonster) {
+                if (silent) {
+                    return false;
+                }
+
                 createFloatingText(
                     player.value.x,
                     player.value.y,
@@ -1147,7 +1232,9 @@ export default {
                 return false;
             }
 
-            selectTarget(nearestMonster);
+            selectTarget(nearestMonster, {
+                userAction
+            });
             return true;
         }
 
@@ -1274,7 +1361,9 @@ export default {
                 selectedTarget.value &&
                 selectedTarget.value.id === monster.id
             ) {
-                stopAutoCombat();
+                if (!afkFarmEnabled.value) {
+                    stopAutoCombat();
+                }
             }
 
             setTimeout(() => {
@@ -1699,6 +1788,7 @@ export default {
         function playerDeath() {
 
             // Respawn simples: volta ao ponto inicial com recursos cheios.
+            markPlayerActivity();
             stopAutoCombat();
             clearRegenerationIntervals();
             pressedMovementKeys.clear();
@@ -1871,6 +1961,26 @@ export default {
             clearTargetIfDead();
 
             if (!selectedTarget.value) {
+                if (
+                    afkFarmEnabled.value &&
+                    ensureAutoCombatTarget({
+                        silent: true,
+                        userAction: false
+                    })
+                ) {
+                    return;
+                }
+
+                if (afkFarmEnabled.value) {
+                    createFloatingText(
+                        player.value.x,
+                        player.value.y,
+                        'Mapa limpo',
+                        'heal'
+                    );
+                    disableAfkFarm();
+                }
+
                 stopAutoCombat();
                 return;
             }
@@ -1889,9 +1999,15 @@ export default {
             });
         }
 
-        function startAutoCombat() {
+        function startAutoCombat({
+            userAction = true
+        } = {}) {
 
-            if (!ensureAutoCombatTarget()) {
+            if (
+                !ensureAutoCombatTarget({
+                    userAction
+                })
+            ) {
                 return;
             }
 
@@ -2266,6 +2382,8 @@ export default {
 
         function useSkill(key) {
 
+            markPlayerActivity();
+
             const skill = getSkillByKey(key);
 
             if (!skill) {
@@ -2297,6 +2415,8 @@ export default {
         }
 
         function handleKeyDown(event) {
+
+            markPlayerActivity();
 
             const key = event.key.toLowerCase();
             const code = event.code.toLowerCase();
@@ -2342,6 +2462,8 @@ export default {
         }
 
         function handleKeyUp(event) {
+
+            markPlayerActivity();
 
             const key = event.key.toLowerCase();
             const code = event.code.toLowerCase();
@@ -2408,6 +2530,7 @@ export default {
 
             startAnimationLoop();
             startCombatClock();
+            startAfkFarmLoop();
             startPlayerMovementLoop();
 
             startMonsterAI();
@@ -2448,6 +2571,10 @@ export default {
 
             if (combatClockInterval) {
                 clearInterval(combatClockInterval);
+            }
+
+            if (afkFarmInterval) {
+                clearInterval(afkFarmInterval);
             }
 
             if (playerAttackTimeout) {
@@ -2494,6 +2621,7 @@ export default {
             zoneBanner,
 
             selectedTarget,
+            afkFarmEnabled,
 
             floatingTexts,
 
