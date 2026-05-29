@@ -67,7 +67,8 @@
 }
 
 .resource-pill,
-.level-badge {
+.level-badge,
+.afk-farm-badge {
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -77,6 +78,19 @@
     border-radius: 6px;
     background: rgba(0, 0, 0, 0.28);
     color: #ffd36b;
+}
+
+.zone-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.afk-farm-badge {
+    color: #d8c7ff;
+    border-color: #7c5bd4;
+    background: rgba(76, 29, 149, 0.32);
+    box-shadow: 0 0 18px rgba(124, 91, 212, 0.28);
 }
 
 .resource-pill span,

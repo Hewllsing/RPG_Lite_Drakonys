@@ -6,9 +6,17 @@
           <span class="eyebrow">Dark Fantasy RPG</span>
           <h1>{{ getZoneName() }}</h1>
         </div>
-        <div class="resource-pill">
-          <span>Gold</span>
-          <strong>{{ gold }}</strong>
+        <div class="zone-actions">
+          <div
+            v-if="afkFarmEnabled"
+            class="afk-farm-badge"
+          >
+            AFK Farm
+          </div>
+          <div class="resource-pill">
+            <span>Gold</span>
+            <strong>{{ gold }}</strong>
+          </div>
         </div>
       </header>
 
