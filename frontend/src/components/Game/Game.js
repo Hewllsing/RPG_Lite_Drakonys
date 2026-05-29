@@ -46,7 +46,7 @@ const PLAYER_START_POSITION = {
     x: 5,
     y: 5
 };
-const PLAYER_MOVE_INTERVAL = 240;
+const PLAYER_MOVE_INTERVAL = 330;
 const PLAYER_ATTACK_COOLDOWN = 900;
 const MIN_PLAYER_ATTACK_COOLDOWN = 450;
 const AUTO_COMBAT_INTERVAL = 180;
@@ -178,7 +178,9 @@ export default {
         );
         const gold = ref(25);
         const activeNpc = ref(null);
+        const npcResponse = ref(null);
         const zoneBanner = ref(null);
+        let npcResponseTimeout = null;
 
         const skillBar = SKILL_DEFINITIONS;
         const skillCooldowns = ref(
@@ -353,9 +355,62 @@ export default {
             }
         }
 
-        function interactNpc(npc) {
+        function openNpcDialog(npc) {
 
             activeNpc.value = npc;
+        }
+
+        function getNpcSuccessMessage(npc) {
+
+            const messages = {
+                blacksmith: 'Fechado. Vou deixar a forja quente para quando trouxeres material de verdade.',
+                merchant: 'Combinado. Separei umas mercadorias boas para a proxima visita.',
+                healer: 'Pronto. Os teus ferimentos fecharam e a mana voltou a correr.',
+                questMaster: 'Contrato aceito. Volta com provas, e talvez com todos os dedos.',
+                trainer: 'Treino anotado. O corpo aprende antes da cabeca admitir.',
+                guard: 'Entendido. Mantem-te na estrada e evita fazer barulho perto das ruinas.'
+            };
+
+            return messages[npc.type] || 'Certo. Esta combinado.';
+        }
+
+        function showNpcResponse(npc, message) {
+
+            npcResponse.value = {
+                name: npc.name,
+                portrait: npc.assets.dialogueIcon || npc.assets.portrait,
+                message
+            };
+
+            if (npcResponseTimeout) {
+                clearTimeout(npcResponseTimeout);
+            }
+
+            npcResponseTimeout = setTimeout(() => {
+                npcResponse.value = null;
+                npcResponseTimeout = null;
+            }, 3200);
+        }
+
+        function acceptZoneQuests() {
+
+            quests.value = quests.value.map(quest => {
+
+                if (
+                    quest.zone !== currentZoneKey.value ||
+                    quest.status !== 'available'
+                ) {
+                    return quest;
+                }
+
+                return {
+                    ...quest,
+                    status: 'inProgress'
+                };
+            });
+        }
+
+        function confirmNpcAction(npc) {
 
             if (npc.type === 'healer') {
                 player.value.hp = player.value.maxHp;
@@ -369,7 +424,16 @@ export default {
                 persistCharacter();
             }
 
+            if (npc.type === 'questMaster') {
+                acceptZoneQuests();
+            }
+
             updateQuestProgress('talk', npc.type);
+            activeNpc.value = null;
+            showNpcResponse(
+                npc,
+                getNpcSuccessMessage(npc)
+            );
         }
 
         function closeNpcDialog() {
@@ -2346,6 +2410,10 @@ export default {
                 clearTimeout(playerAttackTimeout);
             }
 
+            if (npcResponseTimeout) {
+                clearTimeout(npcResponseTimeout);
+            }
+
             clearRegenerationIntervals();
 
             monsters.value.forEach(monster => {
@@ -2378,6 +2446,7 @@ export default {
             inventory,
             gold,
             activeNpc,
+            npcResponse,
             zoneBanner,
 
             selectedTarget,
@@ -2431,7 +2500,8 @@ export default {
             getMinimapStyle,
             getBosses,
             getSkillEffectImage,
-            interactNpc,
+            openNpcDialog,
+            confirmNpcAction,
             closeNpcDialog,
             spendAttributePoint,
             useSkill,
