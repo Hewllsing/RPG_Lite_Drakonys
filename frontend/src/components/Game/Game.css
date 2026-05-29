@@ -175,7 +175,7 @@
 .entity-name {
     position: absolute;
     left: 50%;
-    bottom: 38px;
+    bottom: 52px;
     transform: translateX(-50%);
     max-width: 96px;
     padding: 1px 5px;
@@ -187,7 +187,7 @@
     line-height: 1.2;
     text-align: center;
     white-space: nowrap;
-    z-index: 18;
+    z-index: 24;
 }
 
 .npc-name {
@@ -205,7 +205,7 @@
 .player-overhead-bars {
     position: absolute;
     left: 3px;
-    top: -14px;
+    top: -19px;
     width: 34px;
     display: flex;
     flex-direction: column;
@@ -251,7 +251,7 @@
 .monster-hp-container {
     position: absolute;
     left: 3px;
-    top: -8px;
+    top: -14px;
     width: 34px;
     height: 5px;
     z-index: 14;
