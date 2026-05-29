@@ -5,9 +5,19 @@
       class="game-session"
     >
       <div class="session-bar">
-        <span>
-          {{ session.user.user }} / {{ selectedCharacter.name }}
-        </span>
+        <div class="session-user">
+          <span>
+            {{ session.user.user }} / {{ selectedCharacter.name }}
+          </span>
+
+          <small v-if="session.user.previousLastLoginAt">
+            Ultimo login: {{ formatSessionDate(session.user.previousLastLoginAt) }}
+          </small>
+
+          <small v-else>
+            Primeiro login registado nesta conta.
+          </small>
+        </div>
 
         <button
           type="button"
@@ -460,6 +470,21 @@ export default {
       this.selectedCharacter = null;
       this.characterToDelete = null;
       this.form.password = '';
+    },
+
+    formatSessionDate(value) {
+
+      if (!value) {
+        return '';
+      }
+
+      return new Intl.DateTimeFormat(
+        'pt-PT',
+        {
+          dateStyle: 'short',
+          timeStyle: 'short'
+        }
+      ).format(new Date(value));
     }
   }
 };

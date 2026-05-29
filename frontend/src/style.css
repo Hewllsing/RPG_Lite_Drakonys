@@ -45,11 +45,26 @@ button:disabled {
 
 .session-bar {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
   gap: 12px;
   padding: 12px 20px 0;
   color: #e5e7eb;
+}
+
+.session-user {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.session-user span {
+  font-weight: 600;
+}
+
+.session-user small {
+  color: #a1a1aa;
+  font-size: 12px;
 }
 
 .session-bar button,

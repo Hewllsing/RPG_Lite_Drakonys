@@ -13,13 +13,61 @@ function createSessionToken() {
   return crypto.randomBytes(32).toString('hex');
 }
 
+function formatDbDate(value) {
+
+  if (!value) {
+    return null;
+  }
+
+  return value instanceof Date
+    ? value.toISOString()
+    : new Date(value).toISOString();
+}
+
 function sanitizeUser(user) {
 
   return {
     id: user.id,
     user: user.username,
-    email: user.email
+    email: user.email,
+    lastLoginAt: formatDbDate(user.last_login_at),
+    previousLastLoginAt: formatDbDate(
+      user.previous_last_login_at
+    )
   };
+}
+
+async function getUserById(userId) {
+
+  const [users] = await pool.execute(
+    `
+      SELECT id, username, email, last_login_at
+      FROM users
+      WHERE id = :userId
+      LIMIT 1
+    `,
+    {
+      userId
+    }
+  );
+
+  return users[0] || null;
+}
+
+async function touchLastLogin(userId) {
+
+  await pool.execute(
+    `
+      UPDATE users
+      SET last_login_at = NOW()
+      WHERE id = :userId
+    `,
+    {
+      userId
+    }
+  );
+
+  return getUserById(userId);
 }
 
 async function createSession(userId) {
@@ -78,8 +126,18 @@ async function registerUser({
 
   const [result] = await pool.execute(
     `
-      INSERT INTO users (username, email, password_hash)
-      VALUES (:username, :email, :passwordHash)
+      INSERT INTO users (
+        username,
+        email,
+        password_hash,
+        last_login_at
+      )
+      VALUES (
+        :username,
+        :email,
+        :passwordHash,
+        NOW()
+      )
     `,
     {
       username,
@@ -88,11 +146,9 @@ async function registerUser({
     }
   );
 
-  const newUser = {
-    id: result.insertId,
-    username,
-    email: normalizedEmail
-  };
+  const newUser = await getUserById(
+    result.insertId
+  );
 
   await createCharacterForUser(newUser.id, username);
 
@@ -100,7 +156,10 @@ async function registerUser({
 
   return {
     token,
-    user: sanitizeUser(newUser)
+    user: sanitizeUser({
+      ...newUser,
+      previous_last_login_at: null
+    })
   };
 }
 
@@ -119,7 +178,12 @@ async function loginUser({
 
   const [users] = await pool.execute(
     `
-      SELECT id, username, email, password_hash
+      SELECT
+        id,
+        username,
+        email,
+        password_hash,
+        last_login_at
       FROM users
       WHERE username = :login OR email = :login
       LIMIT 1
@@ -137,11 +201,18 @@ async function loginUser({
     throw error;
   }
 
+  const previousLastLoginAt =
+    user.last_login_at;
+  const loggedUser =
+    await touchLastLogin(user.id);
   const token = await createSession(user.id);
 
   return {
     token,
-    user: sanitizeUser(user)
+    user: sanitizeUser({
+      ...loggedUser,
+      previous_last_login_at: previousLastLoginAt
+    })
   };
 }
 
@@ -153,7 +224,11 @@ async function getUserBySessionToken(token) {
 
   const [users] = await pool.execute(
     `
-      SELECT users.id, users.username, users.email
+      SELECT
+        users.id,
+        users.username,
+        users.email,
+        users.last_login_at
       FROM user_sessions
       INNER JOIN users ON users.id = user_sessions.user_id
       WHERE user_sessions.token = :token
