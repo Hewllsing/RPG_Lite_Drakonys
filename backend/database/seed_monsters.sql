@@ -22,15 +22,15 @@ INSERT INTO monster_templates (
   loot_item_chance
 )
 VALUES
-  (1, 'Goblin', 'Goblin', 'goblin', 1, 40, 7, 5, 1, 1600, 'melee', 1, 2, 8, NULL, 2, 5, 'Goblin Ear', 16.00),
-  (2, 'Goblin Warrior', 'Goblin', 'goblin', 2, 60, 10, 6, 1, 1800, 'melee', 1, 2, 9, NULL, 4, 8, 'Rusty Dagger', 12.00),
-  (3, 'Orc Scout', 'Orc', 'orc', 4, 100, 16, 6, 1, 1900, 'melee', 1, 3, 10, NULL, 7, 12, 'Scout Badge', 14.00),
-  (4, 'Elf Ranger', 'Elf', 'elf', 3, 75, 13, 7, 4, 1500, 'ranged', 3, 3, 10, 'monster-arrow', 6, 14, 'Elven Feather', 24.00),
-  (5, 'Skeleton Guard', 'Skeleton', 'skeleton', 3, 85, 14, 6, 1, 1700, 'melee', 1, 2, 9, NULL, 5, 10, 'Bone Fragment', 22.00),
-  (6, 'Demon Imp', 'Demon', 'demon', 7, 160, 24, 8, 3, 2200, 'ranged', 2, 4, 12, 'monster-shadow', 12, 20, 'Infernal Shard', 18.00),
-  (7, 'Orc', 'Orc', 'orc', 5, 120, 18, 7, 1, 2000, 'melee', 1, 3, 11, NULL, 8, 14, 'Orc Tooth', 16.00),
-  (8, 'Orc Brute', 'Orc', 'orc', 6, 150, 22, 7, 1, 2100, 'melee', 1, 4, 11, NULL, 10, 18, 'Brute Pauldron', 10.00),
-  (9, 'Demon', 'Demon', 'demon', 8, 190, 28, 8, 4, 2300, 'ranged', 3, 4, 13, 'monster-shadow', 16, 26, 'Demonic Ember', 20.00)
+  (1, 'Goblin', 'Goblin', 'goblin', 1, 40, 7, 5, 1, 1600, 'melee', 1, 2, 8, NULL, 2, 5, 'goblin-ear', 16.00),
+  (2, 'Goblin Warrior', 'Goblin', 'goblin', 2, 60, 10, 6, 1, 1800, 'melee', 1, 2, 9, NULL, 4, 8, 'rusty-dagger', 12.00),
+  (3, 'Orc Scout', 'Orc', 'orc', 4, 100, 16, 6, 1, 1900, 'melee', 1, 3, 10, NULL, 7, 12, 'scout-badge', 14.00),
+  (4, 'Elf Ranger', 'Elf', 'elf', 3, 75, 13, 7, 4, 1500, 'ranged', 3, 3, 10, 'monster-arrow', 6, 14, 'elven-feather', 24.00),
+  (5, 'Skeleton Guard', 'Skeleton', 'skeleton', 3, 85, 14, 6, 1, 1700, 'melee', 1, 2, 9, NULL, 5, 10, 'bone-fragment', 22.00),
+  (6, 'Demon Imp', 'Demon', 'demon', 7, 160, 24, 8, 3, 2200, 'ranged', 2, 4, 12, 'monster-shadow', 12, 20, 'infernal-shard', 18.00),
+  (7, 'Orc', 'Orc', 'orc', 5, 120, 18, 7, 1, 2000, 'melee', 1, 3, 11, NULL, 8, 14, 'orc-tooth', 16.00),
+  (8, 'Orc Brute', 'Orc', 'orc', 6, 150, 22, 7, 1, 2100, 'melee', 1, 4, 11, NULL, 10, 18, 'brute-pauldron', 10.00),
+  (9, 'Demon', 'Demon', 'demon', 8, 190, 28, 8, 4, 2300, 'ranged', 3, 4, 13, 'monster-shadow', 16, 26, 'demonic-ember', 20.00)
 ON DUPLICATE KEY UPDATE
   name = VALUES(name),
   race = VALUES(race),

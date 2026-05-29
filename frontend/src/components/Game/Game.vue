@@ -107,6 +107,30 @@
 
         </div>
 
+        <button
+          v-for="drop in groundDrops"
+          :key="drop.id"
+          class="ground-drop"
+          :class="drop.type"
+          :style="{
+            left: drop.x * tileSize + 'px',
+            top: drop.y * tileSize + 'px'
+          }"
+          :title="getGroundDropLabel(drop)"
+          @click.stop="pickupGroundDrop(drop)"
+        >
+          <span class="ground-drop-symbol">
+            {{ getItemSymbol(drop.itemId) }}
+          </span>
+
+          <small
+            v-if="drop.quantity > 1"
+            class="ground-drop-quantity"
+          >
+            {{ drop.quantity }}
+          </small>
+        </button>
+
         <!-- FLOATING DAMAGE -->
 
         <div
@@ -164,7 +188,7 @@
           ></div>
 
           <span>
-            HP {{ player.hp }}/{{ player.maxHp }}
+            HP {{ player.hp }}/{{ getPlayerMaxHp() }}
           </span>
 
         </div>
@@ -184,7 +208,7 @@
           ></div>
 
           <span>
-            MP {{ player.mana }}/{{ player.maxMana }}
+            MP {{ player.mana }}/{{ getPlayerMaxMana() }}
           </span>
 
         </div>
@@ -273,6 +297,87 @@
 
       </div>
 
+      <div class="equipment-frame">
+
+        <h3>Equipamento</h3>
+
+        <div
+          v-for="slot in equipmentSlots"
+          :key="slot"
+          class="equipment-slot"
+        >
+
+          <div>
+            <strong>{{ getEquipmentSlotLabel(slot) }}</strong>
+            <p :title="getItemDetailText(getEquippedItemId(slot))">
+              {{ getEquippedItemLabel(slot) }}
+            </p>
+          </div>
+
+          <button
+            v-if="getEquippedItemId(slot)"
+            type="button"
+            @click="unequipItem(slot)"
+          >
+            Tirar
+          </button>
+
+        </div>
+
+      </div>
+
+      <div class="inventory-frame">
+
+        <h3>Inventario</h3>
+
+        <div
+          v-if="getInventoryEntries().length > 0"
+          class="inventory-list"
+        >
+
+          <div
+            v-for="entry in getInventoryEntries()"
+            :key="entry.itemId"
+            class="inventory-item"
+          >
+
+            <div>
+              <strong>
+                {{ getItemLabel(entry.itemId) }}
+              </strong>
+              <span>
+                x{{ entry.quantity }} · {{ getItemDetailText(entry.itemId) }}
+              </span>
+            </div>
+
+            <div class="inventory-actions">
+              <button
+                v-if="canUseInventoryItem(entry.itemId)"
+                type="button"
+                @click="useInventoryItem(entry.itemId)"
+              >
+                Usar
+              </button>
+
+              <button
+                v-if="canEquipInventoryItem(entry.itemId)"
+                type="button"
+                @click="equipInventoryItem(entry.itemId)"
+              >
+                Equipar
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+
+        <p v-else>
+          Inventario vazio.
+        </p>
+
+      </div>
+
       <!-- ATRIBUTOS -->
 
       <div class="attributes-frame">
@@ -295,7 +400,7 @@
               Dano fisico, armadura, vida
             </small>
             <span>
-              {{ player.strength }} / Arm {{ getPlayerArmor() }}
+              {{ getEffectiveAttribute('strength') }} / Arm {{ getPlayerArmor() }}
             </span>
           </div>
 
@@ -317,7 +422,7 @@
               Mana, cooldown, dano magico
             </small>
             <span>
-              {{ player.intelligence }} / Mag {{ getPlayerMagicDamage() }}
+              {{ getEffectiveAttribute('intelligence') }} / Mag {{ getPlayerMagicDamage() }}
               / -{{ getSkillCooldownReduction() }}%
             </span>
           </div>
@@ -340,7 +445,7 @@
               Critico, ataque, precisao, evasao
             </small>
             <span>
-              {{ player.dexterity }} / Crit {{ getPlayerCriticalChance() }}%
+              {{ getEffectiveAttribute('dexterity') }} / Crit {{ getPlayerCriticalChance() }}%
               / Acc {{ getPlayerAccuracy() }}%
               / Eva {{ getPlayerEvasionChance() }}%
             </span>

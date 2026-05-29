@@ -240,6 +240,133 @@
     font-size: 12px;
 }
 
+.equipment-frame,
+.inventory-frame {
+    width: 260px;
+    background: #18181b;
+    border: 2px solid #3f3f46;
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.equipment-frame h3,
+.inventory-frame h3 {
+    margin: 0 0 10px;
+}
+
+.equipment-slot,
+.inventory-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 0;
+    border-top: 1px solid #27272a;
+}
+
+.equipment-slot:first-of-type,
+.inventory-item:first-of-type {
+    border-top: 0;
+}
+
+.equipment-slot strong,
+.inventory-item strong {
+    display: block;
+    font-size: 13px;
+}
+
+.equipment-slot p,
+.inventory-item span,
+.inventory-frame p {
+    margin: 3px 0 0;
+    color: #a1a1aa;
+    font-size: 11px;
+    line-height: 1.35;
+}
+
+.equipment-slot button,
+.inventory-actions button {
+    border: 0;
+    border-radius: 6px;
+    padding: 6px 10px;
+    background: #2563eb;
+    color: white;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.equipment-slot button {
+    background: #52525b;
+}
+
+.inventory-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.inventory-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.ground-drop {
+    position: absolute;
+    width: 26px;
+    height: 26px;
+    margin-left: 7px;
+    margin-top: 20px;
+    border: 1px solid rgba(24, 24, 27, 0.95);
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.92);
+    color: white;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08);
+    cursor: pointer;
+    z-index: 8;
+}
+
+.ground-drop.gold {
+    background: rgba(161, 98, 7, 0.95);
+    color: #fde68a;
+}
+
+.ground-drop.equipment {
+    background: rgba(30, 64, 175, 0.95);
+}
+
+.ground-drop.consumable {
+    background: rgba(22, 101, 52, 0.95);
+}
+
+.ground-drop.loot {
+    background: rgba(91, 33, 182, 0.95);
+}
+
+.ground-drop-symbol {
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.ground-drop-quantity {
+    position: absolute;
+    right: -3px;
+    bottom: -7px;
+    min-width: 16px;
+    padding: 1px 4px;
+    border-radius: 999px;
+    background: #111827;
+    color: #f8fafc;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
 .attributes-frame {
     width: 260px;
     background: #18181b;
@@ -411,6 +538,25 @@
 .monster-hp-fill {
     height: 100%;
     background: #ef4444;
+}
+
+@media (max-width: 1180px) {
+
+    .game-container {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .game-viewport {
+        width: min(800px, 100%);
+    }
+
+    .player-ui {
+        width: min(800px, 100%);
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: flex-start;
+    }
 }
 
 .floating-text {

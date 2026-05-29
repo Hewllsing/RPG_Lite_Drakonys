@@ -37,6 +37,82 @@ const WEAPON_PROFILES = {
   }
 };
 
+const DEFAULT_EQUIPMENT = {
+  weapon: null,
+  armor: null,
+  accessory: null
+};
+
+const ITEM_DEFINITIONS = {
+  'training-sword': {
+    bonuses: {
+      strength: 1
+    }
+  },
+  'apprentice-staff': {
+    bonuses: {
+      intelligence: 2,
+      magicDamage: 2
+    }
+  },
+  'hunter-bow': {
+    bonuses: {
+      dexterity: 2,
+      attackRange: 1
+    }
+  },
+  'leather-tunic': {
+    bonuses: {
+      armor: 2,
+      maxHp: 8
+    }
+  },
+  'cloth-robe': {
+    bonuses: {
+      maxMana: 12,
+      cooldownReduction: 4
+    }
+  },
+  'focus-charm': {
+    bonuses: {
+      intelligence: 1,
+      maxMana: 6
+    }
+  },
+  'rusty-dagger': {
+    bonuses: {
+      dexterity: 1,
+      criticalChance: 3
+    }
+  },
+  'scout-badge': {
+    bonuses: {
+      dexterity: 1,
+      evasion: 4
+    }
+  },
+  'brute-pauldron': {
+    bonuses: {
+      armor: 4,
+      strength: 1,
+      maxHp: 12
+    }
+  },
+  'infernal-shard': {
+    bonuses: {
+      intelligence: 2,
+      magicDamage: 3
+    }
+  },
+  'demonic-ember': {
+    bonuses: {
+      criticalChance: 5,
+      strength: 1,
+      intelligence: 1
+    }
+  }
+};
+
 const RACE_DEFENSES = {
   demon: {
     armor: 4,
@@ -76,6 +152,46 @@ function getWeaponProfile(player) {
   return WEAPON_PROFILES[characterClass] || WEAPON_PROFILES.warrior;
 }
 
+function normalizeEquipment(player) {
+  const equipment =
+    player?.equipment && typeof player.equipment === 'object'
+      ? player.equipment
+      : DEFAULT_EQUIPMENT;
+
+  return {
+    weapon: equipment.weapon || null,
+    armor: equipment.armor || null,
+    accessory: equipment.accessory || null
+  };
+}
+
+function getEquipmentBonus(player, stat) {
+  const equipment =
+    normalizeEquipment(player);
+
+  return Object.values(equipment).reduce((total, itemId) => {
+    if (!itemId) {
+      return total;
+    }
+
+    return total + (
+      getNumber(
+        ITEM_DEFINITIONS[itemId]?.bonuses?.[stat]
+      )
+    );
+  }, 0);
+}
+
+function getEffectiveAttribute(player, attribute) {
+  return getNumber(player[attribute]) +
+    getEquipmentBonus(player, attribute);
+}
+
+function getAttackRange(player, profile) {
+  return profile.range +
+    getEquipmentBonus(player, 'attackRange');
+}
+
 function getDistance(attacker, target) {
   return Math.max(
     Math.abs(getNumber(attacker.x) - getNumber(target.x)),
@@ -107,22 +223,34 @@ function getMonsterDefense(monster, damageType) {
 
 function calculateAttack(player, monster) {
   const profile = getWeaponProfile(player);
-  const dexterity = getNumber(player.dexterity);
+  const dexterity =
+    getEffectiveAttribute(player, 'dexterity');
   const level = getNumber(player.level) || 1;
   const monsterDefense =
     getMonsterDefense(monster, profile.damageType);
   const primaryValue =
-    getNumber(player[profile.primaryAttribute]);
+    getEffectiveAttribute(player, profile.primaryAttribute);
   const secondaryValue =
-    getNumber(player[profile.secondaryAttribute]);
+    getEffectiveAttribute(player, profile.secondaryAttribute);
   const accuracyChance = Math.min(
     0.98,
-    0.76 + dexterity * 0.012 + level * 0.003 + profile.accuracyBonus
+    0.76 +
+      dexterity * 0.012 +
+      level * 0.003 +
+      profile.accuracyBonus +
+      getEquipmentBonus(player, 'accuracy') / 100
   );
   const criticalChance = Math.min(
     0.45,
-    0.04 + dexterity * 0.015 + profile.criticalBonus
+    0.04 +
+      dexterity * 0.015 +
+      profile.criticalBonus +
+      getEquipmentBonus(player, 'criticalChance') / 100
   );
+  const magicDamageBonus =
+    profile.damageType === 'magical'
+      ? getEquipmentBonus(player, 'magicDamage')
+      : 0;
   const hit = Math.random() <= accuracyChance;
   const dodged =
     hit && Math.random() < monsterDefense.evasion;
@@ -132,6 +260,7 @@ function calculateAttack(player, monster) {
     profile.baseDamage +
       primaryValue * profile.primaryScale +
       secondaryValue * profile.secondaryScale +
+      magicDamageBonus +
       level
   );
 
@@ -147,7 +276,7 @@ function calculateAttack(player, monster) {
       criticalChance,
       weaponType: profile.weaponType,
       damageType: profile.damageType,
-      range: profile.range
+      range: getAttackRange(player, profile)
     };
   }
 
@@ -169,15 +298,17 @@ function calculateAttack(player, monster) {
     criticalChance,
     weaponType: profile.weaponType,
     damageType: profile.damageType,
-    range: profile.range
+    range: getAttackRange(player, profile)
   };
 }
 
 function attackMonster(player, monster) {
   const profile = getWeaponProfile(player);
+  const range =
+    getAttackRange(player, profile);
   const distance = getDistance(player, monster);
 
-  if (distance > profile.range) {
+  if (distance > range) {
     return {
       damage: 0,
       monster,
@@ -187,7 +318,7 @@ function attackMonster(player, monster) {
       killed: false,
       xpGained: 0,
       outOfRange: true,
-      range: profile.range,
+      range,
       weaponType: profile.weaponType,
       damageType: profile.damageType
     };

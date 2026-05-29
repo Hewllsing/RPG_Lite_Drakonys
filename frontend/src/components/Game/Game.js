@@ -217,6 +217,194 @@ const SKILL_DEFINITIONS = [
         radius: 2
     }
 ];
+const DEFAULT_EQUIPMENT = {
+    weapon: null,
+    armor: null,
+    accessory: null
+};
+const EQUIPMENT_SLOTS = [
+    'weapon',
+    'armor',
+    'accessory'
+];
+const EQUIPMENT_SLOT_LABELS = {
+    weapon: 'Arma',
+    armor: 'Armadura',
+    accessory: 'Acessorio'
+};
+const ITEM_BONUS_LABELS = {
+    strength: 'forca',
+    intelligence: 'inteligencia',
+    dexterity: 'destreza',
+    maxHp: 'vida',
+    maxMana: 'mana',
+    armor: 'armadura',
+    criticalChance: 'critico',
+    evasion: 'evasao',
+    accuracy: 'precisao',
+    magicDamage: 'dano magico',
+    cooldownReduction: 'recarga',
+    attackRange: 'range'
+};
+const ITEM_DEFINITIONS = {
+    gold: {
+        name: 'Gold',
+        type: 'currency',
+        stackable: true,
+        symbol: 'G'
+    },
+    'training-sword': {
+        name: 'Training Sword',
+        type: 'equipment',
+        slot: 'weapon',
+        bonuses: {
+            strength: 1
+        },
+        symbol: 'W'
+    },
+    'apprentice-staff': {
+        name: 'Apprentice Staff',
+        type: 'equipment',
+        slot: 'weapon',
+        bonuses: {
+            intelligence: 2,
+            magicDamage: 2
+        },
+        symbol: 'W'
+    },
+    'hunter-bow': {
+        name: 'Hunter Bow',
+        type: 'equipment',
+        slot: 'weapon',
+        bonuses: {
+            dexterity: 2,
+            attackRange: 1
+        },
+        symbol: 'W'
+    },
+    'leather-tunic': {
+        name: 'Leather Tunic',
+        type: 'equipment',
+        slot: 'armor',
+        bonuses: {
+            armor: 2,
+            maxHp: 8
+        },
+        symbol: 'A'
+    },
+    'cloth-robe': {
+        name: 'Cloth Robe',
+        type: 'equipment',
+        slot: 'armor',
+        bonuses: {
+            maxMana: 12,
+            cooldownReduction: 4
+        },
+        symbol: 'A'
+    },
+    'focus-charm': {
+        name: 'Focus Charm',
+        type: 'equipment',
+        slot: 'accessory',
+        bonuses: {
+            intelligence: 1,
+            maxMana: 6
+        },
+        symbol: 'C'
+    },
+    'rusty-dagger': {
+        name: 'Rusty Dagger',
+        type: 'equipment',
+        slot: 'weapon',
+        bonuses: {
+            dexterity: 1,
+            criticalChance: 3
+        },
+        symbol: 'W'
+    },
+    'scout-badge': {
+        name: 'Scout Badge',
+        type: 'equipment',
+        slot: 'accessory',
+        bonuses: {
+            dexterity: 1,
+            evasion: 4
+        },
+        symbol: 'C'
+    },
+    'brute-pauldron': {
+        name: 'Brute Pauldron',
+        type: 'equipment',
+        slot: 'armor',
+        bonuses: {
+            armor: 4,
+            strength: 1,
+            maxHp: 12
+        },
+        symbol: 'A'
+    },
+    'infernal-shard': {
+        name: 'Infernal Shard',
+        type: 'equipment',
+        slot: 'accessory',
+        bonuses: {
+            intelligence: 2,
+            magicDamage: 3
+        },
+        symbol: 'C'
+    },
+    'demonic-ember': {
+        name: 'Demonic Ember',
+        type: 'equipment',
+        slot: 'accessory',
+        bonuses: {
+            criticalChance: 5,
+            strength: 1,
+            intelligence: 1
+        },
+        symbol: 'C'
+    },
+    'small-health-potion': {
+        name: 'Small Health Potion',
+        type: 'consumable',
+        effect: 'heal',
+        amount: 45,
+        stackable: true,
+        symbol: 'H'
+    },
+    'small-mana-potion': {
+        name: 'Small Mana Potion',
+        type: 'consumable',
+        effect: 'mana',
+        amount: 35,
+        stackable: true,
+        symbol: 'M'
+    },
+    'goblin-ear': {
+        name: 'Goblin Ear',
+        type: 'loot',
+        stackable: true,
+        symbol: 'L'
+    },
+    'elven-feather': {
+        name: 'Elven Feather',
+        type: 'loot',
+        stackable: true,
+        symbol: 'L'
+    },
+    'bone-fragment': {
+        name: 'Bone Fragment',
+        type: 'loot',
+        stackable: true,
+        symbol: 'L'
+    },
+    'orc-tooth': {
+        name: 'Orc Tooth',
+        type: 'loot',
+        stackable: true,
+        symbol: 'L'
+    }
+};
 
 const gameMap = [
 
@@ -276,6 +464,10 @@ export default {
             mana: 50,
             maxMana: 50,
             gold: 0,
+            inventory: [],
+            equipment: {
+                ...DEFAULT_EQUIPMENT
+            },
             characterClass: 'warrior',
             strength: 5,
             intelligence: 5,
@@ -289,6 +481,7 @@ export default {
         });
 
         const monsters = ref([]);
+        const groundDrops = ref([]);
 
         const selectedTarget = ref(null);
 
@@ -320,6 +513,7 @@ export default {
         };
 
         const skillBar = SKILL_DEFINITIONS;
+        const equipmentSlots = EQUIPMENT_SLOTS;
         const skillCooldowns = ref(
             SKILL_DEFINITIONS.reduce((cooldowns, skill) => {
                 cooldowns[skill.id] = 0;
@@ -509,14 +703,18 @@ export default {
 
         function getBasicAttackRange() {
 
-            return getWeaponProfile().range;
+            return (
+                getWeaponProfile().range +
+                getEquipmentBonus('attackRange')
+            );
         }
 
         function getPlayerArmor() {
 
             return Math.floor(
-                (Number(player.value.strength) || 0) * 0.55 +
-                    (Number(player.value.level) || 1) * 0.4
+                getEffectiveAttribute('strength') * 0.55 +
+                    (Number(player.value.level) || 1) * 0.4 +
+                    getEquipmentBonus('armor')
             );
         }
 
@@ -525,8 +723,9 @@ export default {
             return Math.min(
                 45,
                 4 +
-                    (Number(player.value.dexterity) || 0) * 1.5 +
-                    getWeaponProfile().criticalBonus
+                    getEffectiveAttribute('dexterity') * 1.5 +
+                    getWeaponProfile().criticalBonus +
+                    getEquipmentBonus('criticalChance')
             );
         }
 
@@ -535,9 +734,10 @@ export default {
             return Math.min(
                 98,
                 76 +
-                    (Number(player.value.dexterity) || 0) * 1.2 +
+                    getEffectiveAttribute('dexterity') * 1.2 +
                     (Number(player.value.level) || 1) * 0.3 +
-                    getWeaponProfile().accuracyBonus
+                    getWeaponProfile().accuracyBonus +
+                    getEquipmentBonus('accuracy')
             );
         }
 
@@ -547,22 +747,28 @@ export default {
                 35,
                 Math.floor(
                     3 +
-                        (Number(player.value.dexterity) || 0) * 1.4 +
-                        (Number(player.value.level) || 1) * 0.2
+                        getEffectiveAttribute('dexterity') * 1.4 +
+                        (Number(player.value.level) || 1) * 0.2 +
+                        getEquipmentBonus('evasion')
                 )
             );
         }
 
         function getPlayerMagicDamage() {
 
-            return 6 + (Number(player.value.intelligence) || 0) * 2;
+            return (
+                6 +
+                getEffectiveAttribute('intelligence') * 2 +
+                getEquipmentBonus('magicDamage')
+            );
         }
 
         function getSkillCooldownReduction() {
 
             return Math.min(
                 35,
-                (Number(player.value.intelligence) || 0) * 2
+                getEffectiveAttribute('intelligence') * 2 +
+                    getEquipmentBonus('cooldownReduction')
             );
         }
 
@@ -571,7 +777,7 @@ export default {
             return Math.max(
                 MIN_PLAYER_ATTACK_COOLDOWN,
                 PLAYER_ATTACK_COOLDOWN -
-                    (Number(player.value.dexterity) || 0) * 20
+                    getEffectiveAttribute('dexterity') * 20
             );
         }
 
@@ -593,7 +799,7 @@ export default {
 
             return getPercent(
                 player.value.hp,
-                player.value.maxHp
+                getPlayerMaxHp()
             );
         }
 
@@ -601,7 +807,7 @@ export default {
 
             return getPercent(
                 player.value.mana,
-                player.value.maxMana
+                getPlayerMaxMana()
             );
         }
 
@@ -622,9 +828,13 @@ export default {
 
             const profile = getWeaponProfile();
             const primaryValue =
-                Number(player.value[profile.primaryAttribute]) || 0;
+                getEffectiveAttribute(
+                    profile.primaryAttribute
+                );
             const secondaryValue =
-                Number(player.value[profile.secondaryAttribute]) || 0;
+                getEffectiveAttribute(
+                    profile.secondaryAttribute
+                );
             const baseDamage = Math.floor(
                 profile.baseDamage +
                     primaryValue * profile.primaryScale +
@@ -904,6 +1114,7 @@ export default {
             player.value.x = newX;
             player.value.y = newY;
 
+            pickupGroundDropsUnderPlayer();
             updateCamera();
             persistCharacter();
 
@@ -1028,6 +1239,468 @@ export default {
             }, duration);
         }
 
+        function normalizeInventoryEntries(inventory) {
+
+            if (!Array.isArray(inventory)) {
+                return [];
+            }
+
+            return inventory
+                .filter(entry => entry?.itemId)
+                .map(entry => ({
+                    itemId: String(entry.itemId),
+                    quantity: Math.max(
+                        1,
+                        Number(entry.quantity) || 1
+                    )
+                }));
+        }
+
+        function normalizeEquipmentState(equipment) {
+
+            if (!equipment || typeof equipment !== 'object') {
+                return {
+                    ...DEFAULT_EQUIPMENT
+                };
+            }
+
+            return {
+                weapon: equipment.weapon || null,
+                armor: equipment.armor || null,
+                accessory: equipment.accessory || null
+            };
+        }
+
+        function getItemDefinition(itemId) {
+
+            return ITEM_DEFINITIONS[itemId] || {
+                name: itemId,
+                type: 'loot',
+                stackable: true,
+                symbol: '?'
+            };
+        }
+
+        function getItemLabel(itemId) {
+            return getItemDefinition(itemId).name;
+        }
+
+        function getItemSymbol(itemId) {
+            return getItemDefinition(itemId).symbol || '?';
+        }
+
+        function getItemBonuses(itemId) {
+            return getItemDefinition(itemId).bonuses || {};
+        }
+
+        function getEquipmentSlotLabel(slot) {
+            return EQUIPMENT_SLOT_LABELS[slot] || slot;
+        }
+
+        function getItemDetailText(itemId) {
+
+            const item = getItemDefinition(itemId);
+
+            if (item.type === 'consumable') {
+                return item.effect === 'mana'
+                    ? `Restaura ${item.amount} mana`
+                    : `Restaura ${item.amount} hp`;
+            }
+
+            if (item.type !== 'equipment') {
+                return item.name;
+            }
+
+            const bonuses =
+                Object.entries(item.bonuses || {})
+                    .map(([key, value]) =>
+                        `+${value} ${ITEM_BONUS_LABELS[key] || key}`
+                    );
+
+            return bonuses.length > 0
+                ? bonuses.join(', ')
+                : item.name;
+        }
+
+        function getInventoryEntries() {
+
+            return normalizeInventoryEntries(
+                player.value.inventory
+            );
+        }
+
+        function setInventoryEntries(entries) {
+            player.value.inventory =
+                normalizeInventoryEntries(entries);
+        }
+
+        function getEquippedItemId(slot) {
+
+            const equipment =
+                normalizeEquipmentState(
+                    player.value.equipment
+                );
+
+            return equipment[slot] || null;
+        }
+
+        function getEquippedItem(slot) {
+
+            const itemId =
+                getEquippedItemId(slot);
+
+            return itemId
+                ? getItemDefinition(itemId)
+                : null;
+        }
+
+        function getEquippedItemLabel(slot) {
+
+            const itemId =
+                getEquippedItemId(slot);
+
+            return itemId
+                ? getItemLabel(itemId)
+                : 'Vazio';
+        }
+
+        function setEquipmentState(equipment) {
+            player.value.equipment =
+                normalizeEquipmentState(equipment);
+        }
+
+        function getEquipmentBonus(stat) {
+
+            return EQUIPMENT_SLOTS.reduce(
+                (total, slot) => {
+                    const itemId =
+                        getEquippedItemId(slot);
+
+                    if (!itemId) {
+                        return total;
+                    }
+
+                    return (
+                        total +
+                        (Number(
+                            getItemBonuses(itemId)[stat]
+                        ) || 0)
+                    );
+                },
+                0
+            );
+        }
+
+        function getEffectiveAttribute(attribute) {
+
+            return (
+                (Number(player.value[attribute]) || 0) +
+                getEquipmentBonus(attribute)
+            );
+        }
+
+        function getPlayerMaxHp() {
+
+            return (
+                (Number(player.value.maxHp) || 100) +
+                getEquipmentBonus('maxHp')
+            );
+        }
+
+        function getPlayerMaxMana() {
+
+            return (
+                (Number(player.value.maxMana) || 50) +
+                getEquipmentBonus('maxMana')
+            );
+        }
+
+        function clampPlayerResources() {
+
+            player.value.hp = Math.min(
+                player.value.hp,
+                getPlayerMaxHp()
+            );
+            player.value.mana = Math.min(
+                player.value.mana,
+                getPlayerMaxMana()
+            );
+        }
+
+        function addInventoryItem(
+            itemId,
+            quantity = 1
+        ) {
+
+            const item = getItemDefinition(itemId);
+            const normalizedQuantity = Math.max(
+                1,
+                Number(quantity) || 1
+            );
+            const entries =
+                getInventoryEntries();
+            const existingEntry =
+                entries.find(
+                    entry => entry.itemId === itemId
+                );
+
+            if (
+                existingEntry &&
+                item.stackable !== false
+            ) {
+                existingEntry.quantity +=
+                    normalizedQuantity;
+            } else {
+                entries.push({
+                    itemId,
+                    quantity: normalizedQuantity
+                });
+            }
+
+            setInventoryEntries(entries);
+        }
+
+        function removeInventoryItem(
+            itemId,
+            quantity = 1
+        ) {
+
+            const normalizedQuantity = Math.max(
+                1,
+                Number(quantity) || 1
+            );
+            const entries =
+                getInventoryEntries();
+            const entry =
+                entries.find(
+                    item => item.itemId === itemId
+                );
+
+            if (!entry) {
+                return false;
+            }
+
+            entry.quantity -= normalizedQuantity;
+
+            setInventoryEntries(
+                entries.filter(item => item.quantity > 0)
+            );
+
+            return true;
+        }
+
+        function canEquipInventoryItem(itemId) {
+
+            return getItemDefinition(itemId).type === 'equipment';
+        }
+
+        function equipInventoryItem(itemId) {
+
+            const item =
+                getItemDefinition(itemId);
+
+            if (item.type !== 'equipment' || !item.slot) {
+                return false;
+            }
+
+            if (!removeInventoryItem(itemId, 1)) {
+                return false;
+            }
+
+            const equipment =
+                normalizeEquipmentState(
+                    player.value.equipment
+                );
+            const previousItemId =
+                equipment[item.slot];
+
+            equipment[item.slot] = itemId;
+            setEquipmentState(equipment);
+
+            if (previousItemId) {
+                addInventoryItem(previousItemId, 1);
+            }
+
+            clampPlayerResources();
+            persistCharacter();
+
+            return true;
+        }
+
+        function unequipItem(slot) {
+
+            const equipment =
+                normalizeEquipmentState(
+                    player.value.equipment
+                );
+            const itemId =
+                equipment[slot];
+
+            if (!itemId) {
+                return false;
+            }
+
+            equipment[slot] = null;
+            setEquipmentState(equipment);
+            addInventoryItem(itemId, 1);
+            clampPlayerResources();
+            persistCharacter();
+
+            return true;
+        }
+
+        function canUseInventoryItem(itemId) {
+
+            return getItemDefinition(itemId).type === 'consumable';
+        }
+
+        function useInventoryItem(itemId) {
+
+            const item =
+                getItemDefinition(itemId);
+
+            if (item.type !== 'consumable') {
+                return false;
+            }
+
+            if (!removeInventoryItem(itemId, 1)) {
+                return false;
+            }
+
+            if (item.effect === 'heal') {
+                const healed =
+                    healPlayer(item.amount, 'heal');
+
+                if (healed <= 0) {
+                    addInventoryItem(itemId, 1);
+                    return false;
+                }
+            }
+
+            if (item.effect === 'mana') {
+                const missingMana =
+                    getPlayerMaxMana() -
+                    player.value.mana;
+                const restored = Math.min(
+                    missingMana,
+                    Math.floor(item.amount || 0)
+                );
+
+                if (restored <= 0) {
+                    addInventoryItem(itemId, 1);
+                    createFloatingText(
+                        player.value.x,
+                        player.value.y,
+                        'Cheio',
+                        'magic'
+                    );
+                    return false;
+                }
+
+                player.value.mana += restored;
+                createFloatingText(
+                    player.value.x,
+                    player.value.y,
+                    `+${restored}`,
+                    'magic'
+                );
+            }
+
+            addLootEntry(
+                `Usaste ${item.name}`
+            );
+            persistCharacter();
+
+            return true;
+        }
+
+        function getGroundDropLabel(drop) {
+
+            if (drop.type === 'gold') {
+                return `${drop.quantity} gold`;
+            }
+
+            return `${getItemLabel(drop.itemId)} x${drop.quantity}`;
+        }
+
+        function createGroundDrop(
+            x,
+            y,
+            itemId,
+            quantity = 1
+        ) {
+
+            const item = getItemDefinition(itemId);
+
+            groundDrops.value.push({
+                id: `${Date.now()}-${Math.random()}`,
+                x,
+                y,
+                itemId,
+                quantity: Math.max(
+                    1,
+                    Number(quantity) || 1
+                ),
+                type:
+                    item.type === 'currency'
+                        ? 'gold'
+                        : item.type
+            });
+        }
+
+        function canPickUpDrop(drop) {
+
+            return getTileDistance(
+                player.value.x,
+                player.value.y,
+                drop.x,
+                drop.y
+            ) <= 1;
+        }
+
+        function pickupGroundDrop(drop) {
+
+            if (!drop || !canPickUpDrop(drop)) {
+                return false;
+            }
+
+            if (drop.type === 'gold') {
+                player.value.gold =
+                    (Number(player.value.gold) || 0) +
+                    drop.quantity;
+            } else {
+                addInventoryItem(
+                    drop.itemId,
+                    drop.quantity
+                );
+            }
+
+            groundDrops.value =
+                groundDrops.value.filter(
+                    item => item.id !== drop.id
+                );
+
+            addLootEntry(
+                `Apanhaste ${getGroundDropLabel(drop)}`
+            );
+            persistCharacter();
+
+            return true;
+        }
+
+        function pickupGroundDropsUnderPlayer() {
+
+            groundDrops.value
+                .filter(
+                    drop =>
+                        drop.x === player.value.x &&
+                        drop.y === player.value.y
+                )
+                .forEach(drop => {
+                    pickupGroundDrop(drop);
+                });
+        }
+
         function addLootEntry(text) {
 
             lootLog.value = [
@@ -1049,9 +1722,8 @@ export default {
             );
             const itemChance =
                 Number(monster.lootItemChance) || 0;
-            const itemName =
+            const itemId =
                 monster.lootItemName?.trim();
-            const lootMessages = [];
 
             if (goldMax > 0) {
                 const gold =
@@ -1062,31 +1734,32 @@ export default {
                     );
 
                 if (gold > 0) {
-                    player.value.gold =
-                        (Number(player.value.gold) || 0) +
-                        gold;
-                    lootMessages.push(
-                        `${monster.name} deixou ${gold} gold`
-                    );
-                    createFloatingText(
+                    createGroundDrop(
                         monster.x,
                         monster.y,
-                        `+${gold}g`,
-                        'loot'
+                        'gold',
+                        gold
+                    );
+                    addLootEntry(
+                        `${monster.name} deixou ${gold} gold no chao`
                     );
                 }
             }
 
             if (
-                itemName &&
+                itemId &&
                 Math.random() * 100 < itemChance
             ) {
-                lootMessages.push(
-                    `${monster.name} deixou ${itemName}`
+                createGroundDrop(
+                    monster.x,
+                    monster.y,
+                    itemId,
+                    1
+                );
+                addLootEntry(
+                    `${monster.name} deixou ${getItemLabel(itemId)}`
                 );
             }
-
-            lootMessages.forEach(addLootEntry);
         }
 
         function getDamageMitigation(monster, damageType) {
@@ -1200,7 +1873,7 @@ export default {
         function healPlayer(amount, kind = 'heal') {
 
             const missingHp =
-                player.value.maxHp - player.value.hp;
+                getPlayerMaxHp() - player.value.hp;
             const healed =
                 Math.min(missingHp, Math.floor(amount));
 
@@ -1892,9 +2565,9 @@ export default {
             player.value.x = PLAYER_START_POSITION.x;
             player.value.y = PLAYER_START_POSITION.y;
             player.value.hp =
-                player.value.maxHp || 100;
+                getPlayerMaxHp();
             player.value.mana =
-                player.value.maxMana || 50;
+                getPlayerMaxMana();
             player.value.moving = false;
             player.value.direction = 'down';
             player.value.animationFrame = 0;
@@ -2169,8 +2842,8 @@ export default {
             }
 
             if (leveledUp) {
-                player.value.hp = player.value.maxHp;
-                player.value.mana = player.value.maxMana;
+                player.value.hp = getPlayerMaxHp();
+                player.value.mana = getPlayerMaxMana();
 
                 console.log('Subiste de level!');
                 persistCharacter();
@@ -2241,7 +2914,7 @@ export default {
 
             const damage =
                 18 +
-                (Number(player.value.intelligence) || 0) * 2.7 +
+                getEffectiveAttribute('intelligence') * 2.7 +
                 (Number(player.value.level) || 1) * 2;
 
             createSkillEffect(target.x, target.y, 'fireball');
@@ -2255,7 +2928,7 @@ export default {
 
         function castHeal(skill) {
 
-            if (player.value.hp >= player.value.maxHp) {
+            if (player.value.hp >= getPlayerMaxHp()) {
                 createFloatingText(
                     player.value.x,
                     player.value.y,
@@ -2271,7 +2944,7 @@ export default {
 
             const healAmount =
                 24 +
-                (Number(player.value.intelligence) || 0) * 2.2 +
+                getEffectiveAttribute('intelligence') * 2.2 +
                 (Number(player.value.level) || 1) * 2;
 
             createSkillEffect(player.value.x, player.value.y, 'heal');
@@ -2339,6 +3012,7 @@ export default {
             }
 
             createSkillEffect(player.value.x, player.value.y, 'dash');
+            pickupGroundDropsUnderPlayer();
             updateCamera();
             persistCharacter();
         }
@@ -2353,7 +3027,7 @@ export default {
 
             const damage =
                 22 +
-                (Number(player.value.strength) || 0) * 3.2 +
+                getEffectiveAttribute('strength') * 3.2 +
                 (Number(player.value.level) || 1) * 2;
 
             createSkillEffect(target.x, target.y, 'power-strike');
@@ -2375,7 +3049,7 @@ export default {
             const healPerTick =
                 7 +
                 Math.floor(
-                    (Number(player.value.intelligence) || 0) * 0.8
+                    getEffectiveAttribute('intelligence') * 0.8
                 );
 
             createSkillEffect(
@@ -2425,9 +3099,9 @@ export default {
 
             const damage =
                 42 +
-                (Number(player.value.strength) || 0) * 1.2 +
-                (Number(player.value.intelligence) || 0) * 2.4 +
-                (Number(player.value.dexterity) || 0) * 1.2 +
+                getEffectiveAttribute('strength') * 1.2 +
+                getEffectiveAttribute('intelligence') * 2.4 +
+                getEffectiveAttribute('dexterity') * 1.2 +
                 (Number(player.value.level) || 1) * 4;
 
             createSkillEffect(origin.x, origin.y, 'ultimate', 820);
@@ -2580,12 +3254,21 @@ export default {
                 ...character,
                 maxHp: character.maxHp || character.hp || 100,
                 maxMana: character.maxMana || character.mana || 50,
+                gold: character.gold || 0,
+                inventory: normalizeInventoryEntries(
+                    character.inventory
+                ),
+                equipment: normalizeEquipmentState(
+                    character.equipment
+                ),
                 attributePoints: character.attributePoints || 0,
                 direction: 'down',
                 moving: false,
                 attacking: false,
                 animationFrame: 0
             };
+
+            clampPlayerResources();
 
             const zoneMonsters =
                 await getMonsters(
@@ -2707,6 +3390,7 @@ export default {
             player,
 
             monsters,
+            groundDrops,
 
             selectedTarget,
 
@@ -2727,6 +3411,7 @@ export default {
             xpBar,
 
             skillSlot,
+            equipmentSlots,
 
             getPlayerSprite,
             getMonsterSprite,
@@ -2752,6 +3437,23 @@ export default {
             getSkillManaCost,
             canPaySkillMana,
             getDistanceToTarget,
+            getPlayerMaxHp,
+            getPlayerMaxMana,
+            getEffectiveAttribute,
+            getItemLabel,
+            getItemSymbol,
+            getItemDetailText,
+            getGroundDropLabel,
+            getEquipmentSlotLabel,
+            getEquippedItemId,
+            getEquippedItemLabel,
+            getInventoryEntries,
+            canEquipInventoryItem,
+            canUseInventoryItem,
+            equipInventoryItem,
+            useInventoryItem,
+            unequipItem,
+            pickupGroundDrop,
             spendAttributePoint,
             useSkill,
 
