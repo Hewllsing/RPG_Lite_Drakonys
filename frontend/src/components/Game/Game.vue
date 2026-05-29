@@ -127,6 +127,7 @@
               top: monster.y * tileSize + 'px'
             }"
             @click="selectTarget(monster)"
+            @dblclick.stop="engageTarget(monster)"
           >
             <span class="entity-name monster-name">{{ monster.name }}</span>
             <img

@@ -1109,7 +1109,52 @@ export default {
         }
 
         function selectTarget(monster) {
+
+            if (!monster || monster.dead || monster.hp <= 0) {
+                return;
+            }
+
             selectedTarget.value = monster;
+        }
+
+        function findNearestMonster() {
+
+            return monsters.value
+                .filter(monster => !monster.dead && monster.hp > 0)
+                .sort((first, second) =>
+                    getDistanceToTarget(first) -
+                    getDistanceToTarget(second)
+                )[0] || null;
+        }
+
+        function ensureAutoCombatTarget() {
+
+            clearTargetIfDead();
+
+            if (selectedTarget.value) {
+                return true;
+            }
+
+            const nearestMonster = findNearestMonster();
+
+            if (!nearestMonster) {
+                createFloatingText(
+                    player.value.x,
+                    player.value.y,
+                    'Sem alvo',
+                    'miss'
+                );
+                return false;
+            }
+
+            selectTarget(nearestMonster);
+            return true;
+        }
+
+        function engageTarget(monster) {
+
+            selectTarget(monster);
+            startAutoCombat();
         }
 
         function clearTargetIfDead() {
@@ -1846,8 +1891,7 @@ export default {
 
         function startAutoCombat() {
 
-            if (!selectedTarget.value) {
-                basicAttack();
+            if (!ensureAutoCombatTarget()) {
                 return;
             }
 
@@ -2506,7 +2550,8 @@ export default {
             spendAttributePoint,
             useSkill,
 
-            selectTarget
+            selectTarget,
+            engageTarget
         };
     }
 };
