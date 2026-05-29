@@ -571,6 +571,49 @@ export default {
             );
         }
 
+        function getPercent(currentValue, maxValue) {
+
+            const current = Number(currentValue) || 0;
+            const max = Number(maxValue) || 1;
+
+            return Math.max(
+                0,
+                Math.min(
+                    100,
+                    Math.round((current / max) * 100)
+                )
+            );
+        }
+
+        function getPlayerHpPercent() {
+
+            return getPercent(
+                player.value.hp,
+                player.value.maxHp
+            );
+        }
+
+        function getPlayerManaPercent() {
+
+            return getPercent(
+                player.value.mana,
+                player.value.maxMana
+            );
+        }
+
+        function getXpRequiredForNextLevel() {
+
+            return (Number(player.value.level) || 1) * 100;
+        }
+
+        function getPlayerXpPercent() {
+
+            return getPercent(
+                player.value.xp,
+                getXpRequiredForNextLevel()
+            );
+        }
+
         function getBasicAttackDamagePreview() {
 
             const profile = getWeaponProfile();
@@ -1655,7 +1698,7 @@ export default {
         function checkLevelUp() {
 
             let xpRequired =
-                player.value.level * 100;
+                getXpRequiredForNextLevel();
             let leveledUp = false;
 
             while (player.value.xp >= xpRequired) {
@@ -1669,7 +1712,7 @@ export default {
                     ATTRIBUTE_POINTS_PER_LEVEL;
 
                 leveledUp = true;
-                xpRequired = player.value.level * 100;
+                xpRequired = getXpRequiredForNextLevel();
             }
 
             if (leveledUp) {
@@ -2212,6 +2255,10 @@ export default {
             getPlayerMagicDamage,
             getSkillCooldownReduction,
             getPlayerAttackCooldown,
+            getPlayerHpPercent,
+            getPlayerManaPercent,
+            getPlayerXpPercent,
+            getXpRequiredForNextLevel,
             getBasicAttackDamagePreview,
             isSkillCoolingDown,
             getSkillCooldownPercent,
