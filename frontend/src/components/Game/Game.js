@@ -162,6 +162,7 @@ export default {
         let afkFarmInterval = null;
         let playerAttackTimeout = null;
         let playerAttackInProgress = false;
+        let lastPlayerMoveAt = 0;
         const regenerationIntervals = [];
         const pressedMovementKeys = new Set();
 
@@ -1144,7 +1145,6 @@ export default {
         }
 
         function movePlayerFromPressedKeys() {
-
             const {
                 dx,
                 dy
@@ -1154,6 +1154,15 @@ export default {
                 player.value.moving = false;
                 return;
             }
+
+            const now = Date.now();
+
+            if (now - lastPlayerMoveAt < PLAYER_MOVE_INTERVAL) {
+                return;
+            }
+
+            // O cooldown vale tanto para tecla segurada quanto para toques repetidos.
+            lastPlayerMoveAt = now;
 
             // Quando duas teclas sao seguradas, tenta a diagonal primeiro.
             if (movePlayer(dx, dy)) {
