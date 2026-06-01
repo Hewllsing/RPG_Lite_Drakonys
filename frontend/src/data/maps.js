@@ -146,6 +146,39 @@ function createGoblinForestMap() {
 }
 
 function createGoblinForestMonsters() {
+  const eliteStats = {
+    goblin: {
+      name: 'Elite Goblin',
+      maxHp: 135,
+      damage: 18,
+      xp: 60,
+      gold: 12
+    },
+    goblinArcher: {
+      name: 'Elite Goblin Archer',
+      maxHp: 114,
+      damage: 21,
+      xp: 75,
+      gold: 15
+    },
+    goblinShaman: {
+      name: 'Elite Goblin Shaman',
+      maxHp: 156,
+      damage: 27,
+      xp: 105,
+      gold: 21
+    }
+  };
+  const elite = (type, x, y) => ({
+    type,
+    x,
+    y,
+    elite: true,
+    agroRange: 8,
+    attackCooldown: 1250,
+    ...eliteStats[type]
+  });
+
   return [
     { type: 'goblin', x: 10, y: 7 },
     { type: 'goblin', x: 12, y: 7 },
@@ -201,7 +234,20 @@ function createGoblinForestMonsters() {
     { type: 'goblinShaman', x: 70, y: 39 },
     { type: 'goblin', x: 67, y: 40 },
     { type: 'goblinArcher', x: 69, y: 41 },
-    { type: 'goblin', x: 71, y: 41 }
+    { type: 'goblin', x: 71, y: 41 },
+
+    elite('goblin', 12, 8),
+    elite('goblinArcher', 32, 10),
+    elite('goblinShaman', 62, 9),
+    elite('goblin', 48, 26),
+    elite('goblinArcher', 22, 31),
+    elite('goblinShaman', 59, 34),
+    elite('goblin', 12, 34),
+    elite('goblinArcher', 68, 39),
+    elite('goblinShaman', 18, 36),
+    elite('goblin', 53, 25),
+    elite('goblinArcher', 72, 37),
+    elite('goblinShaman', 40, 20)
   ];
 }
 
@@ -264,7 +310,14 @@ export const ZONES = {
       { type: 'guard', x: 42, y: 6 }
     ],
     monsters: createGoblinForestMonsters(),
-    boss: { type: 'goblinKing', x: 72, y: 39 },
+    boss: {
+      type: 'goblinKing',
+      x: 40,
+      y: 22,
+      name: 'Goblin King',
+      visualScale: 1.42,
+      aura: 'boss-large'
+    },
     quests: [
       'defeatGoblins',
       'defeatGoblinArchers',

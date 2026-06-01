@@ -138,7 +138,7 @@
             v-for="monster in monsters"
             :key="monster.id"
             class="monster-wrapper"
-            :class="{ boss: monster.isBoss, dead: monster.dead }"
+            :class="{ boss: monster.isBoss, elite: monster.elite, dead: monster.dead }"
             :style="{
               left: monster.x * tileSize + 'px',
               top: monster.y * tileSize + 'px'

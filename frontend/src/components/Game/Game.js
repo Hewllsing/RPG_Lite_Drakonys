@@ -691,7 +691,8 @@ export default {
                         monster.type,
                         monster.x,
                         monster.y,
-                        `${zone.key}-${index}`
+                        `${zone.key}-${index}`,
+                        monster
                     )
             );
 
@@ -700,7 +701,8 @@ export default {
                     createBoss(
                         zone.boss.type,
                         zone.boss.x,
-                        zone.boss.y
+                        zone.boss.y,
+                        zone.boss
                     )
                 );
             }

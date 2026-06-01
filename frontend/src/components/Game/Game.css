@@ -244,6 +244,20 @@
     cursor: pointer;
 }
 
+.monster-wrapper::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    z-index: 0;
+    width: 52px;
+    height: 52px;
+    border-radius: 999px;
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, -50%);
+}
+
 .monster-wrapper.dead {
     pointer-events: none;
     opacity: 0.82;
@@ -256,7 +270,61 @@
 }
 
 .monster-wrapper.boss .monster {
-    filter: drop-shadow(0 0 10px rgba(219, 39, 119, 0.68));
+    width: 78px;
+    height: 78px;
+    transform: translate(-13px, -18px);
+    filter:
+        drop-shadow(0 0 16px rgba(219, 39, 119, 0.88))
+        drop-shadow(0 10px 8px rgba(0, 0, 0, 0.72));
+}
+
+.monster-wrapper.elite::before {
+    opacity: 1;
+    background:
+        radial-gradient(circle, rgba(250, 204, 21, 0.34), transparent 42%),
+        radial-gradient(circle, rgba(124, 91, 212, 0.34), transparent 68%);
+    box-shadow: 0 0 24px rgba(167, 139, 250, 0.34);
+    animation: eliteAuraPulse 1.8s ease-in-out infinite;
+}
+
+.monster-wrapper.elite .monster {
+    filter:
+        drop-shadow(0 0 10px rgba(250, 204, 21, 0.58))
+        drop-shadow(0 0 7px rgba(124, 91, 212, 0.5));
+}
+
+.monster-wrapper.elite .monster-name {
+    color: #ffe28a;
+    background: rgba(36, 20, 7, 0.78);
+}
+
+.monster-wrapper.boss::before {
+    opacity: 1;
+    width: 112px;
+    height: 112px;
+    background:
+        radial-gradient(circle, rgba(248, 113, 113, 0.36), transparent 34%),
+        radial-gradient(circle, rgba(219, 39, 119, 0.42), transparent 58%),
+        radial-gradient(circle, rgba(250, 204, 21, 0.2), transparent 72%);
+    box-shadow:
+        0 0 34px rgba(219, 39, 119, 0.52),
+        inset 0 0 28px rgba(250, 204, 21, 0.18);
+    animation: bossAuraPulse 1.6s ease-in-out infinite;
+}
+
+.monster-wrapper.boss .monster-name {
+    bottom: 108px;
+    max-width: 130px;
+    color: #ffd36b;
+    background: rgba(45, 10, 19, 0.84);
+}
+
+.monster-wrapper.boss .monster-hp-container {
+    left: -4px;
+    top: -31px;
+    width: 60px;
+    height: 7px;
+    border-color: #30050b;
 }
 
 .entity-name {
@@ -1427,6 +1495,32 @@
 
     50% {
         transform: translateY(-3px) scaleY(0.96);
+    }
+}
+
+@keyframes eliteAuraPulse {
+    0%,
+    100% {
+        transform: translate(-50%, -50%) scale(0.92);
+        opacity: 0.72;
+    }
+
+    50% {
+        transform: translate(-50%, -50%) scale(1.12);
+        opacity: 1;
+    }
+}
+
+@keyframes bossAuraPulse {
+    0%,
+    100% {
+        transform: translate(-50%, -50%) scale(0.94) rotate(0deg);
+        opacity: 0.78;
+    }
+
+    50% {
+        transform: translate(-50%, -50%) scale(1.16) rotate(4deg);
+        opacity: 1;
     }
 }
 

@@ -6,19 +6,29 @@ export const BOSS_TYPES = {
   demonLord: { name: 'Demon Lord', spriteKey: 'demonLord', level: 15, maxHp: 900, damage: 55, xp: 760, gold: 400, attackRange: 2, agroRange: 10, attackCooldown: 1800, drops: ['goldCoin', 'demonKey', 'demonEssence'] }
 };
 
-export function createBoss(type, x, y) {
+export function createBoss(type, x, y, overrides = {}) {
   const template = BOSS_TYPES[type];
+  const {
+    type: ignoredType,
+    x: ignoredX,
+    y: ignoredY,
+    ...customStats
+  } = overrides;
+  const bossStats = {
+    ...template,
+    ...customStats
+  };
 
   return {
-    ...template,
+    ...bossStats,
     id: `boss-${type}`,
     typeKey: type,
     x,
     y,
     spawnX: x,
     spawnY: y,
-    hp: template.maxHp,
-    maxHp: template.maxHp,
+    hp: bossStats.maxHp,
+    maxHp: bossStats.maxHp,
     isBoss: true,
     moving: false,
     attacking: false,

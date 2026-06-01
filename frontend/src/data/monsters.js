@@ -16,19 +16,29 @@ export const MONSTER_TYPES = {
   demonMage: { name: 'Demon Mage', spriteKey: 'demonMage', type: 'demon', level: 12, maxHp: 170, damage: 38, xp: 200, gold: 48, agroRange: 8, attackRange: 4, attackCooldown: 2200, drops: ['goldCoin', 'demonEssence', 'staff'] }
 };
 
-export function createMonster(type, x, y, idSuffix = '') {
+export function createMonster(type, x, y, idSuffix = '', overrides = {}) {
   const template = MONSTER_TYPES[type];
+  const {
+    type: ignoredType,
+    x: ignoredX,
+    y: ignoredY,
+    ...customStats
+  } = overrides;
+  const monsterStats = {
+    ...template,
+    ...customStats
+  };
 
   return {
-    ...template,
+    ...monsterStats,
     id: `${type}-${x}-${y}-${idSuffix || Math.random().toString(36).slice(2)}`,
     typeKey: type,
     x,
     y,
     spawnX: x,
     spawnY: y,
-    hp: template.maxHp,
-    maxHp: template.maxHp,
+    hp: monsterStats.maxHp,
+    maxHp: monsterStats.maxHp,
     moving: false,
     attacking: false,
     dead: false,
