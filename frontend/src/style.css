@@ -202,6 +202,14 @@ button:disabled {
   text-align: left;
 }
 
+.class-card img {
+  width: 64px;
+  height: 64px;
+  align-self: center;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.55));
+}
+
 .class-card.selected {
   border-color: #c9a34e;
   box-shadow: 0 0 20px rgba(201, 163, 78, 0.22);

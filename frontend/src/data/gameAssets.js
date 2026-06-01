@@ -16,6 +16,14 @@ import playerAttackLeft from '../assets/player/player_attack_left.png';
 import playerAttackRight from '../assets/player/player_attack_right.png';
 import playerDead from '../assets/player/player_dead.png';
 
+const playerClassSpriteModules = import.meta.glob(
+  '../assets/player/classes/**/*.png',
+  {
+    eager: true,
+    import: 'default'
+  }
+);
+
 import grassTile from '../assets/tiles/grass.png';
 import darkGrassTile from '../assets/tiles/dark_grass.png';
 import dirtTile from '../assets/tiles/dirt.png';
@@ -232,7 +240,58 @@ function frames(idle, walk1, walk2, attack, dead) {
   };
 }
 
+function legacyPlayerSprites() {
+  return {
+    down: { idle: playerIdleDown, attack: playerAttackDown, walk: [playerWalkDown1, playerWalkDown2] },
+    up: { idle: playerIdleUp, attack: playerAttackUp, walk: [playerWalkUp1, playerWalkUp2] },
+    left: { idle: playerIdleLeft, attack: playerAttackLeft, walk: [playerWalkLeft1, playerWalkLeft2] },
+    right: { idle: playerIdleRight, attack: playerAttackRight, walk: [playerWalkRight1, playerWalkRight2] },
+    dead: playerDead
+  };
+}
+
+function getClassPlayerAsset(classKey, fileName) {
+  return playerClassSpriteModules[
+    `../assets/player/classes/${classKey}/${fileName}`
+  ];
+}
+
+function classDirectionFrames(classKey, direction) {
+  const idle =
+    getClassPlayerAsset(classKey, `${classKey}_idle_${direction}.png`);
+  const attack =
+    getClassPlayerAsset(classKey, `${classKey}_attack_${direction}.png`);
+  const walk = [1, 2, 3, 4].map(index =>
+    getClassPlayerAsset(
+      classKey,
+      `${classKey}_walk_${direction}_${index}.png`
+    )
+  );
+
+  return {
+    idle,
+    attack,
+    walk
+  };
+}
+
+function classPlayerSprites(classKey) {
+  return {
+    down: classDirectionFrames(classKey, 'down'),
+    up: classDirectionFrames(classKey, 'up'),
+    left: classDirectionFrames(classKey, 'left'),
+    right: classDirectionFrames(classKey, 'right'),
+    dead: getClassPlayerAsset(classKey, `${classKey}_dead.png`)
+  };
+}
+
+const defaultPlayerSprites = legacyPlayerSprites();
+
 export const playerSprites = {
+  default: defaultPlayerSprites,
+  warrior: classPlayerSprites('warrior'),
+  mage: classPlayerSprites('mage'),
+  archer: classPlayerSprites('archer'),
   down: { idle: playerIdleDown, attack: playerAttackDown, walk: [playerWalkDown1, playerWalkDown2] },
   up: { idle: playerIdleUp, attack: playerAttackUp, walk: [playerWalkUp1, playerWalkUp2] },
   left: { idle: playerIdleLeft, attack: playerAttackLeft, walk: [playerWalkLeft1, playerWalkLeft2] },

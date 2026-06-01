@@ -259,10 +259,33 @@ export default {
             }, {})
         );
 
+        function getPlayerSpriteSet() {
+
+            return (
+                playerSprites[getCharacterClass()] ||
+                playerSprites.default ||
+                playerSprites
+            );
+        }
+
+        function getPlayerDirectionSprites() {
+
+            const spriteSet = getPlayerSpriteSet();
+
+            return (
+                spriteSet[player.value.direction] ||
+                spriteSet.down
+            );
+        }
+
         function getPlayerSprite() {
 
-            const direction =
-                playerSprites[player.value.direction];
+            const spriteSet = getPlayerSpriteSet();
+            const direction = getPlayerDirectionSprites();
+
+            if (player.value.hp <= 0 && spriteSet.dead) {
+                return spriteSet.dead;
+            }
 
             if (player.value.attacking) {
                 return direction.attack;
@@ -273,7 +296,8 @@ export default {
             }
 
             return direction.walk[
-                player.value.animationFrame
+                player.value.animationFrame %
+                    direction.walk.length
             ];
         }
 
@@ -1385,10 +1409,12 @@ export default {
 
                 if (player.value.moving) {
 
+                    const playerWalkFrames =
+                        getPlayerDirectionSprites().walk || [];
+
                     player.value.animationFrame =
-                        player.value.animationFrame === 0
-                            ? 1
-                            : 0;
+                        (player.value.animationFrame + 1) %
+                        Math.max(1, playerWalkFrames.length);
                 }
 
                 monsters.value.forEach(monster => {
@@ -1397,10 +1423,20 @@ export default {
                         return;
                     }
 
+                    const spriteKey =
+                        monster.spriteKey ||
+                        monster.race?.toLowerCase() ||
+                        'goblin';
+                    const sprites =
+                        (monster.isBoss
+                            ? bossSprites[spriteKey]
+                            : monsterSprites[spriteKey]) ||
+                        monsterSprites.goblin;
+                    const walkFrames = sprites.walk || [];
+
                     monster.animationFrame =
-                        monster.animationFrame === 0
-                            ? 1
-                            : 0;
+                        ((monster.animationFrame || 0) + 1) %
+                        Math.max(1, walkFrames.length);
                 });
 
             }, 180);
