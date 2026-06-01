@@ -35,6 +35,45 @@ export const BLOCKED_TILES = [
 ];
 
 export const ZONES = {
+  starterTown: {
+    key: 'starterTown',
+    name: 'Initial City',
+    theme: 'Safe stone refuge',
+    assets: mapAssets.goblinForest,
+    map: [
+      [C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C],
+      [C,S,S,S,S,S,S,S,S,R,R,S,S,S,S,S,S,S,S,C],
+      [C,S,T,S,K,S,S,S,S,R,R,S,S,S,K,S,T,S,S,C],
+      [C,S,S,S,S,S,S,S,S,R,R,S,S,S,S,S,S,S,S,C],
+      [C,S,S,S,WO,WO,WO,WO,WO,WO,WO,WO,WO,S,S,S,S,S,S,C],
+      [C,S,S,S,WO,WO,WO,WO,WO,WO,WO,WO,WO,S,S,S,S,S,S,C],
+      [C,S,S,S,WO,WO,WO,WO,WO,WO,WO,WO,WO,S,S,S,S,S,S,C],
+      [C,S,S,S,WO,WO,WO,WO,WO,WO,WO,WO,WO,S,S,S,S,S,S,C],
+      [C,S,S,S,S,S,S,S,S,R,R,S,S,S,S,S,S,S,S,C],
+      [C,S,S,S,S,S,S,S,S,R,R,S,S,S,S,S,S,S,S,C],
+      [C,S,T,S,S,S,K,S,S,R,R,S,S,K,S,S,S,T,S,C],
+      [C,S,S,S,S,S,S,S,S,R,R,S,S,S,S,S,S,S,S,C],
+      [C,S,S,S,S,S,S,S,S,R,R,S,S,S,S,S,S,S,S,C],
+      [C,S,S,S,S,S,S,S,S,R,R,S,S,S,S,S,S,S,OUT,C],
+      [C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C]
+    ],
+    playerStart: { x: 9, y: 8 },
+    safeZone: true,
+    portals: [
+      { x: 18, y: 13, to: 'goblinForest', color: 'blue', label: 'Goblin Forest' }
+    ],
+    npcs: [
+      { type: 'merchant', x: 6, y: 5 },
+      { type: 'healer', x: 8, y: 5 },
+      { type: 'questMaster', x: 10, y: 5 },
+      { type: 'trainer', x: 12, y: 5 },
+      { type: 'blacksmith', x: 6, y: 7 },
+      { type: 'guard', x: 12, y: 7 },
+      { type: 'storageChest', x: 9, y: 6 }
+    ],
+    monsters: [],
+    quests: []
+  },
   goblinForest: {
     key: 'goblinForest',
     name: 'Goblin Forest',
@@ -59,6 +98,7 @@ export const ZONES = {
     ],
     playerStart: { x: 5, y: 5 },
     portals: [
+      { x: 9, y: 1, to: 'starterTown', color: 'blue', label: 'Initial City' },
       { x: 18, y: 10, to: 'orcCamp', color: 'blue', label: 'Orc Camp' },
       { x: 2, y: 13, to: 'elfWoods', color: 'purple', label: 'Elf Woods' }
     ],
@@ -239,5 +279,5 @@ export const ZONES = {
 };
 
 export function getZoneKeyByName(name) {
-  return Object.values(ZONES).find(zone => zone.name === name)?.key || 'goblinForest';
+  return Object.values(ZONES).find(zone => zone.name === name)?.key || 'starterTown';
 }

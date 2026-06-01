@@ -4,50 +4,58 @@ export const NPC_DEFINITIONS = {
   blacksmith: {
     id: 'blacksmith',
     name: 'Blacksmith',
-    role: 'Forge & upgrades',
-    dialogue: 'My forge is ready. Bring ore, crystals, and patience.',
+    role: 'Forja e melhorias',
+    dialogue: 'A forja esta acesa. Traz minerio, cristais e paciencia.',
     actionLabel: 'Equipamento',
     assets: npcAssets.blacksmith
   },
   merchant: {
     id: 'merchant',
     name: 'Merchant',
-    role: 'Supplies',
-    dialogue: 'Coins talk. Potions, arrows, blades... I have enough for a brave fool.',
+    role: 'Suprimentos',
+    dialogue: 'Moedas falam alto. Pocoes, laminas, arcos, cajados... tenho mercadoria para todos os tipos de coragem.',
     actionLabel: 'Loja',
     assets: npcAssets.merchant
   },
   healer: {
     id: 'healer',
     name: 'Healer',
-    role: 'Sanctuary',
-    dialogue: 'Rest, wanderer. The dark takes enough from the living.',
+    role: 'Santuario',
+    dialogue: 'Descansa, viajante. A escuridao ja leva demais dos vivos.',
     actionLabel: 'Curar',
     assets: npcAssets.healer
   },
   questMaster: {
     id: 'questMaster',
     name: 'Quest Master',
-    role: 'Contracts',
-    dialogue: 'The roads are full of work for someone who can hold a blade.',
+    role: 'Contratos',
+    dialogue: 'As estradas estao cheias de trabalho para quem sabe segurar uma arma.',
     actionLabel: 'Quests',
     assets: npcAssets.questMaster
   },
   trainer: {
     id: 'trainer',
     name: 'Trainer',
-    role: 'Classes & skills',
-    dialogue: 'Strength without timing is noise. Learn the rhythm of your class.',
+    role: 'Classes e skills',
+    dialogue: 'Forca sem tempo certo e so barulho. Aprende o ritmo da tua classe.',
     actionLabel: 'Treino',
     assets: npcAssets.trainer
   },
   guard: {
     id: 'guard',
     name: 'Guard',
-    role: 'Zone guidance',
-    dialogue: 'Stay on the road. The woods listen, and the crypt remembers.',
+    role: 'Orientacao',
+    dialogue: 'Fica na estrada. A floresta escuta, e a cripta lembra.',
     actionLabel: 'Informacao',
     assets: npcAssets.guard
+  },
+  storageChest: {
+    id: 'storageChest',
+    name: 'Bau da Casa',
+    role: 'Armazem pessoal',
+    dialogue: 'Este bau fica na tua casa. Guarda aqui o que nao queres carregar na mochila.',
+    actionLabel: 'Abrir bau',
+    assets: npcAssets.merchant
   }
 };
 

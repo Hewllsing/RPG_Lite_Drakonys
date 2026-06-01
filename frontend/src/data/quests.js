@@ -7,6 +7,8 @@ export const QUEST_DEFINITIONS = {
     objectiveType: 'kill',
     targetTypes: ['goblin', 'goblinArcher', 'goblinShaman'],
     required: 5,
+    xpReward: 80,
+    goldReward: 25,
     reward: '80 XP, 25 gold',
     status: 'available'
   },
@@ -18,6 +20,9 @@ export const QUEST_DEFINITIONS = {
     objectiveType: 'kill',
     targetTypes: ['goblinKing'],
     required: 1,
+    xpReward: 180,
+    goldReward: 65,
+    itemRewards: [{ itemId: 'goblinTotem', quantity: 1 }],
     reward: 'Totem raro, 180 XP',
     status: 'available'
   },
@@ -29,6 +34,9 @@ export const QUEST_DEFINITIONS = {
     objectiveType: 'talk',
     targetTypes: ['healer'],
     required: 1,
+    xpReward: 35,
+    goldReward: 10,
+    itemRewards: [{ itemId: 'healthPotion', quantity: 2 }],
     reward: '2 potions',
     status: 'available'
   },
@@ -40,6 +48,8 @@ export const QUEST_DEFINITIONS = {
     objectiveType: 'collect',
     targetTypes: ['demonKey'],
     required: 1,
+    xpReward: 220,
+    goldReward: 80,
     reward: 'Acesso ao boss final',
     status: 'available'
   },
@@ -51,6 +61,8 @@ export const QUEST_DEFINITIONS = {
     objectiveType: 'explore',
     targetTypes: ['demonGate'],
     required: 1,
+    xpReward: 120,
+    goldReward: 45,
     reward: '120 XP',
     status: 'available'
   }
