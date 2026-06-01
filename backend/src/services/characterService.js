@@ -1,24 +1,5 @@
 const { pool } = require('../database/connection');
 
-const DEFAULT_EQUIPMENT = {
-  weapon: null,
-  armor: null,
-  accessory: null
-};
-
-function parseStoredJson(value, fallbackValue) {
-
-  if (!value) {
-    return fallbackValue;
-  }
-
-  try {
-    return JSON.parse(value);
-  } catch {
-    return fallbackValue;
-  }
-}
-
 function mapCharacter(row) {
 
   return {
@@ -36,18 +17,6 @@ function mapCharacter(row) {
     intelligence: row.intelligence,
     dexterity: row.dexterity,
     attributePoints: row.attribute_points,
-    gold: row.gold,
-    inventory: parseStoredJson(
-      row.inventory_json,
-      []
-    ),
-    equipment: {
-      ...DEFAULT_EQUIPMENT,
-      ...parseStoredJson(
-        row.equipment_json,
-        DEFAULT_EQUIPMENT
-      )
-    },
     currentZone: row.current_zone,
     x: row.x,
     y: row.y,
@@ -135,99 +104,6 @@ function getClassBaseStats(characterClass) {
   return statsByClass[characterClass];
 }
 
-function getStarterInventory(characterClass) {
-
-  const startersByClass = {
-    warrior: [
-      {
-        itemId: 'small-health-potion',
-        quantity: 3
-      },
-      {
-        itemId: 'small-mana-potion',
-        quantity: 1
-      }
-    ],
-    mage: [
-      {
-        itemId: 'small-health-potion',
-        quantity: 2
-      },
-      {
-        itemId: 'small-mana-potion',
-        quantity: 3
-      }
-    ],
-    archer: [
-      {
-        itemId: 'small-health-potion',
-        quantity: 2
-      },
-      {
-        itemId: 'small-mana-potion',
-        quantity: 2
-      }
-    ]
-  };
-
-  return startersByClass[characterClass] || [];
-}
-
-function getStarterEquipment(characterClass) {
-
-  const startersByClass = {
-    warrior: {
-      weapon: 'training-sword',
-      armor: 'leather-tunic',
-      accessory: null
-    },
-    mage: {
-      weapon: 'apprentice-staff',
-      armor: 'cloth-robe',
-      accessory: 'focus-charm'
-    },
-    archer: {
-      weapon: 'hunter-bow',
-      armor: 'leather-tunic',
-      accessory: null
-    }
-  };
-
-  return startersByClass[characterClass] || DEFAULT_EQUIPMENT;
-}
-
-function normalizeInventory(inventory) {
-
-  if (!Array.isArray(inventory)) {
-    return [];
-  }
-
-  return inventory
-    .filter(item => item && item.itemId)
-    .map(item => ({
-      itemId: String(item.itemId),
-      quantity: Math.max(
-        1,
-        Number(item.quantity) || 1
-      )
-    }));
-}
-
-function normalizeEquipment(equipment) {
-
-  if (!equipment || typeof equipment !== 'object') {
-    return {
-      ...DEFAULT_EQUIPMENT
-    };
-  }
-
-  return {
-    weapon: equipment.weapon || null,
-    armor: equipment.armor || null,
-    accessory: equipment.accessory || null
-  };
-}
-
 async function listCharactersByUserId(userId) {
 
   const [characters] = await pool.execute(
@@ -252,12 +128,6 @@ async function createCharacterForUser(userId, name, characterClass = 'warrior') 
     validateCharacterClass(characterClass);
   const baseStats =
     getClassBaseStats(selectedClass);
-  const starterInventory = JSON.stringify(
-    getStarterInventory(selectedClass)
-  );
-  const starterEquipment = JSON.stringify(
-    getStarterEquipment(selectedClass)
-  );
 
   try {
     const [result] = await pool.execute(
@@ -276,9 +146,6 @@ async function createCharacterForUser(userId, name, characterClass = 'warrior') 
           intelligence,
           dexterity,
           attribute_points,
-          gold,
-          inventory_json,
-          equipment_json,
           current_zone,
           x,
           y
@@ -297,20 +164,15 @@ async function createCharacterForUser(userId, name, characterClass = 'warrior') 
           :intelligence,
           :dexterity,
           0,
-          0,
-          :inventoryJson,
-          :equipmentJson,
-          'Goblin Forest',
-          5,
-          5
+          'Initial City',
+          9,
+          8
         )
       `,
       {
         userId,
         name: characterName,
         characterClass: selectedClass,
-        inventoryJson: starterInventory,
-        equipmentJson: starterEquipment,
         ...baseStats
       }
     );
@@ -362,19 +224,6 @@ async function updateCharacterByIdForUser(userId, characterId, character) {
     intelligence: normalize(character.intelligence),
     dexterity: normalize(character.dexterity),
     attributePoints: normalize(character.attributePoints),
-    gold: normalize(character.gold),
-    inventoryJson:
-      character.inventory === undefined
-        ? null
-        : JSON.stringify(
-          normalizeInventory(character.inventory)
-        ),
-    equipmentJson:
-      character.equipment === undefined
-        ? null
-        : JSON.stringify(
-          normalizeEquipment(character.equipment)
-        ),
     currentZone: normalize(character.currentZone),
     x: normalize(character.x),
     y: normalize(character.y)
@@ -400,9 +249,6 @@ async function updateCharacterByIdForUser(userId, characterId, character) {
           intelligence = COALESCE(:intelligence, intelligence),
           dexterity = COALESCE(:dexterity, dexterity),
           attribute_points = COALESCE(:attributePoints, attribute_points),
-          gold = COALESCE(:gold, gold),
-          inventory_json = COALESCE(:inventoryJson, inventory_json),
-          equipment_json = COALESCE(:equipmentJson, equipment_json),
           current_zone = COALESCE(:currentZone, current_zone),
           x = COALESCE(:x, x),
           y = COALESCE(:y, y)

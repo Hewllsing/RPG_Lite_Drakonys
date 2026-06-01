@@ -1,409 +1,347 @@
 <template>
-  <div class="game-container">
-
-    <div class="game-viewport">
-
-      <div
-        class="game-map"
-        :style="{
-          transform: `translate(-${camera.x}px, -${camera.y}px)`
-        }"
-      >
-
-        <!-- MAPA -->
-
-        <div
-          v-for="(row, rowIndex) in gameMap"
-          :key="rowIndex"
-        >
-
-          <img
-            v-for="(tile, colIndex) in row"
-            :key="`${rowIndex}-${colIndex}`"
-            class="tile"
-            :src="tileImages[tile]"
-            :style="{
-              left: colIndex * tileSize + 'px',
-              top: rowIndex * tileSize + 'px'
-            }"
-          />
-
+  <div class="game-shell">
+    <section class="game-stage">
+      <header class="zone-header">
+        <div>
+          <span class="eyebrow">Dark Fantasy RPG</span>
+          <h1>{{ getZoneName() }}</h1>
         </div>
-
-        <!-- PLAYER -->
-
-        <div
-          class="player-wrapper"
-          :style="{
-            left: player.x * tileSize + 'px',
-            top: player.y * tileSize + 'px'
-          }"
-        >
-
-          <div class="player-overhead-bars">
-
-            <div class="player-overhead-bar hp">
-              <div
-                class="player-overhead-fill hp"
-                :style="{
-                  width: getPlayerHpPercent() + '%'
-                }"
-              ></div>
-            </div>
-
-            <div class="player-overhead-bar mp">
-              <div
-                class="player-overhead-fill mp"
-                :style="{
-                  width: getPlayerManaPercent() + '%'
-                }"
-              ></div>
-            </div>
-
-          </div>
-
-          <img
-            class="player"
-            :src="getPlayerSprite()"
-          />
-
-        </div>
-
-        <!-- MONSTROS -->
-
-        <div
-          v-for="monster in monsters"
-          :key="monster.id"
-          class="monster-wrapper"
-          :style="{
-            left: monster.x * tileSize + 'px',
-            top: monster.y * tileSize + 'px'
-          }"
-          @click="selectTarget(monster)"
-        >
-
-          <img
-            :src="getMonsterSprite(monster)"
-            class="monster"
-            :class="{
-              selected:
-                selectedTarget?.id === monster.id
-            }"
-          />
-
-          <!-- HP BAR -->
-
-          <div class="monster-hp-container">
-
-            <div
-              class="monster-hp-fill"
-              :style="{
-                width:
-                  (monster.hp / monster.maxHp) * 100 + '%'
-              }"
-            ></div>
-
-          </div>
-
-        </div>
-
-        <button
-          v-for="drop in groundDrops"
-          :key="drop.id"
-          class="ground-drop"
-          :class="drop.type"
-          :style="{
-            left: drop.x * tileSize + 'px',
-            top: drop.y * tileSize + 'px'
-          }"
-          :title="getGroundDropLabel(drop)"
-          @click.stop="pickupGroundDrop(drop)"
-        >
-          <span class="ground-drop-symbol">
-            {{ getItemSymbol(drop.itemId) }}
-          </span>
-
-          <small
-            v-if="drop.quantity > 1"
-            class="ground-drop-quantity"
+        <div class="zone-actions">
+          <div
+            v-if="afkFarmEnabled"
+            class="afk-farm-badge"
           >
-            {{ drop.quantity }}
-          </small>
-        </button>
+            AFK Farm
+          </div>
+          <div class="resource-pill">
+            <span>Gold</span>
+            <strong>{{ gold }}</strong>
+          </div>
+        </div>
+      </header>
 
-        <!-- FLOATING DAMAGE -->
-
+      <div class="game-viewport">
         <div
-          v-for="text in floatingTexts"
-          :key="text.id"
-          class="floating-text"
-          :class="text.kind"
-          :style="{
-            left: text.x * tileSize + 'px',
-            top: text.y * tileSize + 'px'
-          }"
+          v-if="zoneBanner"
+          class="zone-banner"
         >
-          {{ text.text }}
-        </div>
-
-        <!-- SKILL EFFECTS -->
-
-        <div
-          v-for="effect in skillEffects"
-          :key="effect.id"
-          class="skill-effect"
-          :class="effect.kind"
-          :style="{
-            left: effect.x * tileSize + 'px',
-            top: effect.y * tileSize + 'px'
-          }"
-        ></div>
-
-      </div>
-
-    </div>
-
-    <!-- UI -->
-
-    <div class="player-ui">
-
-      <h2>{{ player.name }}</h2>
-
-      <!-- STATUS -->
-
-      <div class="status-bars">
-
-        <div class="bar-container hp">
-
           <img
-            :src="hpBar"
-            class="status-bar"
+            v-if="zoneBanner.image"
+            :src="zoneBanner.image"
+            alt=""
           />
-
-          <div
-            class="status-bar-fill hp"
-            :style="{
-              width: getPlayerHpPercent() + '%'
-            }"
-          ></div>
-
-          <span>
-            HP {{ player.hp }}/{{ getPlayerMaxHp() }}
-          </span>
-
-        </div>
-
-        <div class="bar-container mp">
-
-          <img
-            :src="mpBar"
-            class="status-bar"
-          />
-
-          <div
-            class="status-bar-fill mp"
-            :style="{
-              width: getPlayerManaPercent() + '%'
-            }"
-          ></div>
-
-          <span>
-            MP {{ player.mana }}/{{ getPlayerMaxMana() }}
-          </span>
-
-        </div>
-
-        <div class="bar-container xp">
-
-          <img
-            :src="xpBar"
-            class="status-bar"
-          />
-
-          <div
-            class="status-bar-fill xp"
-            :style="{
-              width: getPlayerXpPercent() + '%'
-            }"
-          ></div>
-
-          <span>
-            LVL {{ player.level }} - XP {{ player.xp }}/{{ getXpRequiredForNextLevel() }}
-          </span>
-
-        </div>
-
-      </div>
-
-      <!-- TARGET -->
-
-      <div class="target-frame">
-
-        <h3>Target</h3>
-
-        <div v-if="selectedTarget">
-
-          <p>
-            {{ selectedTarget.name }}
-          </p>
-
-          <p>
-            HP:
-            {{ selectedTarget.hp }}
-          </p>
-
-          <p>
-            Range:
-            {{ getDistanceToTarget(selectedTarget) }}/{{ getBasicAttackRange() }}
-          </p>
-
-        </div>
-
-        <p v-else>
-          Nenhum target
-        </p>
-
-      </div>
-
-      <div class="loot-frame">
-
-        <div class="loot-header">
-
-          <h3>Loot</h3>
-
-          <span>
-            {{ player.gold || 0 }} gold
-          </span>
-
-        </div>
-
-        <ul
-          v-if="lootLog.length > 0"
-          class="loot-list"
-        >
-
-          <li
-            v-for="entry in lootLog"
-            :key="entry.id"
-          >
-            {{ entry.text }}
-          </li>
-
-        </ul>
-
-        <p v-else>
-          Nenhum loot ainda.
-        </p>
-
-      </div>
-
-      <div class="equipment-frame">
-
-        <h3>Equipamento</h3>
-
-        <div
-          v-for="slot in equipmentSlots"
-          :key="slot"
-          class="equipment-slot"
-        >
-
           <div>
-            <strong>{{ getEquipmentSlotLabel(slot) }}</strong>
-            <p :title="getItemDetailText(getEquippedItemId(slot))">
-              {{ getEquippedItemLabel(slot) }}
-            </p>
+            <span>Entrando em</span>
+            <strong>{{ zoneBanner.name }}</strong>
+            <small>{{ zoneBanner.theme }}</small>
           </div>
-
-          <button
-            v-if="getEquippedItemId(slot)"
-            type="button"
-            @click="unequipItem(slot)"
-          >
-            Tirar
-          </button>
-
         </div>
-
-      </div>
-
-      <div class="inventory-frame">
-
-        <h3>Inventario</h3>
 
         <div
-          v-if="getInventoryEntries().length > 0"
-          class="inventory-list"
+          class="game-map"
+          @click="handleMapClick"
+          :style="{
+            transform: `translate(-${camera.x}px, -${camera.y}px)`
+          }"
         >
+          <template
+            v-for="(row, rowIndex) in gameMap"
+            :key="rowIndex"
+          >
+            <img
+              v-for="(tile, colIndex) in row"
+              :key="`${rowIndex}-${colIndex}`"
+              class="tile"
+              :src="tileImages[tile]"
+              :style="{
+                left: colIndex * tileSize + 'px',
+                top: rowIndex * tileSize + 'px'
+              }"
+              alt=""
+            />
+          </template>
 
           <div
-            v-for="entry in getInventoryEntries()"
-            :key="entry.itemId"
-            class="inventory-item"
+            v-for="portal in portals"
+            :key="`${portal.to}-${portal.x}-${portal.y}`"
+            class="portal-wrapper"
+            :style="{
+              left: portal.x * tileSize + 'px',
+              top: portal.y * tileSize + 'px'
+            }"
+            :title="portal.label"
           >
-
-            <div>
-              <strong>
-                {{ getItemLabel(entry.itemId) }}
-              </strong>
-              <span>
-                x{{ entry.quantity }} · {{ getItemDetailText(entry.itemId) }}
-              </span>
-            </div>
-
-            <div class="inventory-actions">
-              <button
-                v-if="canUseInventoryItem(entry.itemId)"
-                type="button"
-                @click="useInventoryItem(entry.itemId)"
-              >
-                Usar
-              </button>
-
-              <button
-                v-if="canEquipInventoryItem(entry.itemId)"
-                type="button"
-                @click="equipInventoryItem(entry.itemId)"
-              >
-                Equipar
-              </button>
-            </div>
-
+            <img
+              :src="portalAssets[portal.color]"
+              class="portal"
+              alt=""
+            />
           </div>
 
+          <div
+            v-for="npc in npcs"
+            :key="`${npc.type}-${npc.x}-${npc.y}`"
+            class="npc-wrapper"
+            :style="{
+              left: npc.x * tileSize + 'px',
+              top: npc.y * tileSize + 'px'
+            }"
+            @click.stop="openNpcDialog(npc)"
+          >
+            <span class="entity-name npc-name">{{ npc.name }}</span>
+            <img
+              :src="npc.assets.sprite"
+              class="npc"
+              alt=""
+            />
+          </div>
+
+          <div
+            class="player-wrapper"
+            :style="{
+              left: player.x * tileSize + 'px',
+              top: player.y * tileSize + 'px'
+            }"
+            @click.stop
+          >
+            <div class="player-overhead-bars">
+              <div class="player-overhead-bar hp">
+                <div
+                  class="player-overhead-fill hp"
+                  :style="{ width: getPlayerHpPercent() + '%' }"
+                ></div>
+              </div>
+              <div class="player-overhead-bar mp">
+                <div
+                  class="player-overhead-fill mp"
+                  :style="{ width: getPlayerManaPercent() + '%' }"
+                ></div>
+              </div>
+            </div>
+
+            <span class="entity-name player-name">{{ player.name }}</span>
+            <img
+              class="player"
+              :src="getPlayerSprite()"
+              alt=""
+            />
+          </div>
+
+          <div
+            v-for="monster in monsters"
+            :key="monster.id"
+            class="monster-wrapper"
+            :class="{ boss: monster.isBoss, dead: monster.dead }"
+            :style="{
+              left: monster.x * tileSize + 'px',
+              top: monster.y * tileSize + 'px'
+            }"
+            @click.stop="selectTarget(monster)"
+            @dblclick.stop="engageTarget(monster)"
+          >
+            <span class="entity-name monster-name">{{ monster.name }}</span>
+            <img
+              :src="getMonsterSprite(monster)"
+              class="monster"
+              :class="{ selected: selectedTarget?.id === monster.id }"
+              alt=""
+            />
+            <div class="monster-hp-container">
+              <div
+                class="monster-hp-fill"
+                :style="{ width: (monster.hp / monster.maxHp) * 100 + '%' }"
+              ></div>
+            </div>
+          </div>
+
+          <div
+            v-for="text in floatingTexts"
+            :key="text.id"
+            class="floating-text"
+            :class="text.kind"
+            :style="{
+              left: text.x * tileSize + 'px',
+              top: text.y * tileSize + 'px'
+            }"
+          >
+            {{ text.text }}
+          </div>
+
+          <div
+            v-for="effect in skillEffects"
+            :key="effect.id"
+            class="skill-effect"
+            :class="effect.kind"
+            :style="{
+              left: effect.x * tileSize + 'px',
+              top: effect.y * tileSize + 'px'
+            }"
+          >
+            <img
+              v-if="getSkillEffectImage(effect)"
+              :src="getSkillEffectImage(effect)"
+              alt=""
+            />
+          </div>
         </div>
-
-        <p v-else>
-          Inventario vazio.
-        </p>
-
       </div>
 
-      <!-- ATRIBUTOS -->
-
-      <div class="attributes-frame">
-
-        <div class="attributes-header">
-
-          <h3>Atributos</h3>
-
-          <span>
-            {{ getAvailableAttributePoints() }} pts
+      <div class="hotbar">
+        <button
+          v-for="skill in skillBar"
+          :key="skill.key"
+          type="button"
+          class="skill-wrapper"
+          :class="{ unavailable: !canPaySkillMana(skill) }"
+          :title="`${skill.name} - MP ${getSkillManaCost(skill)} - ${skill.description || ''}`"
+          @click="useSkill(skill.key.toLowerCase())"
+        >
+          <img
+            :src="skill.icon"
+            class="skill-icon"
+            alt=""
+          />
+          <div
+            v-if="isSkillCoolingDown(skill)"
+            class="skill-cooldown"
+            :style="{ height: getSkillCooldownPercent(skill) + '%' }"
+          ></div>
+          <span
+            v-if="isSkillCoolingDown(skill)"
+            class="skill-cooldown-text"
+          >
+            {{ getSkillCooldownText(skill) }}
           </span>
+          <span class="skill-key">{{ skill.key }}</span>
+          <span
+            v-if="getSkillManaCost(skill) > 0"
+            class="skill-mana"
+          >
+            {{ getSkillManaCost(skill) }}
+          </span>
+        </button>
+      </div>
+    </section>
 
+    <aside class="player-ui">
+      <section class="ui-panel character-panel">
+        <div class="panel-title-row">
+          <div>
+            <span class="eyebrow">Personagem</span>
+            <h2>{{ player.name }}</h2>
+          </div>
+          <div class="level-stack">
+            <span>{{ getClassLabel(player.characterClass) }}</span>
+            <strong class="level-badge">Lv {{ player.level }}</strong>
+          </div>
         </div>
 
-        <div class="attribute-row">
+        <div class="status-bars">
+          <div class="bar-container hp">
+            <div
+              class="status-bar-fill hp"
+              :style="{ width: getPlayerHpPercent() + '%' }"
+            ></div>
+            <span>HP {{ player.hp }}/{{ player.maxHp }}</span>
+          </div>
+          <div class="bar-container mp">
+            <div
+              class="status-bar-fill mp"
+              :style="{ width: getPlayerManaPercent() + '%' }"
+            ></div>
+            <span>MP {{ player.mana }}/{{ player.maxMana }}</span>
+          </div>
+          <div class="bar-container xp">
+            <div
+              class="status-bar-fill xp"
+              :style="{ width: getPlayerXpPercent() + '%' }"
+            ></div>
+            <span>XP {{ player.xp }}/{{ getXpRequiredForNextLevel() }}</span>
+          </div>
+        </div>
+      </section>
 
+      <section
+        class="ui-panel target-frame"
+        :class="{ boss: selectedTarget?.isBoss }"
+      >
+        <div class="panel-title-row">
+          <h3>Target</h3>
+          <span v-if="selectedTarget">{{ getDistanceToTarget(selectedTarget) }}/{{ getBasicAttackRange() }}</span>
+        </div>
+        <div
+          v-if="selectedTarget"
+          class="target-content"
+        >
+          <img
+            :src="getMonsterSprite(selectedTarget)"
+            alt=""
+          />
+          <div>
+            <strong>{{ selectedTarget.name }}</strong>
+            <small>{{ selectedTarget.isBoss ? 'Boss' : selectedTarget.type }}</small>
+            <div class="target-health">
+              <div
+                :style="{ width: (selectedTarget.hp / selectedTarget.maxHp) * 100 + '%' }"
+              ></div>
+            </div>
+            <span>{{ selectedTarget.hp }}/{{ selectedTarget.maxHp }}</span>
+          </div>
+        </div>
+        <p v-else class="muted">Nenhum target</p>
+      </section>
+
+      <section class="ui-panel minimap-panel">
+        <div class="panel-title-row">
+          <h3>Minimap</h3>
+          <span>{{ getZoneName() }}</span>
+        </div>
+        <div class="minimap">
+          <img
+            v-if="activeZone.assets?.minimap"
+            :src="activeZone.assets.minimap"
+            alt=""
+          />
+          <span
+            class="minimap-marker player-marker"
+            :style="getMinimapStyle(player)"
+          ></span>
+          <span
+            v-for="npc in npcs"
+            :key="`mini-npc-${npc.type}-${npc.x}`"
+            class="minimap-marker npc-marker"
+            :style="getMinimapStyle(npc)"
+          ></span>
+          <span
+            v-for="portal in portals"
+            :key="`mini-portal-${portal.to}`"
+            class="minimap-marker portal-marker"
+            :style="getMinimapStyle(portal)"
+          ></span>
+          <span
+            v-for="boss in getBosses()"
+            :key="`mini-boss-${boss.id}`"
+            class="minimap-marker boss-marker"
+            :style="getMinimapStyle(boss)"
+          ></span>
+          <span
+            class="minimap-marker party-marker"
+            :style="{ left: '12%', top: '18%' }"
+          ></span>
+        </div>
+      </section>
+
+      <section class="ui-panel attributes-frame">
+        <div class="attributes-header">
+          <h3>Atributos</h3>
+          <span>{{ getAvailableAttributePoints() }} pts</span>
+        </div>
+        <div class="attribute-row">
           <div>
             <strong>Forca</strong>
-            <small>
-              Dano fisico, armadura, vida
-            </small>
-            <span>
-              {{ getEffectiveAttribute('strength') }} / Arm {{ getPlayerArmor() }}
-            </span>
+            <small>Dano fisico, armadura, vida</small>
+            <span>{{ player.strength }} / Arm {{ getPlayerArmor() }}</span>
           </div>
-
           <button
             type="button"
             :disabled="getAvailableAttributePoints() <= 0"
@@ -411,22 +349,13 @@
           >
             +
           </button>
-
         </div>
-
         <div class="attribute-row">
-
           <div>
             <strong>Inteligencia</strong>
-            <small>
-              Mana, cooldown, dano magico
-            </small>
-            <span>
-              {{ getEffectiveAttribute('intelligence') }} / Mag {{ getPlayerMagicDamage() }}
-              / -{{ getSkillCooldownReduction() }}%
-            </span>
+            <small>Mana, cooldown, dano magico</small>
+            <span>{{ player.intelligence }} / Mag {{ getPlayerMagicDamage() }} / -{{ getSkillCooldownReduction() }}%</span>
           </div>
-
           <button
             type="button"
             :disabled="getAvailableAttributePoints() <= 0"
@@ -434,23 +363,13 @@
           >
             +
           </button>
-
         </div>
-
         <div class="attribute-row">
-
           <div>
             <strong>Destreza</strong>
-            <small>
-              Critico, ataque, precisao, evasao
-            </small>
-            <span>
-              {{ getEffectiveAttribute('dexterity') }} / Crit {{ getPlayerCriticalChance() }}%
-              / Acc {{ getPlayerAccuracy() }}%
-              / Eva {{ getPlayerEvasionChance() }}%
-            </span>
+            <small>Critico, ataque, precisao, evasao</small>
+            <span>{{ player.dexterity }} / Crit {{ getPlayerCriticalChance() }}% / Acc {{ getPlayerAccuracy() }}%</span>
           </div>
-
           <button
             type="button"
             :disabled="getAvailableAttributePoints() <= 0"
@@ -458,75 +377,262 @@
           >
             +
           </button>
-
         </div>
-
         <p class="attack-speed-note">
-          {{ getWeaponLabel() }} / {{ getDamageTypeLabel() }}
-          / Range {{ getBasicAttackRange() }}
-          / Dano {{ getBasicAttackDamagePreview() }}
-          / {{ getPlayerAttackCooldown() }}ms
+          {{ getWeaponLabel() }} / {{ getDamageTypeLabel() }} / Range {{ getBasicAttackRange() }} / Dano {{ getBasicAttackDamagePreview() }}
         </p>
+      </section>
+    </aside>
 
-      </div>
-
-      <!-- HOTBAR -->
-
-      <div class="hotbar">
-
-        <div
-          v-for="skill in skillBar"
-          :key="skill.key"
-          class="skill-wrapper"
-          :class="{
-            unavailable: !canPaySkillMana(skill)
-          }"
-          :title="`${skill.name} - MP ${getSkillManaCost(skill)}`"
-          @click="useSkill(skill.key.toLowerCase())"
-        >
-
-          <img
-            :src="skillSlot"
-            class="skill-slot"
-          />
-
-          <img
-            :src="skill.icon"
-            class="skill-icon"
-          />
-
-          <div
-            v-if="isSkillCoolingDown(skill)"
-            class="skill-cooldown"
-            :style="{
-              height: getSkillCooldownPercent(skill) + '%'
-            }"
-          ></div>
-
-          <span
-            v-if="isSkillCoolingDown(skill)"
-            class="skill-cooldown-text"
-          >
-            {{ getSkillCooldownText(skill) }}
-          </span>
-
-          <span class="skill-key">
-            {{ skill.key }}
-          </span>
-
-          <span
-            v-if="getSkillManaCost(skill) > 0"
-            class="skill-mana"
-          >
-            {{ getSkillManaCost(skill) }}
-          </span>
-
+    <aside class="right-ui">
+      <section class="ui-panel inventory-panel">
+        <div class="panel-title-row">
+          <h3>Inventario</h3>
+          <span>{{ getInventoryLimitLabel() }}</span>
         </div>
+        <div class="inventory-grid">
+          <div
+            v-for="item in inventory"
+            :key="item.id"
+            class="inventory-slot"
+            :title="getItemTooltip(item)"
+          >
+            <img
+              :src="getItemFrame(item)"
+              class="rarity-frame"
+              alt=""
+            />
+            <img
+              :src="getItemIcon(item)"
+              class="item-icon"
+              alt=""
+            />
+            <span>{{ item.quantity }}</span>
+          </div>
+        </div>
+      </section>
 
-      </div>
+      <section class="ui-panel quests-panel">
+        <div class="panel-title-row">
+          <h3>Quests</h3>
+          <span>{{ getDailyQuestSummary() }}</span>
+        </div>
+        <p class="quest-daily-note">
+          As primeiras 10 quests do dia dao 3x XP e gold. Limite diario: 30 quests.
+        </p>
+        <div class="quest-list">
+          <article
+            v-for="quest in getVisibleQuests()"
+            :key="quest.id"
+            class="quest-card"
+            :class="quest.status"
+          >
+            <img
+              :src="getQuestIcon(quest)"
+              alt=""
+            />
+            <div>
+              <strong>{{ quest.title }}</strong>
+              <p>{{ quest.description }}</p>
+              <span>{{ quest.progress }}/{{ quest.required }} - {{ getQuestStatusLabel(quest.status) }}</span>
+              <small>{{ quest.reward }}</small>
+            </div>
+          </article>
+        </div>
+      </section>
 
+      <section class="ui-panel skills-panel">
+        <div class="panel-title-row">
+          <h3>Skills</h3>
+          <span>{{ player.characterClass }}</span>
+        </div>
+        <div class="skill-list">
+          <div
+            v-for="skill in skillBar"
+            :key="`skill-info-${skill.id}`"
+            class="skill-info"
+            :title="skill.description"
+          >
+            <img
+              :src="skill.icon"
+              alt=""
+            />
+            <div>
+              <strong>{{ skill.name }}</strong>
+              <span>MP {{ getSkillManaCost(skill) }} / {{ skill.key }}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </aside>
+
+    <div
+      v-if="activeNpc"
+      class="dialog-backdrop"
+      @click.self="closeNpcDialog"
+    >
+      <section class="npc-dialog">
+        <img
+          :src="activeNpc.assets.portrait"
+          class="npc-portrait"
+          alt=""
+        />
+        <div>
+          <div class="panel-title-row">
+            <div>
+              <span class="eyebrow">{{ activeNpc.role }}</span>
+              <h3>{{ activeNpc.name }}</h3>
+            </div>
+            <button
+              type="button"
+              @click="closeNpcDialog"
+            >
+              X
+            </button>
+          </div>
+          <p>{{ activeNpc.dialogue }}</p>
+          <button
+            type="button"
+            class="dialog-action"
+            @click="confirmNpcAction(activeNpc)"
+          >
+            {{ activeNpc.actionLabel }}
+          </button>
+        </div>
+      </section>
     </div>
 
+    <div
+      v-if="merchantOpen"
+      class="dialog-backdrop"
+      @click.self="merchantOpen = false"
+    >
+      <section class="trade-dialog">
+        <div class="panel-title-row">
+          <div>
+            <span class="eyebrow">Loja</span>
+            <h3>Merchant</h3>
+          </div>
+          <button
+            type="button"
+            @click="merchantOpen = false"
+          >
+            X
+          </button>
+        </div>
+        <p>Compra por preco alto e compra os teus itens por 1/3 do valor.</p>
+        <div class="trade-columns">
+          <div>
+            <h4>Comprar</h4>
+            <button
+              v-for="item in getMerchantItems()"
+              :key="`buy-${item.id}`"
+              type="button"
+              class="trade-row"
+              @click="buyMerchantItem(item.id)"
+            >
+              <img :src="item.icon" alt="" />
+              <span>{{ item.name }}</span>
+              <strong>{{ item.buyPrice }}g</strong>
+            </button>
+          </div>
+          <div>
+            <h4>Vender</h4>
+            <button
+              v-for="item in inventory.filter(slot => slot.id !== 'goldCoin')"
+              :key="`sell-${item.id}`"
+              type="button"
+              class="trade-row"
+              @click="sellInventoryItem(item)"
+            >
+              <img :src="getItemIcon(item)" alt="" />
+              <span>{{ getInventoryItem(item).name }}</span>
+              <strong>{{ Math.max(1, Math.floor((getInventoryItem(item).value || 3) / 3)) }}g</strong>
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div
+      v-if="storageOpen"
+      class="dialog-backdrop"
+      @click.self="storageOpen = false"
+    >
+      <section class="trade-dialog storage-dialog">
+        <div class="panel-title-row">
+          <div>
+            <span class="eyebrow">Casa</span>
+            <h3>Bau pessoal</h3>
+          </div>
+          <button
+            type="button"
+            @click="storageOpen = false"
+          >
+            X
+          </button>
+        </div>
+        <p>{{ getStorageLimitLabel() }} no bau. Move um item por clique.</p>
+        <div class="trade-columns">
+          <div>
+            <h4>Mochila</h4>
+            <button
+              v-for="item in inventory.filter(slot => slot.id !== 'goldCoin')"
+              :key="`store-${item.id}`"
+              type="button"
+              class="trade-row"
+              @click="moveItemToStorage(item)"
+            >
+              <img :src="getItemIcon(item)" alt="" />
+              <span>{{ getInventoryItem(item).name }}</span>
+              <strong>x{{ item.quantity }}</strong>
+            </button>
+          </div>
+          <div>
+            <h4>Bau</h4>
+            <button
+              v-for="item in storageItems"
+              :key="`take-${item.id}`"
+              type="button"
+              class="trade-row"
+              @click="moveItemFromStorage(item)"
+            >
+              <img :src="getItemIcon(item)" alt="" />
+              <span>{{ getInventoryItem(item).name }}</span>
+              <strong>x{{ item.quantity }}</strong>
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div
+      v-if="npcResponse"
+      class="npc-response-toast"
+    >
+      <img
+        :src="npcResponse.portrait"
+        alt=""
+      />
+      <div>
+        <strong>{{ npcResponse.name }}</strong>
+        <span>{{ npcResponse.message }}</span>
+      </div>
+    </div>
+
+    <div
+      v-if="questNotification"
+      class="quest-complete-toast"
+    >
+      <strong>Quest completa</strong>
+      <span>{{ questNotification.title }}</span>
+      <small>
+        +{{ questNotification.xpReward }} XP / +{{ questNotification.goldReward }} gold
+        <template v-if="questNotification.multiplier > 1">
+          / bonus {{ questNotification.multiplier }}x
+        </template>
+      </small>
+    </div>
   </div>
 </template>
 

@@ -1,0 +1,20 @@
+{
+  "name": "rpg-lite-drakonys",
+  "version": "1.0.0",
+  "private": true,
+  "description": "RPG Web 2D com frontend Vue e backend Node/Express.",
+  "scripts": {
+    "install:all": "npm install --prefix backend && npm install --prefix frontend",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "build:frontend": "npm run build --prefix frontend"
+  },
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "engines": {
+    "node": ">=20",
+    "npm": ">=10"
+  }
+}

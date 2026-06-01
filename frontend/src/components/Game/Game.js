@@ -1,106 +1,71 @@
 
-import { ref, onMounted, onUnmounted } from 'vue';
+import {
+    computed,
+    ref,
+    onMounted,
+    onUnmounted
+} from 'vue';
 
 import {
     getCharacter,
     saveCharacter
 } from '../../services/characterService';
-import { getMonsters } from '../../services/monsterService';
 import { attackMonster as attackMonsterRequest } from '../../services/combatService';
-
-/* PLAYER */
-
-import playerIdleDown from '../../assets/player/player_idle_down.png';
-import playerWalkDown1 from '../../assets/player/player_walk_down_1.png';
-import playerWalkDown2 from '../../assets/player/player_walk_down_2.png';
-import playerAttackDown from '../../assets/player/player_attack_down.png';
-
-import playerIdleUp from '../../assets/player/player_idle_up.png';
-import playerWalkUp1 from '../../assets/player/player_walk_up_1.png';
-import playerWalkUp2 from '../../assets/player/player_walk_up_2.png';
-import playerAttackUp from '../../assets/player/player_attack_up.png';
-
-import playerIdleLeft from '../../assets/player/player_idle_left.png';
-import playerWalkLeft1 from '../../assets/player/player_walk_left_1.png';
-import playerWalkLeft2 from '../../assets/player/player_walk_left_2.png';
-import playerAttackLeft from '../../assets/player/player_attack_left.png';
-
-import playerIdleRight from '../../assets/player/player_idle_right.png';
-import playerWalkRight1 from '../../assets/player/player_walk_right_1.png';
-import playerWalkRight2 from '../../assets/player/player_walk_right_2.png';
-import playerAttackRight from '../../assets/player/player_attack_right.png';
-
-/* MONSTERS */
-
-import demonAttack from '../../assets/monsters/demon_attack.png';
-import demonIdle from '../../assets/monsters/demon_idle.png';
-import demonWalk1 from '../../assets/monsters/demon_walk_1.png';
-import demonWalk2 from '../../assets/monsters/demon_walk_2.png';
-
-import elfAttack from '../../assets/monsters/elf_attack.png';
-import elfIdle from '../../assets/monsters/elf_idle.png';
-import elfWalk1 from '../../assets/monsters/elf_walk_1.png';
-import elfWalk2 from '../../assets/monsters/elf_walk_2.png';
-
-import goblinAttack from '../../assets/monsters/goblin_attack.png';
-import goblinIdle from '../../assets/monsters/goblin_idle.png';
-import goblinWalk1 from '../../assets/monsters/goblin_walk_1.png';
-import goblinWalk2 from '../../assets/monsters/goblin_walk_2.png';
-
-import orcAttack from '../../assets/monsters/orc_attack.png';
-import orcIdle from '../../assets/monsters/orc_idle.png';
-import orcWalk1 from '../../assets/monsters/orc_walk_1.png';
-import orcWalk2 from '../../assets/monsters/orc_walk_2.png';
-
-import skeletonAttack from '../../assets/monsters/skeleton_attack.png';
-import skeletonIdle from '../../assets/monsters/skeleton_idle.png';
-import skeletonWalk1 from '../../assets/monsters/skeleton_walk_1.png';
-import skeletonWalk2 from '../../assets/monsters/skeleton_walk_2.png';
-
-/* TILES */
-
-import grassTile from '../../assets/tiles/grass.png';
-import wallTile from '../../assets/tiles/wall.png';
-import treeTile from '../../assets/tiles/tree.png';
-import waterTile from '../../assets/tiles/water.png';
-
-/* UI */
-
-import hpBar from '../../assets/ui/bar_hp.png';
-import mpBar from '../../assets/ui/bar_mp.png';
-import xpBar from '../../assets/ui/bar_xp.png';
-
-import skillSlot from '../../assets/ui/skill_slot.png';
-
-/* SKILLS */
-
-import skillAttack from '../../assets/skills/skill_basic_attack.png';
-import skillFireball from '../../assets/skills/skill_fireball.png';
-import skillHeal from '../../assets/skills/skill_heal.png';
-import skillDash from '../../assets/skills/skill_dash.png';
-import skillPowerStrike from '../../assets/skills/skill_power_strike.png';
-import skillRegeneration from '../../assets/skills/skill_regeneration.png';
-import skillUltimate from '../../assets/skills/skill_ultimate.png';
+import {
+    bossSprites,
+    effectAssets,
+    itemAssets,
+    minimapAssets,
+    monsterSprites,
+    npcAssets,
+    playerSprites,
+    portalAssets,
+    questAssets,
+    rarityFrames,
+    tileImages,
+    uiAssets
+} from '../../data/gameAssets';
+import { createBoss } from '../../data/bosses';
+import {
+    ITEM_DEFINITIONS,
+    STARTER_INVENTORY
+} from '../../data/items';
+import {
+    BLOCKED_TILES,
+    getZoneKeyByName,
+    ZONES
+} from '../../data/maps';
+import { createMonster } from '../../data/monsters';
+import { createNpc } from '../../data/npcs';
+import { createQuestState } from '../../data/quests';
+import { SKILL_DEFINITIONS } from '../../data/skills';
 
 const MAP_WIDTH = 20;
 const MAP_HEIGHT = 15;
+const VIEWPORT_WIDTH = 880;
+const VIEWPORT_HEIGHT = 640;
+const PLAYER_START_ZONE = 'starterTown';
 const PLAYER_START_POSITION = {
-    x: 5,
-    y: 5
+    x: 9,
+    y: 8
 };
-const BLOCKED_TILES = [
-    'wall',
-    'tree',
-    'water'
-];
-const PLAYER_MOVE_INTERVAL = 170;
+const PLAYER_MOVE_INTERVAL = 330;
 const PLAYER_ATTACK_COOLDOWN = 900;
-const MIN_PLAYER_ATTACK_COOLDOWN = 450;
+const MIN_PLAYER_ATTACK_COOLDOWN = 550;
 const AUTO_COMBAT_INTERVAL = 180;
 const ATTRIBUTE_POINTS_PER_LEVEL = 3;
 const COMBAT_CLOCK_INTERVAL = 80;
-const LOOT_LOG_LIMIT = 6;
-const MONSTER_AI_INTERVAL = 420;
+const AFK_FARM_DELAY = 30000;
+const AFK_FARM_CHECK_INTERVAL = 1000;
+const RESOURCE_REGEN_INTERVAL = 1000;
+const OUT_OF_COMBAT_DELAY = 5000;
+const OUT_OF_COMBAT_REGEN_MULTIPLIER = 3;
+const MONSTER_RESPAWN_DELAY = 10000;
+const INVENTORY_SLOT_LIMIT = 30;
+const STORAGE_SLOT_LIMIT = 90;
+const DAILY_QUEST_BONUS_LIMIT = 10;
+const DAILY_QUEST_LIMIT = 30;
+const DAILY_QUEST_STORAGE_KEY = 'rpg_lite_daily_quests';
 const WEAPON_PROFILES = {
     warrior: {
         weaponType: 'sword',
@@ -108,11 +73,11 @@ const WEAPON_PROFILES = {
         damageType: 'physical',
         damageLabel: 'Fisico',
         range: 1,
-        baseDamage: 6,
+        baseDamage: 8,
         primaryAttribute: 'strength',
-        primaryScale: 2,
+        primaryScale: 2.6,
         secondaryAttribute: 'dexterity',
-        secondaryScale: 0.4,
+        secondaryScale: 0.25,
         accuracyBonus: 0,
         criticalBonus: 0
     },
@@ -138,307 +103,61 @@ const WEAPON_PROFILES = {
         range: 4,
         baseDamage: 4,
         primaryAttribute: 'dexterity',
-        primaryScale: 1.7,
+        primaryScale: 1.25,
         secondaryAttribute: 'strength',
-        secondaryScale: 0.8,
+        secondaryScale: 1,
         accuracyBonus: 5,
-        criticalBonus: 5
+        criticalBonus: 2
     }
 };
 const ATTRIBUTE_GAIN_BY_POINT = {
     strength: {
-        maxHp: 5
+        maxHp: 10
     },
     intelligence: {
         maxMana: 8
     },
     dexterity: {}
 };
-const SKILL_DEFINITIONS = [
-    {
-        id: 'basicAttack',
-        key: '1',
-        icon: skillAttack,
-        name: 'Ataque',
-        manaCost: 0,
-        cooldown: 0
-    },
-    {
-        id: 'fireball',
-        key: '2',
-        icon: skillFireball,
-        name: 'Fireball',
-        manaCost: 18,
-        cooldown: 2800,
-        range: 5
-    },
-    {
-        id: 'heal',
-        key: '3',
-        icon: skillHeal,
-        name: 'Heal',
-        manaCost: 20,
-        cooldown: 6000
-    },
-    {
-        id: 'dash',
-        key: '4',
-        icon: skillDash,
-        name: 'Dash',
-        manaCost: 10,
-        cooldown: 3500,
-        range: 3
-    },
-    {
-        id: 'powerStrike',
-        key: 'Q',
-        icon: skillPowerStrike,
-        name: 'Power Strike',
-        manaCost: 16,
-        cooldown: 4200,
-        range: 1
-    },
-    {
-        id: 'regeneration',
-        key: 'E',
-        icon: skillRegeneration,
-        name: 'Regeneration',
-        manaCost: 26,
-        cooldown: 14000
-    },
-    {
-        id: 'ultimate',
-        key: 'R',
-        icon: skillUltimate,
-        name: 'Ultimate',
-        manaCost: 45,
-        cooldown: 22000,
-        range: 5,
-        radius: 2
+
+function getDailyQuestDateKey() {
+
+    return new Date().toISOString().slice(0, 10);
+}
+
+function loadDailyQuestState() {
+
+    const fallback = {
+        date: getDailyQuestDateKey(),
+        completed: 0
+    };
+
+    if (typeof localStorage === 'undefined') {
+        return fallback;
     }
-];
-const DEFAULT_EQUIPMENT = {
-    weapon: null,
-    armor: null,
-    accessory: null
-};
-const EQUIPMENT_SLOTS = [
-    'weapon',
-    'armor',
-    'accessory'
-];
-const EQUIPMENT_SLOT_LABELS = {
-    weapon: 'Arma',
-    armor: 'Armadura',
-    accessory: 'Acessorio'
-};
-const ITEM_BONUS_LABELS = {
-    strength: 'forca',
-    intelligence: 'inteligencia',
-    dexterity: 'destreza',
-    maxHp: 'vida',
-    maxMana: 'mana',
-    armor: 'armadura',
-    criticalChance: 'critico',
-    evasion: 'evasao',
-    accuracy: 'precisao',
-    magicDamage: 'dano magico',
-    cooldownReduction: 'recarga',
-    attackRange: 'range'
-};
-const ITEM_DEFINITIONS = {
-    gold: {
-        name: 'Gold',
-        type: 'currency',
-        stackable: true,
-        symbol: 'G'
-    },
-    'training-sword': {
-        name: 'Training Sword',
-        type: 'equipment',
-        slot: 'weapon',
-        bonuses: {
-            strength: 1
-        },
-        symbol: 'W'
-    },
-    'apprentice-staff': {
-        name: 'Apprentice Staff',
-        type: 'equipment',
-        slot: 'weapon',
-        bonuses: {
-            intelligence: 2,
-            magicDamage: 2
-        },
-        symbol: 'W'
-    },
-    'hunter-bow': {
-        name: 'Hunter Bow',
-        type: 'equipment',
-        slot: 'weapon',
-        bonuses: {
-            dexterity: 2,
-            attackRange: 1
-        },
-        symbol: 'W'
-    },
-    'leather-tunic': {
-        name: 'Leather Tunic',
-        type: 'equipment',
-        slot: 'armor',
-        bonuses: {
-            armor: 2,
-            maxHp: 8
-        },
-        symbol: 'A'
-    },
-    'cloth-robe': {
-        name: 'Cloth Robe',
-        type: 'equipment',
-        slot: 'armor',
-        bonuses: {
-            maxMana: 12,
-            cooldownReduction: 4
-        },
-        symbol: 'A'
-    },
-    'focus-charm': {
-        name: 'Focus Charm',
-        type: 'equipment',
-        slot: 'accessory',
-        bonuses: {
-            intelligence: 1,
-            maxMana: 6
-        },
-        symbol: 'C'
-    },
-    'rusty-dagger': {
-        name: 'Rusty Dagger',
-        type: 'equipment',
-        slot: 'weapon',
-        bonuses: {
-            dexterity: 1,
-            criticalChance: 3
-        },
-        symbol: 'W'
-    },
-    'scout-badge': {
-        name: 'Scout Badge',
-        type: 'equipment',
-        slot: 'accessory',
-        bonuses: {
-            dexterity: 1,
-            evasion: 4
-        },
-        symbol: 'C'
-    },
-    'brute-pauldron': {
-        name: 'Brute Pauldron',
-        type: 'equipment',
-        slot: 'armor',
-        bonuses: {
-            armor: 4,
-            strength: 1,
-            maxHp: 12
-        },
-        symbol: 'A'
-    },
-    'infernal-shard': {
-        name: 'Infernal Shard',
-        type: 'equipment',
-        slot: 'accessory',
-        bonuses: {
-            intelligence: 2,
-            magicDamage: 3
-        },
-        symbol: 'C'
-    },
-    'demonic-ember': {
-        name: 'Demonic Ember',
-        type: 'equipment',
-        slot: 'accessory',
-        bonuses: {
-            criticalChance: 5,
-            strength: 1,
-            intelligence: 1
-        },
-        symbol: 'C'
-    },
-    'small-health-potion': {
-        name: 'Small Health Potion',
-        type: 'consumable',
-        effect: 'heal',
-        amount: 45,
-        stackable: true,
-        symbol: 'H'
-    },
-    'small-mana-potion': {
-        name: 'Small Mana Potion',
-        type: 'consumable',
-        effect: 'mana',
-        amount: 35,
-        stackable: true,
-        symbol: 'M'
-    },
-    'goblin-ear': {
-        name: 'Goblin Ear',
-        type: 'loot',
-        stackable: true,
-        symbol: 'L'
-    },
-    'elven-feather': {
-        name: 'Elven Feather',
-        type: 'loot',
-        stackable: true,
-        symbol: 'L'
-    },
-    'bone-fragment': {
-        name: 'Bone Fragment',
-        type: 'loot',
-        stackable: true,
-        symbol: 'L'
-    },
-    'orc-tooth': {
-        name: 'Orc Tooth',
-        type: 'loot',
-        stackable: true,
-        symbol: 'L'
+
+    try {
+        const stored = JSON.parse(
+            localStorage.getItem(DAILY_QUEST_STORAGE_KEY)
+        );
+
+        if (stored?.date === fallback.date) {
+            return {
+                ...fallback,
+                completed: Number(stored.completed) || 0
+            };
+        }
+    } catch (error) {
+        console.log('Nao foi possivel ler as quests diarias.');
     }
-};
 
-const gameMap = [
+    localStorage.setItem(
+        DAILY_QUEST_STORAGE_KEY,
+        JSON.stringify(fallback)
+    );
 
-    ['wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall'],
-
-    ['wall', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'wall'],
-
-    ['wall', 'grass', 'grass', 'tree', 'tree', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'wall'],
-
-    ['wall', 'grass', 'grass', 'tree', 'tree', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'wall'],
-
-    ['wall', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'water', 'water', 'water', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'wall'],
-
-    ['wall', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'water', 'water', 'water', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'wall'],
-
-    ['wall', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'wall'],
-
-    ['wall', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'wall'],
-
-    ['wall', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'wall'],
-
-    ['wall', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'wall'],
-
-    ['wall', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'wall'],
-
-    ['wall', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'wall'],
-
-    ['wall', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'wall'],
-
-    ['wall', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'grass', 'wall'],
-
-    ['wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall']
-
-];
+    return fallback;
+}
 
 export default {
 
@@ -451,7 +170,7 @@ export default {
 
     setup(props) {
 
-        const tileSize = 40;
+        const tileSize = 44;
 
         const player = ref({
             name: 'Hero',
@@ -463,12 +182,8 @@ export default {
             maxHp: 100,
             mana: 50,
             maxMana: 50,
-            gold: 0,
-            inventory: [],
-            equipment: {
-                ...DEFAULT_EQUIPMENT
-            },
             characterClass: 'warrior',
+            currentZone: 'Initial City',
             strength: 5,
             intelligence: 5,
             dexterity: 5,
@@ -477,26 +192,37 @@ export default {
             moving: false,
             attacking: false,
             animationFrame: 0,
-            lastAttackAt: 0
+            lastAttackAt: 0,
+            lastCombatAt: 0
         });
 
         const monsters = ref([]);
-        const groundDrops = ref([]);
 
         const selectedTarget = ref(null);
+        const afkFarmEnabled = ref(false);
+        const lastPlayerActivityAt = ref(Date.now());
 
         const floatingTexts = ref([]);
-        const lootLog = ref([]);
         const skillEffects = ref([]);
         const combatClock = ref(Date.now());
+        const questNotification = ref(null);
+        const dailyQuestState = ref(loadDailyQuestState());
+        const merchantOpen = ref(false);
+        const storageOpen = ref(false);
+        const storageItems = ref([]);
 
         let animationInterval = null;
         let monsterAIInterval = null;
         let playerMovementInterval = null;
         let autoCombatInterval = null;
         let combatClockInterval = null;
+        let afkFarmInterval = null;
+        let resourceRegenInterval = null;
         let playerAttackTimeout = null;
         let playerAttackInProgress = false;
+        let lastPlayerMoveAt = 0;
+        let clickMovePath = [];
+        let questNotificationTimeout = null;
         const regenerationIntervals = [];
         const pressedMovementKeys = new Set();
 
@@ -505,15 +231,27 @@ export default {
             y: 0
         });
 
-        const tileImages = {
-            grass: grassTile,
-            wall: wallTile,
-            tree: treeTile,
-            water: waterTile
-        };
+        const currentZoneKey = ref('goblinForest');
+        const activeZone = computed(
+            () => ZONES[currentZoneKey.value] || ZONES.goblinForest
+        );
+        const gameMap = computed(() => activeZone.value.map);
+        const npcs = ref([]);
+        const portals = ref([]);
+        const quests = ref(createQuestState());
+        const inventory = ref(
+            STARTER_INVENTORY.map(item => ({
+                id: item.id || item.itemId,
+                quantity: item.quantity
+            }))
+        );
+        const gold = ref(25);
+        const activeNpc = ref(null);
+        const npcResponse = ref(null);
+        const zoneBanner = ref(null);
+        let npcResponseTimeout = null;
 
         const skillBar = SKILL_DEFINITIONS;
-        const equipmentSlots = EQUIPMENT_SLOTS;
         const skillCooldowns = ref(
             SKILL_DEFINITIONS.reduce((cooldowns, skill) => {
                 cooldowns[skill.id] = 0;
@@ -521,97 +259,33 @@ export default {
             }, {})
         );
 
-        const playerSprites = {
+        function getPlayerSpriteSet() {
 
-            down: {
-                idle: playerIdleDown,
-                attack: playerAttackDown,
-                walk: [
-                    playerWalkDown1,
-                    playerWalkDown2
-                ]
-            },
+            return (
+                playerSprites[getCharacterClass()] ||
+                playerSprites.default ||
+                playerSprites
+            );
+        }
 
-            up: {
-                idle: playerIdleUp,
-                attack: playerAttackUp,
-                walk: [
-                    playerWalkUp1,
-                    playerWalkUp2
-                ]
-            },
+        function getPlayerDirectionSprites() {
 
-            left: {
-                idle: playerIdleLeft,
-                attack: playerAttackLeft,
-                walk: [
-                    playerWalkLeft1,
-                    playerWalkLeft2
-                ]
-            },
+            const spriteSet = getPlayerSpriteSet();
 
-            right: {
-                idle: playerIdleRight,
-                attack: playerAttackRight,
-                walk: [
-                    playerWalkRight1,
-                    playerWalkRight2
-                ]
-            }
-        };
-
-        const monsterSprites = {
-
-            demon: {
-                idle: demonIdle,
-                attack: demonAttack,
-                walk: [
-                    demonWalk1,
-                    demonWalk2
-                ]
-            },
-
-            elf: {
-                idle: elfIdle,
-                attack: elfAttack,
-                walk: [
-                    elfWalk1,
-                    elfWalk2
-                ]
-            },
-
-            goblin: {
-                idle: goblinIdle,
-                attack: goblinAttack,
-                walk: [
-                    goblinWalk1,
-                    goblinWalk2
-                ]
-            },
-
-            orc: {
-                idle: orcIdle,
-                attack: orcAttack,
-                walk: [
-                    orcWalk1,
-                    orcWalk2
-                ]
-            },
-
-            skeleton: {
-                idle: skeletonIdle,
-                attack: skeletonAttack,
-                walk: [
-                    skeletonWalk1,
-                    skeletonWalk2
-                ]
-            }
-        };
+            return (
+                spriteSet[player.value.direction] ||
+                spriteSet.down
+            );
+        }
 
         function getPlayerSprite() {
 
-            const direction =
-                playerSprites[player.value.direction];
+            const spriteSet = getPlayerSpriteSet();
+            const direction = getPlayerDirectionSprites();
+
+            if (player.value.hp <= 0 && spriteSet.dead) {
+                return spriteSet.dead;
+            }
 
             if (player.value.attacking) {
                 return direction.attack;
@@ -622,8 +296,27 @@ export default {
             }
 
             return direction.walk[
-                player.value.animationFrame
+                player.value.animationFrame %
+                    direction.walk.length
             ];
+        }
+
+        function disableAfkFarm() {
+
+            afkFarmEnabled.value = false;
+        }
+
+        function markPlayerActivity() {
+
+            lastPlayerActivityAt.value = Date.now();
+            disableAfkFarm();
+        }
+
+        function hasAliveMonsters() {
+
+            return monsters.value.some(
+                monster => !monster.dead && monster.hp > 0
+            );
         }
 
         function getMonsterSprite(monster) {
@@ -633,8 +326,14 @@ export default {
                 monster.race?.toLowerCase() ||
                 'goblin';
             const sprites =
-                monsterSprites[spriteKey] ||
+                (monster.isBoss
+                    ? bossSprites[spriteKey]
+                    : monsterSprites[spriteKey]) ||
                 monsterSprites.goblin;
+
+            if (monster.dead) {
+                return sprites.dead || sprites.idle;
+            }
 
             if (monster.attacking) {
                 return sprites.attack;
@@ -652,10 +351,10 @@ export default {
         function updateCamera() {
 
             camera.value.x =
-                player.value.x * tileSize - 400;
+                player.value.x * tileSize - VIEWPORT_WIDTH / 2;
 
             camera.value.y =
-                player.value.y * tileSize - 300;
+                player.value.y * tileSize - VIEWPORT_HEIGHT / 2;
 
             if (camera.value.x < 0) {
                 camera.value.x = 0;
@@ -673,6 +372,703 @@ export default {
             });
         }
 
+        function getMapWidth() {
+
+            return gameMap.value[0]?.length || MAP_WIDTH;
+        }
+
+        function getMapHeight() {
+
+            return gameMap.value.length || MAP_HEIGHT;
+        }
+
+        function getZoneName() {
+
+            return activeZone.value.name;
+        }
+
+        function loadZoneEntities(zoneKey) {
+
+            const zone = ZONES[zoneKey] || ZONES.goblinForest;
+
+            currentZoneKey.value = zone.key;
+            portals.value = zone.portals || [];
+            npcs.value = (zone.npcs || []).map(npc =>
+                createNpc(npc.type, npc.x, npc.y)
+            );
+
+            const zoneMonsters = (zone.monsters || []).map(
+                (monster, index) =>
+                    createMonster(
+                        monster.type,
+                        monster.x,
+                        monster.y,
+                        `${zone.key}-${index}`
+                    )
+            );
+
+            if (zone.boss) {
+                zoneMonsters.push(
+                    createBoss(
+                        zone.boss.type,
+                        zone.boss.x,
+                        zone.boss.y
+                    )
+                );
+            }
+
+            monsters.value = zoneMonsters;
+        }
+
+        function transitionToZone(zoneKey) {
+
+            const zone = ZONES[zoneKey];
+
+            if (!zone) {
+                return;
+            }
+
+            // Troca de zona centralizada para manter mapa, entidades e HUD em sincronia.
+            markPlayerActivity();
+            stopAutoCombat();
+            selectedTarget.value = null;
+            loadZoneEntities(zoneKey);
+
+            player.value.x = zone.playerStart.x;
+            player.value.y = zone.playerStart.y;
+            player.value.currentZone = zone.name;
+            player.value.moving = false;
+
+            zoneBanner.value = {
+                name: zone.name,
+                theme: zone.theme,
+                image: zone.assets?.banner
+            };
+
+            updateQuestProgress('explore', zone.key);
+            updateCamera();
+            persistCharacter();
+
+            setTimeout(() => {
+                zoneBanner.value = null;
+            }, 1200);
+        }
+
+        function checkPortalCollision() {
+
+            const portal = portals.value.find(
+                item =>
+                    item.x === player.value.x &&
+                    item.y === player.value.y
+            );
+
+            if (portal) {
+                transitionToZone(portal.to);
+            }
+        }
+
+        function openNpcDialog(npc) {
+
+            markPlayerActivity();
+            activeNpc.value = npc;
+        }
+
+        function getNpcSuccessMessage(npc) {
+
+            const messages = {
+                blacksmith: 'Fechado. Vou deixar a forja quente para quando trouxeres material de verdade.',
+                merchant: 'Combinado. Separei umas mercadorias boas para a proxima visita.',
+                healer: 'Pronto. Os teus ferimentos fecharam e a mana voltou a correr.',
+                questMaster: 'Contrato aceito. Volta com provas, e talvez com todos os dedos.',
+                trainer: 'Treino anotado. O corpo aprende antes da cabeca admitir.',
+                guard: 'Entendido. Mantem-te na estrada e evita fazer barulho perto das ruinas.',
+                storageChest: 'Bau aberto. A casa guarda melhor do que a mochila.'
+            };
+
+            return messages[npc.type] || 'Certo. Esta combinado.';
+        }
+
+        function showNpcResponse(npc, message) {
+
+            npcResponse.value = {
+                name: npc.name,
+                portrait: npc.assets.dialogueIcon || npc.assets.portrait,
+                message
+            };
+
+            if (npcResponseTimeout) {
+                clearTimeout(npcResponseTimeout);
+            }
+
+            npcResponseTimeout = setTimeout(() => {
+                npcResponse.value = null;
+                npcResponseTimeout = null;
+            }, 3200);
+        }
+
+        function acceptZoneQuests() {
+
+            quests.value = quests.value.map(quest => {
+
+                if (
+                    (
+                        currentZoneKey.value !== PLAYER_START_ZONE &&
+                        quest.zone !== currentZoneKey.value
+                    ) ||
+                    quest.status !== 'available'
+                ) {
+                    return quest;
+                }
+
+                return {
+                    ...quest,
+                    status: 'inProgress'
+                };
+            });
+        }
+
+        function confirmNpcAction(npc) {
+
+            markPlayerActivity();
+
+            if (npc.type === 'healer') {
+                player.value.hp = player.value.maxHp;
+                player.value.mana = player.value.maxMana;
+                createFloatingText(
+                    player.value.x,
+                    player.value.y,
+                    '+Full',
+                    'heal'
+                );
+                persistCharacter();
+            }
+
+            if (npc.type === 'questMaster') {
+                acceptZoneQuests();
+            }
+
+            if (npc.type === 'merchant') {
+                merchantOpen.value = true;
+            }
+
+            if (npc.type === 'storageChest') {
+                storageOpen.value = true;
+            }
+
+            updateQuestProgress('talk', npc.type);
+            activeNpc.value = null;
+            showNpcResponse(
+                npc,
+                getNpcSuccessMessage(npc)
+            );
+        }
+
+        function closeNpcDialog() {
+
+            markPlayerActivity();
+            activeNpc.value = null;
+        }
+
+        function updateQuestProgress(objectiveType, targetType, amount = 1) {
+
+            const completedQuests = [];
+
+            quests.value = quests.value.map(quest => {
+
+                if (
+                    quest.objectiveType !== objectiveType ||
+                    !quest.targetTypes.includes(targetType) ||
+                    quest.status === 'complete' ||
+                    quest.rewardClaimed
+                ) {
+                    return quest;
+                }
+
+                const progress = Math.min(
+                    quest.required,
+                    quest.progress + amount
+                );
+
+                const updatedQuest = {
+                    ...quest,
+                    progress,
+                    status:
+                        progress >= quest.required
+                            ? 'complete'
+                            : 'inProgress'
+                };
+
+                if (
+                    updatedQuest.status === 'complete' &&
+                    quest.status !== 'complete'
+                ) {
+                    updatedQuest.rewardClaimed = true;
+                    completedQuests.push(updatedQuest);
+                }
+
+                return updatedQuest;
+            });
+
+            completedQuests.forEach(quest => {
+                grantQuestReward(quest);
+            });
+        }
+
+        function getVisibleQuests() {
+
+            return quests.value.filter(
+                quest =>
+                    quest.zone === currentZoneKey.value ||
+                    quest.status !== 'available'
+            );
+        }
+
+        function getQuestStatusLabel(status) {
+
+            const labels = {
+                available: 'Disponivel',
+                inProgress: 'Em progresso',
+                complete: 'Completa'
+            };
+
+            return labels[status] || status;
+        }
+
+        function getQuestIcon(quest) {
+
+            if (quest.status === 'complete') {
+                return questAssets.completed;
+            }
+
+            if (quest.status === 'inProgress') {
+                return questAssets.inProgress;
+            }
+
+            return questAssets.available;
+        }
+
+        function persistDailyQuestState() {
+
+            if (typeof localStorage === 'undefined') {
+                return;
+            }
+
+            localStorage.setItem(
+                DAILY_QUEST_STORAGE_KEY,
+                JSON.stringify(dailyQuestState.value)
+            );
+        }
+
+        function refreshDailyQuestState() {
+
+            if (
+                dailyQuestState.value.date ===
+                getDailyQuestDateKey()
+            ) {
+                return;
+            }
+
+            dailyQuestState.value = {
+                date: getDailyQuestDateKey(),
+                completed: 0
+            };
+            persistDailyQuestState();
+        }
+
+        function getDailyQuestBonusRemaining() {
+
+            refreshDailyQuestState();
+
+            return Math.max(
+                0,
+                DAILY_QUEST_BONUS_LIMIT -
+                    dailyQuestState.value.completed
+            );
+        }
+
+        function getDailyQuestRemaining() {
+
+            refreshDailyQuestState();
+
+            return Math.max(
+                0,
+                DAILY_QUEST_LIMIT -
+                    dailyQuestState.value.completed
+            );
+        }
+
+        function getDailyQuestSummary() {
+
+            refreshDailyQuestState();
+
+            return `${dailyQuestState.value.completed}/${DAILY_QUEST_LIMIT} hoje - ${getDailyQuestBonusRemaining()} bonus 3x restantes`;
+        }
+
+        function showQuestNotification(quest, xpReward, goldReward, multiplier) {
+
+            questNotification.value = {
+                title: quest.title,
+                xpReward,
+                goldReward,
+                multiplier
+            };
+
+            if (questNotificationTimeout) {
+                clearTimeout(questNotificationTimeout);
+            }
+
+            questNotificationTimeout = setTimeout(() => {
+                questNotification.value = null;
+                questNotificationTimeout = null;
+            }, 3600);
+        }
+
+        function grantQuestReward(quest) {
+
+            refreshDailyQuestState();
+
+            if (dailyQuestState.value.completed >= DAILY_QUEST_LIMIT) {
+                createFloatingText(
+                    player.value.x,
+                    player.value.y,
+                    'Limite diario',
+                    'miss'
+                );
+                return;
+            }
+
+            const multiplier =
+                dailyQuestState.value.completed <
+                DAILY_QUEST_BONUS_LIMIT
+                    ? 3
+                    : 1;
+            const xpReward =
+                (Number(quest.xpReward) || 0) * multiplier;
+            const goldReward =
+                (Number(quest.goldReward) || 0) * multiplier;
+
+            player.value.xp += xpReward;
+            gold.value += goldReward;
+
+            (quest.itemRewards || []).forEach(itemReward => {
+                addItem(
+                    itemReward.itemId,
+                    itemReward.quantity || 1
+                );
+            });
+
+            dailyQuestState.value.completed++;
+            persistDailyQuestState();
+            showQuestNotification(
+                quest,
+                xpReward,
+                goldReward,
+                multiplier
+            );
+            checkLevelUp();
+            persistCharacter();
+        }
+
+        function addItem(itemId, quantity = 1) {
+
+            const definition = ITEM_DEFINITIONS[itemId];
+
+            if (!definition) {
+                return;
+            }
+
+            if (itemId === 'goldCoin') {
+                gold.value += quantity;
+                return;
+            }
+
+            const existingItem = inventory.value.find(
+                item => item.id === itemId
+            );
+
+            if (existingItem) {
+                existingItem.quantity += quantity;
+                return;
+            }
+
+            if (inventory.value.length >= INVENTORY_SLOT_LIMIT) {
+                createFloatingText(
+                    player.value.x,
+                    player.value.y,
+                    'Inventario cheio',
+                    'miss'
+                );
+                return;
+            }
+
+            inventory.value.push({
+                id: itemId,
+                quantity
+            });
+
+            if (itemId === 'demonKey') {
+                updateQuestProgress('collect', 'demonKey');
+            }
+        }
+
+        function addDrops(monster) {
+
+            const drops = monster.drops || [];
+
+            if (monster.gold) {
+                addItem('goldCoin', monster.gold);
+            }
+
+            drops.forEach(itemId => {
+                const chance = itemId === 'goldCoin'
+                    ? 1
+                    : monster.isBoss
+                        ? 0.85
+                        : 0.35;
+
+                if (Math.random() <= chance) {
+                    addItem(itemId);
+                }
+            });
+        }
+
+        function getInventoryItem(item) {
+
+            return ITEM_DEFINITIONS[item.id] || {};
+        }
+
+        function getItemIcon(item) {
+
+            return getInventoryItem(item).icon || itemAssets.goldCoin;
+        }
+
+        function getItemFrame(item) {
+
+            const definition = getInventoryItem(item);
+
+            return rarityFrames[definition.rarity] || rarityFrames.common;
+        }
+
+        function getItemTooltip(item) {
+
+            const definition = getInventoryItem(item);
+
+            return `${definition.name || item.id} - ${definition.rarity || 'common'} - ${definition.type || 'item'}`;
+        }
+
+        function getInventoryLimitLabel() {
+
+            return `${inventory.value.length}/${INVENTORY_SLOT_LIMIT} slots`;
+        }
+
+        function getStorageLimitLabel() {
+
+            return `${storageItems.value.length}/${STORAGE_SLOT_LIMIT} slots`;
+        }
+
+        function getMerchantItems() {
+
+            return Object.values(ITEM_DEFINITIONS)
+                .filter(item => item.id !== 'goldCoin')
+                .map(item => ({
+                    ...item,
+                    buyPrice: Math.ceil((item.value || 100) * 1.8),
+                    sellPrice: Math.max(
+                        1,
+                        Math.floor((item.value || 3) / 3)
+                    )
+                }));
+        }
+
+        function buyMerchantItem(itemId) {
+
+            const item = getMerchantItems().find(
+                merchantItem => merchantItem.id === itemId
+            );
+
+            if (!item) {
+                return;
+            }
+
+            if (
+                !inventory.value.some(slot => slot.id === itemId) &&
+                inventory.value.length >= INVENTORY_SLOT_LIMIT
+            ) {
+                createFloatingText(
+                    player.value.x,
+                    player.value.y,
+                    'Inventario cheio',
+                    'miss'
+                );
+                return;
+            }
+
+            if (gold.value < item.buyPrice) {
+                createFloatingText(
+                    player.value.x,
+                    player.value.y,
+                    'Sem gold',
+                    'miss'
+                );
+                return;
+            }
+
+            gold.value -= item.buyPrice;
+            addItem(itemId);
+            createFloatingText(
+                player.value.x,
+                player.value.y,
+                'Comprado',
+                'heal'
+            );
+        }
+
+        function removeInventoryItem(itemId, quantity = 1) {
+
+            const item = inventory.value.find(
+                slot => slot.id === itemId
+            );
+
+            if (!item) {
+                return false;
+            }
+
+            item.quantity -= quantity;
+
+            if (item.quantity <= 0) {
+                inventory.value = inventory.value.filter(
+                    slot => slot.id !== itemId
+                );
+            }
+
+            return true;
+        }
+
+        function sellInventoryItem(item) {
+
+            const definition = getInventoryItem(item);
+
+            if (!definition.id || definition.id === 'goldCoin') {
+                return;
+            }
+
+            if (!removeInventoryItem(item.id)) {
+                return;
+            }
+
+            const value = Math.max(
+                1,
+                Math.floor((definition.value || 3) / 3)
+            );
+
+            gold.value += value;
+            createFloatingText(
+                player.value.x,
+                player.value.y,
+                `+${value}g`,
+                'gold'
+            );
+        }
+
+        function moveItemToStorage(item) {
+
+            const stored = storageItems.value.find(
+                slot => slot.id === item.id
+            );
+
+            if (
+                !stored &&
+                storageItems.value.length >= STORAGE_SLOT_LIMIT
+            ) {
+                createFloatingText(
+                    player.value.x,
+                    player.value.y,
+                    'Bau cheio',
+                    'miss'
+                );
+                return;
+            }
+
+            if (!removeInventoryItem(item.id)) {
+                return;
+            }
+
+            if (stored) {
+                stored.quantity++;
+            } else {
+                storageItems.value.push({
+                    id: item.id,
+                    quantity: 1
+                });
+            }
+        }
+
+        function moveItemFromStorage(item) {
+
+            if (
+                !inventory.value.some(slot => slot.id === item.id) &&
+                inventory.value.length >= INVENTORY_SLOT_LIMIT
+            ) {
+                createFloatingText(
+                    player.value.x,
+                    player.value.y,
+                    'Inventario cheio',
+                    'miss'
+                );
+                return;
+            }
+
+            const stored = storageItems.value.find(
+                slot => slot.id === item.id
+            );
+
+            if (!stored) {
+                return;
+            }
+
+            stored.quantity--;
+
+            if (stored.quantity <= 0) {
+                storageItems.value = storageItems.value.filter(
+                    slot => slot.id !== item.id
+                );
+            }
+
+            addItem(item.id);
+        }
+
+        function getMinimapStyle(entity) {
+
+            return {
+                left: `${(entity.x / getMapWidth()) * 100}%`,
+                top: `${(entity.y / getMapHeight()) * 100}%`
+            };
+        }
+
+        function getBosses() {
+
+            return monsters.value.filter(
+                monster => monster.isBoss && !monster.dead
+            );
+        }
+
+        function getSkillEffectImage(effect) {
+
+            const map = {
+                fireball: 'fire',
+                heal: 'heal',
+                regeneration: 'heal',
+                dash: 'shadow',
+                'power-shot': 'critical',
+                'power-strike': 'critical',
+                curse: 'shadow',
+                ultimate: 'holy',
+                death: 'death'
+            };
+
+            return effectAssets[map[effect.kind] || effect.kind];
+        }
+
         function getAvailableAttributePoints() {
 
             return Number(player.value.attributePoints) || 0;
@@ -681,6 +1077,17 @@ export default {
         function getCharacterClass() {
 
             return player.value.characterClass || 'warrior';
+        }
+
+        function getClassLabel(characterClass = getCharacterClass()) {
+
+            const labels = {
+                warrior: 'Warrior',
+                mage: 'Mage',
+                archer: 'Archer'
+            };
+
+            return labels[characterClass] || 'Warrior';
         }
 
         function getWeaponProfile() {
@@ -703,72 +1110,60 @@ export default {
 
         function getBasicAttackRange() {
 
-            return (
-                getWeaponProfile().range +
-                getEquipmentBonus('attackRange')
-            );
+            return getWeaponProfile().range;
         }
 
         function getPlayerArmor() {
 
             return Math.floor(
-                getEffectiveAttribute('strength') * 0.55 +
-                    (Number(player.value.level) || 1) * 0.4 +
-                    getEquipmentBonus('armor')
+                (Number(player.value.strength) || 0) * 0.9 +
+                    (Number(player.value.level) || 1) * 0.5
             );
         }
 
         function getPlayerCriticalChance() {
 
             return Math.min(
-                45,
-                4 +
-                    getEffectiveAttribute('dexterity') * 1.5 +
-                    getWeaponProfile().criticalBonus +
-                    getEquipmentBonus('criticalChance')
+                35,
+                3 +
+                    (Number(player.value.dexterity) || 0) * 0.8 +
+                    getWeaponProfile().criticalBonus
             );
         }
 
         function getPlayerAccuracy() {
 
             return Math.min(
-                98,
-                76 +
-                    getEffectiveAttribute('dexterity') * 1.2 +
+                96,
+                74 +
+                    (Number(player.value.dexterity) || 0) * 0.7 +
                     (Number(player.value.level) || 1) * 0.3 +
-                    getWeaponProfile().accuracyBonus +
-                    getEquipmentBonus('accuracy')
+                    getWeaponProfile().accuracyBonus
             );
         }
 
         function getPlayerEvasionChance() {
 
             return Math.min(
-                35,
+                22,
                 Math.floor(
                     3 +
-                        getEffectiveAttribute('dexterity') * 1.4 +
-                        (Number(player.value.level) || 1) * 0.2 +
-                        getEquipmentBonus('evasion')
+                        (Number(player.value.dexterity) || 0) * 0.55 +
+                        (Number(player.value.level) || 1) * 0.2
                 )
             );
         }
 
         function getPlayerMagicDamage() {
 
-            return (
-                6 +
-                getEffectiveAttribute('intelligence') * 2 +
-                getEquipmentBonus('magicDamage')
-            );
+            return 6 + (Number(player.value.intelligence) || 0) * 2;
         }
 
         function getSkillCooldownReduction() {
 
             return Math.min(
                 35,
-                getEffectiveAttribute('intelligence') * 2 +
-                    getEquipmentBonus('cooldownReduction')
+                (Number(player.value.intelligence) || 0) * 2
             );
         }
 
@@ -777,7 +1172,7 @@ export default {
             return Math.max(
                 MIN_PLAYER_ATTACK_COOLDOWN,
                 PLAYER_ATTACK_COOLDOWN -
-                    getEffectiveAttribute('dexterity') * 20
+                    (Number(player.value.dexterity) || 0) * 10
             );
         }
 
@@ -799,7 +1194,7 @@ export default {
 
             return getPercent(
                 player.value.hp,
-                getPlayerMaxHp()
+                player.value.maxHp
             );
         }
 
@@ -807,7 +1202,7 @@ export default {
 
             return getPercent(
                 player.value.mana,
-                getPlayerMaxMana()
+                player.value.maxMana
             );
         }
 
@@ -828,13 +1223,9 @@ export default {
 
             const profile = getWeaponProfile();
             const primaryValue =
-                getEffectiveAttribute(
-                    profile.primaryAttribute
-                );
+                Number(player.value[profile.primaryAttribute]) || 0;
             const secondaryValue =
-                getEffectiveAttribute(
-                    profile.secondaryAttribute
-                );
+                Number(player.value[profile.secondaryAttribute]) || 0;
             const baseDamage = Math.floor(
                 profile.baseDamage +
                     primaryValue * profile.primaryScale +
@@ -882,7 +1273,7 @@ export default {
 
         function getSkillCooldown(skill) {
 
-            if (skill.id === 'basicAttack') {
+            if (skill.id === 'slash') {
                 return getPlayerAttackCooldown();
             }
 
@@ -895,7 +1286,7 @@ export default {
 
         function getSkillLastUsedAt(skill) {
 
-            if (skill.id === 'basicAttack') {
+            if (skill.id === 'slash') {
                 return player.value.lastAttackAt || 0;
             }
 
@@ -960,7 +1351,7 @@ export default {
 
         function markSkillUsed(skill) {
 
-            if (skill.id === 'basicAttack') {
+            if (skill.id === 'slash') {
                 return;
             }
 
@@ -975,6 +1366,8 @@ export default {
         }
 
         function spendAttributePoint(attribute) {
+
+            markPlayerActivity();
 
             if (
                 getAvailableAttributePoints() <= 0 ||
@@ -1016,10 +1409,12 @@ export default {
 
                 if (player.value.moving) {
 
+                    const playerWalkFrames =
+                        getPlayerDirectionSprites().walk || [];
+
                     player.value.animationFrame =
-                        player.value.animationFrame === 0
-                            ? 1
-                            : 0;
+                        (player.value.animationFrame + 1) %
+                        Math.max(1, playerWalkFrames.length);
                 }
 
                 monsters.value.forEach(monster => {
@@ -1028,10 +1423,20 @@ export default {
                         return;
                     }
 
+                    const spriteKey =
+                        monster.spriteKey ||
+                        monster.race?.toLowerCase() ||
+                        'goblin';
+                    const sprites =
+                        (monster.isBoss
+                            ? bossSprites[spriteKey]
+                            : monsterSprites[spriteKey]) ||
+                        monsterSprites.goblin;
+                    const walkFrames = sprites.walk || [];
+
                     monster.animationFrame =
-                        monster.animationFrame === 0
-                            ? 1
-                            : 0;
+                        ((monster.animationFrame || 0) + 1) %
+                        Math.max(1, walkFrames.length);
                 });
 
             }, 180);
@@ -1046,6 +1451,123 @@ export default {
             combatClockInterval = setInterval(() => {
                 combatClock.value = Date.now();
             }, COMBAT_CLOCK_INTERVAL);
+        }
+
+        function getOutOfCombatMultiplier(entity) {
+
+            return Date.now() - (entity.lastCombatAt || 0) >=
+                OUT_OF_COMBAT_DELAY
+                ? OUT_OF_COMBAT_REGEN_MULTIPLIER
+                : 1;
+        }
+
+        function getPlayerHpRegenPerSecond() {
+
+            return Math.max(
+                1,
+                Math.floor((Number(player.value.maxHp) || 100) * 0.01)
+            );
+        }
+
+        function getPlayerManaRegenPerSecond() {
+
+            return Math.max(
+                1,
+                Math.floor((Number(player.value.maxMana) || 50) * 0.018)
+            );
+        }
+
+        function regenerateEntityResources() {
+
+            const playerMultiplier =
+                getOutOfCombatMultiplier(player.value);
+            const hpRegen =
+                getPlayerHpRegenPerSecond() * playerMultiplier;
+            const manaRegen =
+                getPlayerManaRegenPerSecond() * playerMultiplier;
+
+            if (player.value.hp > 0) {
+                player.value.hp = Math.min(
+                    player.value.maxHp,
+                    player.value.hp + hpRegen
+                );
+                player.value.mana = Math.min(
+                    player.value.maxMana,
+                    player.value.mana + manaRegen
+                );
+            }
+
+            monsters.value.forEach(monster => {
+
+                if (monster.dead || monster.hp <= 0) {
+                    return;
+                }
+
+                const monsterMultiplier =
+                    getOutOfCombatMultiplier(monster);
+                const monsterRegen = Math.max(
+                    1,
+                    Math.floor((monster.maxHp || 1) * 0.012)
+                ) * monsterMultiplier;
+
+                monster.hp = Math.min(
+                    monster.maxHp,
+                    monster.hp + monsterRegen
+                );
+            });
+        }
+
+        function startResourceRegenerationLoop() {
+
+            if (resourceRegenInterval) {
+                return;
+            }
+
+            resourceRegenInterval = setInterval(() => {
+                regenerateEntityResources();
+            }, RESOURCE_REGEN_INTERVAL);
+        }
+
+        function startAfkFarmLoop() {
+
+            if (afkFarmInterval) {
+                return;
+            }
+
+            afkFarmInterval = setInterval(() => {
+
+                if (
+                    afkFarmEnabled.value ||
+                    activeNpc.value ||
+                    pressedMovementKeys.size > 0 ||
+                    player.value.hp <= 0
+                ) {
+                    return;
+                }
+
+                if (
+                    Date.now() - lastPlayerActivityAt.value <
+                    AFK_FARM_DELAY
+                ) {
+                    return;
+                }
+
+                if (!hasAliveMonsters()) {
+                    return;
+                }
+
+                // AFK farm usa o auto-combate existente para perseguir e atacar.
+                afkFarmEnabled.value = true;
+                createFloatingText(
+                    player.value.x,
+                    player.value.y,
+                    'AFK Farm',
+                    'magic'
+                );
+                startAutoCombat({
+                    userAction: false
+                });
+            }, AFK_FARM_CHECK_INTERVAL);
         }
 
         function updatePlayerDirection(dx, dy) {
@@ -1075,23 +1597,164 @@ export default {
             if (
                 x < 0 ||
                 y < 0 ||
-                x >= MAP_WIDTH ||
-                y >= MAP_HEIGHT
+                x >= getMapWidth() ||
+                y >= getMapHeight()
             ) {
                 return false;
             }
 
-            const tile = gameMap[y][x];
+            const tile = gameMap.value[y]?.[x];
 
             if (BLOCKED_TILES.includes(tile)) {
                 return false;
             }
 
+            if (
+                npcs.value.some(
+                    npc =>
+                        npc.x === x &&
+                        npc.y === y
+                )
+            ) {
+                return false;
+            }
+
             return !monsters.value.some(
                 monster =>
+                    !monster.dead &&
                     monster.x === x &&
                     monster.y === y
             );
+        }
+
+        function isBlockedMapPosition(x, y) {
+
+            if (
+                x < 0 ||
+                y < 0 ||
+                x >= getMapWidth() ||
+                y >= getMapHeight()
+            ) {
+                return true;
+            }
+
+            return BLOCKED_TILES.includes(
+                gameMap.value[y]?.[x]
+            );
+        }
+
+        function hasLineOfSight(fromX, fromY, toX, toY) {
+
+            let x = fromX;
+            let y = fromY;
+            const dx = Math.abs(toX - fromX);
+            const dy = Math.abs(toY - fromY);
+            const stepX = fromX < toX ? 1 : -1;
+            const stepY = fromY < toY ? 1 : -1;
+            let error = dx - dy;
+
+            while (!(x === toX && y === toY)) {
+                const doubleError = error * 2;
+
+                if (doubleError > -dy) {
+                    error -= dy;
+                    x += stepX;
+                }
+
+                if (doubleError < dx) {
+                    error += dx;
+                    y += stepY;
+                }
+
+                if (x === toX && y === toY) {
+                    return true;
+                }
+
+                if (isBlockedMapPosition(x, y)) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        function canPlayerAttackTarget(target) {
+
+            if (!target) {
+                return false;
+            }
+
+            if (getBasicAttackRange() <= 1) {
+                return true;
+            }
+
+            return hasLineOfSight(
+                player.value.x,
+                player.value.y,
+                target.x,
+                target.y
+            );
+        }
+
+        function findPath(start, target, canWalk) {
+
+            if (start.x === target.x && start.y === target.y) {
+                return [];
+            }
+
+            const queue = [{
+                ...start,
+                path: []
+            }];
+            const visited = new Set([
+                `${start.x},${start.y}`
+            ]);
+            const directions = [
+                { x: 1, y: 0 },
+                { x: -1, y: 0 },
+                { x: 0, y: 1 },
+                { x: 0, y: -1 }
+            ];
+
+            while (queue.length) {
+                const current = queue.shift();
+
+                for (const direction of directions) {
+                    const next = {
+                        x: current.x + direction.x,
+                        y: current.y + direction.y
+                    };
+                    const key = `${next.x},${next.y}`;
+
+                    if (visited.has(key)) {
+                        continue;
+                    }
+
+                    if (!canWalk(next.x, next.y)) {
+                        continue;
+                    }
+
+                    const path = [
+                        ...current.path,
+                        next
+                    ];
+
+                    if (
+                        next.x === target.x &&
+                        next.y === target.y
+                    ) {
+                        return path;
+                    }
+
+                    visited.add(key);
+                    queue.push({
+                        ...next,
+                        path
+                    });
+                }
+            }
+
+            return [];
         }
 
         function movePlayer(dx, dy) {
@@ -1114,9 +1777,84 @@ export default {
             player.value.x = newX;
             player.value.y = newY;
 
-            pickupGroundDropsUnderPlayer();
+            checkPortalCollision();
             updateCamera();
             persistCharacter();
+
+            return true;
+        }
+
+        function findPlayerAttackPath(target) {
+
+            const candidates = [];
+            const range = getBasicAttackRange();
+
+            for (let y = 0; y < getMapHeight(); y++) {
+                for (let x = 0; x < getMapWidth(); x++) {
+                    const distance = Math.max(
+                        Math.abs(x - target.x),
+                        Math.abs(y - target.y)
+                    );
+
+                    if (
+                        distance === 0 ||
+                        distance > range ||
+                        !canPlayerMoveTo(x, y)
+                    ) {
+                        continue;
+                    }
+
+                    if (
+                        range > 1 &&
+                        !hasLineOfSight(x, y, target.x, target.y)
+                    ) {
+                        continue;
+                    }
+
+                    candidates.push({
+                        x,
+                        y,
+                        score:
+                            Math.abs(player.value.x - x) +
+                            Math.abs(player.value.y - y)
+                    });
+                }
+            }
+
+            return candidates
+                .sort((first, second) => first.score - second.score)
+                .map(candidate =>
+                    findPath(
+                        {
+                            x: player.value.x,
+                            y: player.value.y
+                        },
+                        candidate,
+                        canPlayerMoveTo
+                    )
+                )
+                .find(path => path.length) || [];
+        }
+
+        function followClickMovePath() {
+
+            if (!clickMovePath.length) {
+                return false;
+            }
+
+            const next = clickMovePath.shift();
+            const dx = next.x - player.value.x;
+            const dy = next.y - player.value.y;
+
+            if (Math.abs(dx) + Math.abs(dy) !== 1) {
+                clickMovePath = [];
+                return false;
+            }
+
+            if (!movePlayer(dx, dy)) {
+                clickMovePath = [];
+                return false;
+            }
 
             return true;
         }
@@ -1137,7 +1875,6 @@ export default {
         }
 
         function movePlayerFromPressedKeys() {
-
             const {
                 dx,
                 dy
@@ -1147,6 +1884,15 @@ export default {
                 player.value.moving = false;
                 return;
             }
+
+            const now = Date.now();
+
+            if (now - lastPlayerMoveAt < PLAYER_MOVE_INTERVAL) {
+                return;
+            }
+
+            // O cooldown vale tanto para tecla segurada quanto para toques repetidos.
+            lastPlayerMoveAt = now;
 
             // Quando duas teclas sao seguradas, tenta a diagonal primeiro.
             if (movePlayer(dx, dy)) {
@@ -1171,12 +1917,77 @@ export default {
             }
 
             playerMovementInterval = setInterval(() => {
-                movePlayerFromPressedKeys();
+                if (pressedMovementKeys.size > 0) {
+                    movePlayerFromPressedKeys();
+                    return;
+                }
+
+                followClickMovePath();
             }, PLAYER_MOVE_INTERVAL);
         }
 
-        function selectTarget(monster) {
+        function selectTarget(monster, {
+            userAction = true
+        } = {}) {
+
+            if (!monster || monster.dead || monster.hp <= 0) {
+                return;
+            }
+
+            if (userAction) {
+                markPlayerActivity();
+            }
+
             selectedTarget.value = monster;
+        }
+
+        function findNearestMonster() {
+
+            return monsters.value
+                .filter(monster => !monster.dead && monster.hp > 0)
+                .sort((first, second) =>
+                    getDistanceToTarget(first) -
+                    getDistanceToTarget(second)
+                )[0] || null;
+        }
+
+        function ensureAutoCombatTarget({
+            silent = false,
+            userAction = true
+        } = {}) {
+
+            clearTargetIfDead();
+
+            if (selectedTarget.value) {
+                return true;
+            }
+
+            const nearestMonster = findNearestMonster();
+
+            if (!nearestMonster) {
+                if (silent) {
+                    return false;
+                }
+
+                createFloatingText(
+                    player.value.x,
+                    player.value.y,
+                    'Sem alvo',
+                    'miss'
+                );
+                return false;
+            }
+
+            selectTarget(nearestMonster, {
+                userAction
+            });
+            return true;
+        }
+
+        function engageTarget(monster) {
+
+            selectTarget(monster);
+            startAutoCombat();
         }
 
         function clearTargetIfDead() {
@@ -1239,529 +2050,6 @@ export default {
             }, duration);
         }
 
-        function normalizeInventoryEntries(inventory) {
-
-            if (!Array.isArray(inventory)) {
-                return [];
-            }
-
-            return inventory
-                .filter(entry => entry?.itemId)
-                .map(entry => ({
-                    itemId: String(entry.itemId),
-                    quantity: Math.max(
-                        1,
-                        Number(entry.quantity) || 1
-                    )
-                }));
-        }
-
-        function normalizeEquipmentState(equipment) {
-
-            if (!equipment || typeof equipment !== 'object') {
-                return {
-                    ...DEFAULT_EQUIPMENT
-                };
-            }
-
-            return {
-                weapon: equipment.weapon || null,
-                armor: equipment.armor || null,
-                accessory: equipment.accessory || null
-            };
-        }
-
-        function getItemDefinition(itemId) {
-
-            return ITEM_DEFINITIONS[itemId] || {
-                name: itemId,
-                type: 'loot',
-                stackable: true,
-                symbol: '?'
-            };
-        }
-
-        function getItemLabel(itemId) {
-            return getItemDefinition(itemId).name;
-        }
-
-        function getItemSymbol(itemId) {
-            return getItemDefinition(itemId).symbol || '?';
-        }
-
-        function getItemBonuses(itemId) {
-            return getItemDefinition(itemId).bonuses || {};
-        }
-
-        function getEquipmentSlotLabel(slot) {
-            return EQUIPMENT_SLOT_LABELS[slot] || slot;
-        }
-
-        function getItemDetailText(itemId) {
-
-            const item = getItemDefinition(itemId);
-
-            if (item.type === 'consumable') {
-                return item.effect === 'mana'
-                    ? `Restaura ${item.amount} mana`
-                    : `Restaura ${item.amount} hp`;
-            }
-
-            if (item.type !== 'equipment') {
-                return item.name;
-            }
-
-            const bonuses =
-                Object.entries(item.bonuses || {})
-                    .map(([key, value]) =>
-                        `+${value} ${ITEM_BONUS_LABELS[key] || key}`
-                    );
-
-            return bonuses.length > 0
-                ? bonuses.join(', ')
-                : item.name;
-        }
-
-        function getInventoryEntries() {
-
-            return normalizeInventoryEntries(
-                player.value.inventory
-            );
-        }
-
-        function setInventoryEntries(entries) {
-            player.value.inventory =
-                normalizeInventoryEntries(entries);
-        }
-
-        function getEquippedItemId(slot) {
-
-            const equipment =
-                normalizeEquipmentState(
-                    player.value.equipment
-                );
-
-            return equipment[slot] || null;
-        }
-
-        function getEquippedItem(slot) {
-
-            const itemId =
-                getEquippedItemId(slot);
-
-            return itemId
-                ? getItemDefinition(itemId)
-                : null;
-        }
-
-        function getEquippedItemLabel(slot) {
-
-            const itemId =
-                getEquippedItemId(slot);
-
-            return itemId
-                ? getItemLabel(itemId)
-                : 'Vazio';
-        }
-
-        function setEquipmentState(equipment) {
-            player.value.equipment =
-                normalizeEquipmentState(equipment);
-        }
-
-        function getEquipmentBonus(stat) {
-
-            return EQUIPMENT_SLOTS.reduce(
-                (total, slot) => {
-                    const itemId =
-                        getEquippedItemId(slot);
-
-                    if (!itemId) {
-                        return total;
-                    }
-
-                    return (
-                        total +
-                        (Number(
-                            getItemBonuses(itemId)[stat]
-                        ) || 0)
-                    );
-                },
-                0
-            );
-        }
-
-        function getEffectiveAttribute(attribute) {
-
-            return (
-                (Number(player.value[attribute]) || 0) +
-                getEquipmentBonus(attribute)
-            );
-        }
-
-        function getPlayerMaxHp() {
-
-            return (
-                (Number(player.value.maxHp) || 100) +
-                getEquipmentBonus('maxHp')
-            );
-        }
-
-        function getPlayerMaxMana() {
-
-            return (
-                (Number(player.value.maxMana) || 50) +
-                getEquipmentBonus('maxMana')
-            );
-        }
-
-        function clampPlayerResources() {
-
-            player.value.hp = Math.min(
-                player.value.hp,
-                getPlayerMaxHp()
-            );
-            player.value.mana = Math.min(
-                player.value.mana,
-                getPlayerMaxMana()
-            );
-        }
-
-        function addInventoryItem(
-            itemId,
-            quantity = 1
-        ) {
-
-            const item = getItemDefinition(itemId);
-            const normalizedQuantity = Math.max(
-                1,
-                Number(quantity) || 1
-            );
-            const entries =
-                getInventoryEntries();
-            const existingEntry =
-                entries.find(
-                    entry => entry.itemId === itemId
-                );
-
-            if (
-                existingEntry &&
-                item.stackable !== false
-            ) {
-                existingEntry.quantity +=
-                    normalizedQuantity;
-            } else {
-                entries.push({
-                    itemId,
-                    quantity: normalizedQuantity
-                });
-            }
-
-            setInventoryEntries(entries);
-        }
-
-        function removeInventoryItem(
-            itemId,
-            quantity = 1
-        ) {
-
-            const normalizedQuantity = Math.max(
-                1,
-                Number(quantity) || 1
-            );
-            const entries =
-                getInventoryEntries();
-            const entry =
-                entries.find(
-                    item => item.itemId === itemId
-                );
-
-            if (!entry) {
-                return false;
-            }
-
-            entry.quantity -= normalizedQuantity;
-
-            setInventoryEntries(
-                entries.filter(item => item.quantity > 0)
-            );
-
-            return true;
-        }
-
-        function canEquipInventoryItem(itemId) {
-
-            return getItemDefinition(itemId).type === 'equipment';
-        }
-
-        function equipInventoryItem(itemId) {
-
-            const item =
-                getItemDefinition(itemId);
-
-            if (item.type !== 'equipment' || !item.slot) {
-                return false;
-            }
-
-            if (!removeInventoryItem(itemId, 1)) {
-                return false;
-            }
-
-            const equipment =
-                normalizeEquipmentState(
-                    player.value.equipment
-                );
-            const previousItemId =
-                equipment[item.slot];
-
-            equipment[item.slot] = itemId;
-            setEquipmentState(equipment);
-
-            if (previousItemId) {
-                addInventoryItem(previousItemId, 1);
-            }
-
-            clampPlayerResources();
-            persistCharacter();
-
-            return true;
-        }
-
-        function unequipItem(slot) {
-
-            const equipment =
-                normalizeEquipmentState(
-                    player.value.equipment
-                );
-            const itemId =
-                equipment[slot];
-
-            if (!itemId) {
-                return false;
-            }
-
-            equipment[slot] = null;
-            setEquipmentState(equipment);
-            addInventoryItem(itemId, 1);
-            clampPlayerResources();
-            persistCharacter();
-
-            return true;
-        }
-
-        function canUseInventoryItem(itemId) {
-
-            return getItemDefinition(itemId).type === 'consumable';
-        }
-
-        function useInventoryItem(itemId) {
-
-            const item =
-                getItemDefinition(itemId);
-
-            if (item.type !== 'consumable') {
-                return false;
-            }
-
-            if (!removeInventoryItem(itemId, 1)) {
-                return false;
-            }
-
-            if (item.effect === 'heal') {
-                const healed =
-                    healPlayer(item.amount, 'heal');
-
-                if (healed <= 0) {
-                    addInventoryItem(itemId, 1);
-                    return false;
-                }
-            }
-
-            if (item.effect === 'mana') {
-                const missingMana =
-                    getPlayerMaxMana() -
-                    player.value.mana;
-                const restored = Math.min(
-                    missingMana,
-                    Math.floor(item.amount || 0)
-                );
-
-                if (restored <= 0) {
-                    addInventoryItem(itemId, 1);
-                    createFloatingText(
-                        player.value.x,
-                        player.value.y,
-                        'Cheio',
-                        'magic'
-                    );
-                    return false;
-                }
-
-                player.value.mana += restored;
-                createFloatingText(
-                    player.value.x,
-                    player.value.y,
-                    `+${restored}`,
-                    'magic'
-                );
-            }
-
-            addLootEntry(
-                `Usaste ${item.name}`
-            );
-            persistCharacter();
-
-            return true;
-        }
-
-        function getGroundDropLabel(drop) {
-
-            if (drop.type === 'gold') {
-                return `${drop.quantity} gold`;
-            }
-
-            return `${getItemLabel(drop.itemId)} x${drop.quantity}`;
-        }
-
-        function createGroundDrop(
-            x,
-            y,
-            itemId,
-            quantity = 1
-        ) {
-
-            const item = getItemDefinition(itemId);
-
-            groundDrops.value.push({
-                id: `${Date.now()}-${Math.random()}`,
-                x,
-                y,
-                itemId,
-                quantity: Math.max(
-                    1,
-                    Number(quantity) || 1
-                ),
-                type:
-                    item.type === 'currency'
-                        ? 'gold'
-                        : item.type
-            });
-        }
-
-        function canPickUpDrop(drop) {
-
-            return getTileDistance(
-                player.value.x,
-                player.value.y,
-                drop.x,
-                drop.y
-            ) <= 1;
-        }
-
-        function pickupGroundDrop(drop) {
-
-            if (!drop || !canPickUpDrop(drop)) {
-                return false;
-            }
-
-            if (drop.type === 'gold') {
-                player.value.gold =
-                    (Number(player.value.gold) || 0) +
-                    drop.quantity;
-            } else {
-                addInventoryItem(
-                    drop.itemId,
-                    drop.quantity
-                );
-            }
-
-            groundDrops.value =
-                groundDrops.value.filter(
-                    item => item.id !== drop.id
-                );
-
-            addLootEntry(
-                `Apanhaste ${getGroundDropLabel(drop)}`
-            );
-            persistCharacter();
-
-            return true;
-        }
-
-        function pickupGroundDropsUnderPlayer() {
-
-            groundDrops.value
-                .filter(
-                    drop =>
-                        drop.x === player.value.x &&
-                        drop.y === player.value.y
-                )
-                .forEach(drop => {
-                    pickupGroundDrop(drop);
-                });
-        }
-
-        function addLootEntry(text) {
-
-            lootLog.value = [
-                {
-                    id: `${Date.now()}-${Math.random()}`,
-                    text
-                },
-                ...lootLog.value
-            ].slice(0, LOOT_LOG_LIMIT);
-        }
-
-        function grantMonsterLoot(monster) {
-
-            const goldMin =
-                Number(monster.lootGoldMin) || 0;
-            const goldMax = Math.max(
-                goldMin,
-                Number(monster.lootGoldMax) || 0
-            );
-            const itemChance =
-                Number(monster.lootItemChance) || 0;
-            const itemId =
-                monster.lootItemName?.trim();
-
-            if (goldMax > 0) {
-                const gold =
-                    goldMin +
-                    Math.floor(
-                        Math.random() *
-                            (goldMax - goldMin + 1)
-                    );
-
-                if (gold > 0) {
-                    createGroundDrop(
-                        monster.x,
-                        monster.y,
-                        'gold',
-                        gold
-                    );
-                    addLootEntry(
-                        `${monster.name} deixou ${gold} gold no chao`
-                    );
-                }
-            }
-
-            if (
-                itemId &&
-                Math.random() * 100 < itemChance
-            ) {
-                createGroundDrop(
-                    monster.x,
-                    monster.y,
-                    itemId,
-                    1
-                );
-                addLootEntry(
-                    `${monster.name} deixou ${getItemLabel(itemId)}`
-                );
-            }
-        }
-
         function getDamageMitigation(monster, damageType) {
 
             const race =
@@ -1800,31 +2088,84 @@ export default {
 
         function removeMonsterIfDead(monster, xpMultiplier = 20) {
 
-            if (monster.hp > 0) {
+            if (monster.hp > 0 || monster.dead) {
                 return false;
             }
 
-            grantMonsterLoot(monster);
-            player.value.xp +=
-                (Number(monster.level) || 1) * xpMultiplier;
+            monster.dead = true;
+            monster.moving = false;
+            monster.attacking = false;
 
-            monsters.value =
-                monsters.value.filter(
-                    item => item.id !== monster.id
-                );
+            player.value.xp +=
+                monster.xp ||
+                (Number(monster.level) || 1) * xpMultiplier;
+            addDrops(monster);
+            updateQuestProgress('kill', monster.typeKey);
+            createSkillEffect(monster.x, monster.y, 'death', 560);
+
+            if (
+                selectedTarget.value &&
+                selectedTarget.value.id === monster.id
+            ) {
+                if (!afkFarmEnabled.value) {
+                    stopAutoCombat();
+                }
+            }
 
             if (
                 selectedTarget.value &&
                 selectedTarget.value.id === monster.id
             ) {
                 selectedTarget.value = null;
-                stopAutoCombat();
             }
+
+            monster.respawnTimeout = setTimeout(() => {
+                respawnMonster(monster);
+            }, MONSTER_RESPAWN_DELAY);
 
             checkLevelUp();
             persistCharacter();
 
             return true;
+        }
+
+        function findRespawnPosition(monster) {
+
+            const origin = {
+                x: monster.spawnX ?? monster.x,
+                y: monster.spawnY ?? monster.y
+            };
+            const candidates = [
+                origin,
+                { x: origin.x + 1, y: origin.y },
+                { x: origin.x - 1, y: origin.y },
+                { x: origin.x, y: origin.y + 1 },
+                { x: origin.x, y: origin.y - 1 }
+            ];
+
+            return candidates.find(candidate =>
+                canMonsterMoveTo(
+                    candidate.x,
+                    candidate.y,
+                    monster
+                )
+            ) || origin;
+        }
+
+        function respawnMonster(monster) {
+
+            const position = findRespawnPosition(monster);
+
+            monster.x = position.x;
+            monster.y = position.y;
+            monster.hp = monster.maxHp;
+            monster.dead = false;
+            monster.moving = false;
+            monster.attacking = false;
+            monster.animationFrame = 0;
+            monster.lastAttackAt = Date.now();
+            monster.lastCombatAt = 0;
+            monster.respawnTimeout = null;
         }
 
         function damageMonster(
@@ -1842,8 +2183,6 @@ export default {
                 return false;
             }
 
-            engageMonster(monster);
-
             const mitigation =
                 ignoreMitigation
                     ? 0
@@ -1857,6 +2196,8 @@ export default {
                 0,
                 monster.hp - damage
             );
+            monster.lastCombatAt = Date.now();
+            player.value.lastCombatAt = Date.now();
 
             createFloatingText(
                 monster.x,
@@ -1873,7 +2214,7 @@ export default {
         function healPlayer(amount, kind = 'heal') {
 
             const missingHp =
-                getPlayerMaxHp() - player.value.hp;
+                player.value.maxHp - player.value.hp;
             const healed =
                 Math.min(missingHp, Math.floor(amount));
 
@@ -1943,27 +2284,17 @@ export default {
             }, 260);
         }
 
-        function getTileDistance(
-            fromX,
-            fromY,
-            toX,
-            toY
-        ) {
-
-            return Math.max(
-                Math.abs(fromX - toX),
-                Math.abs(fromY - toY)
-            );
-        }
-
         function getDistanceToPlayer(monster) {
 
-            return getTileDistance(
-                player.value.x,
-                player.value.y,
-                monster.x,
-                monster.y
+            const distanceX = Math.abs(
+                player.value.x - monster.x
             );
+
+            const distanceY = Math.abs(
+                player.value.y - monster.y
+            );
+
+            return Math.max(distanceX, distanceY);
         }
 
         function getDistanceToTarget(target) {
@@ -1972,42 +2303,10 @@ export default {
                 return Infinity;
             }
 
-            return getTileDistance(
-                player.value.x,
-                player.value.y,
-                target.x,
-                target.y
+            return Math.max(
+                Math.abs(player.value.x - target.x),
+                Math.abs(player.value.y - target.y)
             );
-        }
-
-        function getDistanceToSpawn(monster) {
-
-            return getTileDistance(
-                monster.x,
-                monster.y,
-                monster.spawnX,
-                monster.spawnY
-            );
-        }
-
-        function getMonsterPreferredRange(monster) {
-
-            const preferredRange = Math.max(
-                1,
-                Number(monster.preferredRange) || 1
-            );
-
-            return Math.min(
-                Math.max(
-                    1,
-                    Number(monster.attackRange) || 1
-                ),
-                preferredRange
-            );
-        }
-
-        function createTileKey(x, y) {
-            return `${x},${y}`;
         }
 
         function stopAutoCombat() {
@@ -2024,8 +2323,22 @@ export default {
                 return false;
             }
 
-            if (getDistanceToTarget(target) <= getBasicAttackRange()) {
+            if (
+                getDistanceToTarget(target) <= getBasicAttackRange() &&
+                canPlayerAttackTarget(target)
+            ) {
                 return true;
+            }
+
+            const pathToAttackTile = findPlayerAttackPath(target);
+
+            if (pathToAttackTile.length) {
+                const next = pathToAttackTile[0];
+
+                return movePlayer(
+                    next.x - player.value.x,
+                    next.y - player.value.y
+                );
             }
 
             const deltaX = target.x - player.value.x;
@@ -2095,379 +2408,188 @@ export default {
             );
         }
 
-        function canMonsterMoveTo(
-            x,
-            y,
-            movingMonsterId,
-            {
-                ignorePlayer = false
-            } = {}
-        ) {
+        function canMonsterMoveTo(x, y, movingMonster = null) {
 
             if (
                 x < 0 ||
                 y < 0 ||
-                x >= MAP_WIDTH ||
-                y >= MAP_HEIGHT
+                x >= getMapWidth() ||
+                y >= getMapHeight()
             ) {
                 return false;
             }
 
-            const tile = gameMap[y][x];
+            const tile = gameMap.value[y]?.[x];
 
             if (BLOCKED_TILES.includes(tile)) {
                 return false;
             }
 
             if (
-                !ignorePlayer &&
                 x === player.value.x &&
                 y === player.value.y
             ) {
                 return false;
             }
 
+            if (
+                npcs.value.some(
+                    npc =>
+                        npc.x === x &&
+                        npc.y === y
+                )
+            ) {
+                return false;
+            }
+
             return !monsters.value.some(
                 monster =>
-                    monster.id !== movingMonsterId &&
-                    monster.hp > 0 &&
+                    monster.id !== movingMonster?.id &&
+                    !monster.dead &&
                     monster.x === x &&
                     monster.y === y
             );
         }
 
-        function getOrderedMonsterSteps(
-            fromX,
-            fromY,
-            targetX,
-            targetY
-        ) {
+        function canMonsterAttackPlayer(monster) {
 
-            return [
-                {
-                    x: 1,
-                    y: 0
-                },
-                {
-                    x: -1,
-                    y: 0
-                },
-                {
-                    x: 0,
-                    y: 1
-                },
-                {
-                    x: 0,
-                    y: -1
-                }
-            ].sort((left, right) => {
-
-                const leftDistance =
-                    getTileDistance(
-                        fromX + left.x,
-                        fromY + left.y,
-                        targetX,
-                        targetY
-                    );
-                const rightDistance =
-                    getTileDistance(
-                        fromX + right.x,
-                        fromY + right.y,
-                        targetX,
-                        targetY
-                    );
-
-                return leftDistance - rightDistance;
-            });
-        }
-
-        function moveMonsterByStep(monster, step) {
-
-            if (!step) {
-                return false;
+            if ((monster.attackRange || 1) <= 1) {
+                return true;
             }
 
-            monster.x += step.x;
-            monster.y += step.y;
-            monster.moving = true;
-            stopMonsterMovementAnimation(monster);
-
-            return true;
+            return hasLineOfSight(
+                monster.x,
+                monster.y,
+                player.value.x,
+                player.value.y
+            );
         }
 
-        function findMonsterPathStep(
-            monster,
-            targetX,
-            targetY,
-            desiredDistance = 1
-        ) {
+        function findMonsterAttackPath(monster) {
 
-            if (
-                getTileDistance(
-                    monster.x,
-                    monster.y,
-                    targetX,
-                    targetY
-                ) <= desiredDistance
-            ) {
-                return null;
-            }
+            const candidates = [];
+            const range = monster.attackRange || 1;
 
-            const queue = [
-                {
-                    x: monster.x,
-                    y: monster.y
-                }
-            ];
-            const visited = new Set([
-                createTileKey(monster.x, monster.y)
-            ]);
-            const parents = new Map();
-            let destination = null;
-
-            while (queue.length > 0) {
-                const current = queue.shift();
-
-                if (
-                    !(
-                        current.x === monster.x &&
-                        current.y === monster.y
-                    ) &&
-                    getTileDistance(
-                        current.x,
-                        current.y,
-                        targetX,
-                        targetY
-                    ) <= desiredDistance
-                ) {
-                    destination = current;
-                    break;
-                }
-
-                getOrderedMonsterSteps(
-                    current.x,
-                    current.y,
-                    targetX,
-                    targetY
-                ).forEach(step => {
-
-                    const nextX = current.x + step.x;
-                    const nextY = current.y + step.y;
-                    const nextKey =
-                        createTileKey(nextX, nextY);
+            for (let y = 0; y < getMapHeight(); y++) {
+                for (let x = 0; x < getMapWidth(); x++) {
+                    const distance = Math.max(
+                        Math.abs(x - player.value.x),
+                        Math.abs(y - player.value.y)
+                    );
 
                     if (
-                        visited.has(nextKey) ||
-                        !canMonsterMoveTo(
-                            nextX,
-                            nextY,
-                            monster.id
-                        )
+                        distance === 0 ||
+                        distance > range ||
+                        !canMonsterMoveTo(x, y, monster)
                     ) {
-                        return;
+                        continue;
                     }
 
-                    visited.add(nextKey);
-                    parents.set(nextKey, current);
-                    queue.push({
-                        x: nextX,
-                        y: nextY
+                    if (
+                        range > 1 &&
+                        !hasLineOfSight(
+                            x,
+                            y,
+                            player.value.x,
+                            player.value.y
+                        )
+                    ) {
+                        continue;
+                    }
+
+                    candidates.push({
+                        x,
+                        y,
+                        score:
+                            Math.abs(monster.x - x) +
+                            Math.abs(monster.y - y)
                     });
-                });
-            }
-
-            if (!destination) {
-                return null;
-            }
-
-            let currentStep = destination;
-            let parent =
-                parents.get(
-                    createTileKey(
-                        destination.x,
-                        destination.y
-                    )
-                );
-
-            while (
-                parent &&
-                !(
-                    parent.x === monster.x &&
-                    parent.y === monster.y
-                )
-            ) {
-                currentStep = parent;
-                parent = parents.get(
-                    createTileKey(
-                        parent.x,
-                        parent.y
-                    )
-                );
-            }
-
-            return {
-                x: currentStep.x - monster.x,
-                y: currentStep.y - monster.y
-            };
-        }
-
-        function moveMonsterTowardsGoal(
-            monster,
-            targetX,
-            targetY,
-            desiredDistance = 1
-        ) {
-
-            const step = findMonsterPathStep(
-                monster,
-                targetX,
-                targetY,
-                desiredDistance
-            );
-
-            if (!step) {
-                return false;
-            }
-
-            return moveMonsterByStep(monster, step);
-        }
-
-        function moveMonsterAwayFromPlayer(monster) {
-
-            const currentDistance =
-                getDistanceToPlayer(monster);
-            const bestStep = [
-                {
-                    x: 1,
-                    y: 0
-                },
-                {
-                    x: -1,
-                    y: 0
-                },
-                {
-                    x: 0,
-                    y: 1
-                },
-                {
-                    x: 0,
-                    y: -1
                 }
-            ]
-                .filter(step =>
-                    canMonsterMoveTo(
-                        monster.x + step.x,
-                        monster.y + step.y,
-                        monster.id
+            }
+
+            return candidates
+                .sort((first, second) => first.score - second.score)
+                .map(candidate =>
+                    findPath(
+                        {
+                            x: monster.x,
+                            y: monster.y
+                        },
+                        candidate,
+                        (x, y) => canMonsterMoveTo(x, y, monster)
                     )
                 )
-                .sort((left, right) => {
-
-                    const leftDistance =
-                        getTileDistance(
-                            monster.x + left.x,
-                            monster.y + left.y,
-                            player.value.x,
-                            player.value.y
-                        );
-                    const rightDistance =
-                        getTileDistance(
-                            monster.x + right.x,
-                            monster.y + right.y,
-                            player.value.x,
-                            player.value.y
-                        );
-
-                    return rightDistance - leftDistance;
-                })[0];
-
-            if (!bestStep) {
-                return false;
-            }
-
-            const nextDistance =
-                getTileDistance(
-                    monster.x + bestStep.x,
-                    monster.y + bestStep.y,
-                    player.value.x,
-                    player.value.y
-                );
-
-            if (nextDistance <= currentDistance) {
-                return false;
-            }
-
-            return moveMonsterByStep(monster, bestStep);
+                .find(path => path.length) || [];
         }
 
-        function moveMonsterToSpawn(monster) {
+        function moveMonsterTowardsPlayer(monster) {
 
-            if (getDistanceToSpawn(monster) === 0) {
-                monster.returningHome = false;
-                monster.moving = false;
-                return false;
-            }
+            const pathToAttackTile = findMonsterAttackPath(monster);
 
-            const moved =
-                moveMonsterTowardsGoal(
-                    monster,
-                    monster.spawnX,
-                    monster.spawnY,
-                    0
-                );
+            if (pathToAttackTile.length) {
+                const next = pathToAttackTile[0];
 
-            if (!moved) {
-                monster.returningHome = false;
-            }
-
-            return moved;
-        }
-
-        function engageMonster(monster) {
-
-            if (!monster || monster.hp <= 0) {
+                monster.x = next.x;
+                monster.y = next.y;
+                monster.moving = true;
+                stopMonsterMovementAnimation(monster);
                 return;
             }
 
-            monster.isAggro = true;
-            monster.returningHome = false;
-            monster.lastKnownPlayerX =
-                player.value.x;
-            monster.lastKnownPlayerY =
-                player.value.y;
+            const deltaX = player.value.x - monster.x;
+            const deltaY = player.value.y - monster.y;
 
-            monsters.value.forEach(otherMonster => {
+            const horizontalStep = {
+                x: deltaX === 0
+                    ? 0
+                    : deltaX > 0
+                        ? 1
+                        : -1,
+                y: 0
+            };
 
-                if (
-                    otherMonster.id === monster.id ||
-                    otherMonster.hp <= 0
-                ) {
-                    return;
+            const verticalStep = {
+                x: 0,
+                y: deltaY === 0
+                    ? 0
+                    : deltaY > 0
+                        ? 1
+                        : -1
+            };
+
+            const steps =
+                Math.abs(deltaX) >= Math.abs(deltaY)
+                    ? [
+                        horizontalStep,
+                        verticalStep
+                    ]
+                    : [
+                        verticalStep,
+                        horizontalStep
+                    ];
+
+            const nextStep = steps.find(step => {
+
+                if (step.x === 0 && step.y === 0) {
+                    return false;
                 }
 
-                const assistRange = Math.max(
-                    0,
-                    Number(otherMonster.assistRange) || 0
+                return canMonsterMoveTo(
+                    monster.x + step.x,
+                    monster.y + step.y,
+                    monster
                 );
-
-                if (
-                    getTileDistance(
-                        otherMonster.x,
-                        otherMonster.y,
-                        monster.x,
-                        monster.y
-                    ) > assistRange
-                ) {
-                    return;
-                }
-
-                otherMonster.isAggro = true;
-                otherMonster.returningHome = false;
-                otherMonster.lastKnownPlayerX =
-                    player.value.x;
-                otherMonster.lastKnownPlayerY =
-                    player.value.y;
             });
+
+            if (!nextStep) {
+                return;
+            }
+
+            monster.x += nextStep.x;
+            monster.y += nextStep.y;
+            monster.moving = true;
+
+            stopMonsterMovementAnimation(monster);
         }
 
         function attackPlayer(monster) {
@@ -2482,18 +2604,15 @@ export default {
                 return;
             }
 
-            monster.lastAttackAt = now;
-            playMonsterAttackAnimation(monster);
-
-            if (monster.attackStyle === 'ranged') {
-                createSkillEffect(
-                    player.value.x,
-                    player.value.y,
-                    monster.projectileKind ||
-                        'monster-ranged',
-                    360
-                );
+            if (!canMonsterAttackPlayer(monster)) {
+                moveMonsterTowardsPlayer(monster);
+                return;
             }
+
+            monster.lastAttackAt = now;
+            monster.lastCombatAt = now;
+            player.value.lastCombatAt = now;
+            playMonsterAttackAnimation(monster);
 
             const monsterAccuracy = Math.min(
                 0.95,
@@ -2559,23 +2678,26 @@ export default {
         function playerDeath() {
 
             // Respawn simples: volta ao ponto inicial com recursos cheios.
+            markPlayerActivity();
             stopAutoCombat();
             clearRegenerationIntervals();
             pressedMovementKeys.clear();
+            clickMovePath = [];
+            loadZoneEntities(PLAYER_START_ZONE);
             player.value.x = PLAYER_START_POSITION.x;
             player.value.y = PLAYER_START_POSITION.y;
+            player.value.currentZone =
+                ZONES[PLAYER_START_ZONE].name;
             player.value.hp =
-                getPlayerMaxHp();
+                player.value.maxHp || 100;
             player.value.mana =
-                getPlayerMaxMana();
+                player.value.maxMana || 50;
             player.value.moving = false;
             player.value.direction = 'down';
             player.value.animationFrame = 0;
 
             monsters.value.forEach(monster => {
                 monster.lastAttackAt = Date.now();
-                monster.isAggro = false;
-                monster.returningHome = true;
             });
 
             updateCamera();
@@ -2602,62 +2724,24 @@ export default {
                         monster.agroRange || 5;
                     const attackRange =
                         monster.attackRange || 1;
-                    const leashRange = Math.max(
-                        agroRange + 2,
-                        monster.leashRange || 8
-                    );
-                    const preferredRange =
-                        getMonsterPreferredRange(monster);
-                    const inAgroRange =
-                        distance <= agroRange;
 
-                    if (inAgroRange) {
-                        engageMonster(monster);
-                    }
-
-                    if (
-                        monster.isAggro &&
-                        (
-                            distance > leashRange ||
-                            getDistanceToSpawn(monster) >
-                                leashRange
-                        )
-                    ) {
-                        monster.isAggro = false;
-                        monster.returningHome = true;
-                    }
-
-                    if (monster.returningHome) {
-                        moveMonsterToSpawn(monster);
-                        return;
-                    }
-
-                    if (!monster.isAggro) {
+                    // O monstro so reage quando o player entra no raio de agro.
+                    if (distance > agroRange) {
                         return;
                     }
 
                     if (
-                        monster.attackStyle === 'ranged' &&
-                        distance < preferredRange &&
-                        moveMonsterAwayFromPlayer(monster)
+                        distance <= attackRange &&
+                        canMonsterAttackPlayer(monster)
                     ) {
-                        return;
-                    }
-
-                    if (distance <= attackRange) {
                         attackPlayer(monster);
                         return;
                     }
 
-                    moveMonsterTowardsGoal(
-                        monster,
-                        player.value.x,
-                        player.value.y,
-                        preferredRange
-                    );
+                    moveMonsterTowardsPlayer(monster);
                 });
 
-            }, MONSTER_AI_INTERVAL);
+            }, 600);
         }
 
         async function basicAttack({
@@ -2684,8 +2768,6 @@ export default {
                 return false;
             }
 
-            engageMonster(selectedTarget.value);
-
             const distanceX = Math.abs(
                 player.value.x - selectedTarget.value.x
             );
@@ -2710,8 +2792,21 @@ export default {
                 return false;
             }
 
+            if (!canPlayerAttackTarget(selectedTarget.value)) {
+                createFloatingText(
+                    selectedTarget.value.x,
+                    selectedTarget.value.y,
+                    'Sem linha',
+                    'miss'
+                );
+
+                return false;
+            }
+
             playerAttackInProgress = true;
             player.value.lastAttackAt = now;
+            player.value.lastCombatAt = now;
+            selectedTarget.value.lastCombatAt = now;
 
             try {
                 const result = await attackMonsterRequest(
@@ -2759,18 +2854,9 @@ export default {
                         `Mataste ${selectedTarget.value.name}`
                     );
 
-                    grantMonsterLoot(selectedTarget.value);
-                    player.value.xp += result.xpGained;
-
-                    monsters.value =
-                        monsters.value.filter(
-                            m => m.id !== selectedTarget.value.id
-                        );
-
-                    selectedTarget.value = null;
-                    stopAutoCombat();
-
-                    checkLevelUp();
+                    selectedTarget.value.xp =
+                        result.xpGained || selectedTarget.value.xp;
+                    removeMonsterIfDead(selectedTarget.value);
                     persistCharacter();
                 }
 
@@ -2785,13 +2871,34 @@ export default {
             clearTargetIfDead();
 
             if (!selectedTarget.value) {
+                if (
+                    afkFarmEnabled.value &&
+                    ensureAutoCombatTarget({
+                        silent: true,
+                        userAction: false
+                    })
+                ) {
+                    return;
+                }
+
+                if (afkFarmEnabled.value) {
+                    createFloatingText(
+                        player.value.x,
+                        player.value.y,
+                        'Mapa limpo',
+                        'heal'
+                    );
+                    disableAfkFarm();
+                }
+
                 stopAutoCombat();
                 return;
             }
 
             if (
                 getDistanceToTarget(selectedTarget.value) >
-                getBasicAttackRange()
+                    getBasicAttackRange() ||
+                !canPlayerAttackTarget(selectedTarget.value)
             ) {
                 movePlayerTowardsTarget(selectedTarget.value);
                 return;
@@ -2803,10 +2910,15 @@ export default {
             });
         }
 
-        function startAutoCombat() {
+        function startAutoCombat({
+            userAction = true
+        } = {}) {
 
-            if (!selectedTarget.value) {
-                basicAttack();
+            if (
+                !ensureAutoCombatTarget({
+                    userAction
+                })
+            ) {
                 return;
             }
 
@@ -2842,8 +2954,8 @@ export default {
             }
 
             if (leveledUp) {
-                player.value.hp = getPlayerMaxHp();
-                player.value.mana = getPlayerMaxMana();
+                player.value.hp = player.value.maxHp;
+                player.value.mana = player.value.maxMana;
 
                 console.log('Subiste de level!');
                 persistCharacter();
@@ -2901,6 +3013,24 @@ export default {
                 return null;
             }
 
+            if (
+                skill.range > 1 &&
+                !hasLineOfSight(
+                    player.value.x,
+                    player.value.y,
+                    selectedTarget.value.x,
+                    selectedTarget.value.y
+                )
+            ) {
+                createFloatingText(
+                    selectedTarget.value.x,
+                    selectedTarget.value.y,
+                    'Sem linha',
+                    'miss'
+                );
+                return null;
+            }
+
             return selectedTarget.value;
         }
 
@@ -2914,7 +3044,7 @@ export default {
 
             const damage =
                 18 +
-                getEffectiveAttribute('intelligence') * 2.7 +
+                (Number(player.value.intelligence) || 0) * 2.7 +
                 (Number(player.value.level) || 1) * 2;
 
             createSkillEffect(target.x, target.y, 'fireball');
@@ -2928,7 +3058,7 @@ export default {
 
         function castHeal(skill) {
 
-            if (player.value.hp >= getPlayerMaxHp()) {
+            if (player.value.hp >= player.value.maxHp) {
                 createFloatingText(
                     player.value.x,
                     player.value.y,
@@ -2944,7 +3074,7 @@ export default {
 
             const healAmount =
                 24 +
-                getEffectiveAttribute('intelligence') * 2.2 +
+                (Number(player.value.intelligence) || 0) * 2.2 +
                 (Number(player.value.level) || 1) * 2;
 
             createSkillEffect(player.value.x, player.value.y, 'heal');
@@ -3012,9 +3142,13 @@ export default {
             }
 
             createSkillEffect(player.value.x, player.value.y, 'dash');
-            pickupGroundDropsUnderPlayer();
             updateCamera();
             persistCharacter();
+        }
+
+        function castShadowStep(skill) {
+
+            castDash(skill);
         }
 
         function castPowerStrike(skill) {
@@ -3027,13 +3161,62 @@ export default {
 
             const damage =
                 22 +
-                getEffectiveAttribute('strength') * 3.2 +
+                (Number(player.value.strength) || 0) * 3.2 +
                 (Number(player.value.level) || 1) * 2;
 
             createSkillEffect(target.x, target.y, 'power-strike');
             damageMonster(target, damage, {
                 kind: 'critical',
                 damageType: 'physical',
+                xpMultiplier: 24
+            });
+            persistCharacter();
+        }
+
+        function castPowerShot(skill) {
+
+            const target = getTargetForSkill(skill);
+
+            if (!target || !payAndStartSkill(skill)) {
+                return;
+            }
+
+            const damage =
+                20 +
+                (Number(player.value.dexterity) || 0) * 3 +
+                (Number(player.value.level) || 1) * 2;
+
+            createSkillEffect(target.x, target.y, 'power-shot');
+            damageMonster(target, damage, {
+                kind: 'critical',
+                damageType: 'physical',
+                xpMultiplier: 24
+            });
+            persistCharacter();
+        }
+
+        function castCurse(skill) {
+
+            const target = getTargetForSkill(skill);
+
+            if (!target || !payAndStartSkill(skill)) {
+                return;
+            }
+
+            const damage =
+                16 +
+                (Number(player.value.intelligence) || 0) * 2.4 +
+                (Number(player.value.level) || 1) * 2;
+
+            target.damage = Math.max(
+                1,
+                Math.floor((target.damage || 1) * 0.85)
+            );
+
+            createSkillEffect(target.x, target.y, 'curse');
+            damageMonster(target, damage, {
+                kind: 'magic',
+                damageType: 'magical',
                 xpMultiplier: 24
             });
             persistCharacter();
@@ -3049,7 +3232,7 @@ export default {
             const healPerTick =
                 7 +
                 Math.floor(
-                    getEffectiveAttribute('intelligence') * 0.8
+                    (Number(player.value.intelligence) || 0) * 0.8
                 );
 
             createSkillEffect(
@@ -3099,9 +3282,9 @@ export default {
 
             const damage =
                 42 +
-                getEffectiveAttribute('strength') * 1.2 +
-                getEffectiveAttribute('intelligence') * 2.4 +
-                getEffectiveAttribute('dexterity') * 1.2 +
+                (Number(player.value.strength) || 0) * 1.2 +
+                (Number(player.value.intelligence) || 0) * 2.4 +
+                (Number(player.value.dexterity) || 0) * 1.2 +
                 (Number(player.value.level) || 1) * 4;
 
             createSkillEffect(origin.x, origin.y, 'ultimate', 820);
@@ -3128,13 +3311,15 @@ export default {
 
         function useSkill(key) {
 
+            markPlayerActivity();
+
             const skill = getSkillByKey(key);
 
             if (!skill) {
                 return;
             }
 
-            if (skill.id === 'basicAttack') {
+            if (skill.id === 'slash') {
                 startAutoCombat();
                 return;
             }
@@ -3142,6 +3327,9 @@ export default {
             const actions = {
                 fireball: castFireball,
                 heal: castHeal,
+                shadowStep: castShadowStep,
+                powerShot: castPowerShot,
+                curse: castCurse,
                 dash: castDash,
                 powerStrike: castPowerStrike,
                 regeneration: castRegeneration,
@@ -3156,6 +3344,8 @@ export default {
         }
 
         function handleKeyDown(event) {
+
+            markPlayerActivity();
 
             const key = event.key.toLowerCase();
             const code = event.code.toLowerCase();
@@ -3174,6 +3364,7 @@ export default {
                 const wasPressed =
                     pressedMovementKeys.has(movementKey);
                 pressedMovementKeys.add(movementKey);
+                clickMovePath = [];
                 stopAutoCombat();
                 if (!wasPressed) {
                     movePlayerFromPressedKeys();
@@ -3202,6 +3393,8 @@ export default {
 
         function handleKeyUp(event) {
 
+            markPlayerActivity();
+
             const key = event.key.toLowerCase();
             const code = event.code.toLowerCase();
             const movementKeyByCode = {
@@ -3228,7 +3421,61 @@ export default {
 
         function handleWindowBlur() {
             pressedMovementKeys.clear();
+            clickMovePath = [];
             player.value.moving = false;
+        }
+
+        function handleMapClick(event) {
+
+            markPlayerActivity();
+            stopAutoCombat();
+
+            const viewport =
+                event.currentTarget.closest('.game-viewport');
+
+            if (!viewport) {
+                return;
+            }
+
+            const rect = viewport.getBoundingClientRect();
+            const targetX = Math.floor(
+                (event.clientX - rect.left + camera.value.x) /
+                    tileSize
+            );
+            const targetY = Math.floor(
+                (event.clientY - rect.top + camera.value.y) /
+                    tileSize
+            );
+
+            if (
+                targetX === player.value.x &&
+                targetY === player.value.y
+            ) {
+                clickMovePath = [];
+                return;
+            }
+
+            if (!canPlayerMoveTo(targetX, targetY)) {
+                createFloatingText(
+                    player.value.x,
+                    player.value.y,
+                    'Bloq',
+                    'miss'
+                );
+                return;
+            }
+
+            clickMovePath = findPath(
+                {
+                    x: player.value.x,
+                    y: player.value.y
+                },
+                {
+                    x: targetX,
+                    y: targetY
+                },
+                canPlayerMoveTo
+            );
         }
 
         onMounted(async () => {
@@ -3254,73 +3501,22 @@ export default {
                 ...character,
                 maxHp: character.maxHp || character.hp || 100,
                 maxMana: character.maxMana || character.mana || 50,
-                gold: character.gold || 0,
-                inventory: normalizeInventoryEntries(
-                    character.inventory
-                ),
-                equipment: normalizeEquipmentState(
-                    character.equipment
-                ),
                 attributePoints: character.attributePoints || 0,
                 direction: 'down',
                 moving: false,
                 attacking: false,
-                animationFrame: 0
+                animationFrame: 0,
+                lastCombatAt: 0
             };
 
-            clampPlayerResources();
-
-            const zoneMonsters =
-                await getMonsters(
-                    player.value.currentZone
-                );
-
-            monsters.value = zoneMonsters.map(monster => ({
-                ...monster,
-                maxHp: monster.maxHp || monster.hp,
-                agroRange: monster.agroRange || 5,
-                attackRange: monster.attackRange || 1,
-                attackCooldown:
-                    monster.attackCooldown || 1600,
-                attackStyle:
-                    monster.attackStyle ||
-                    (
-                        (monster.attackRange || 1) > 1
-                            ? 'ranged'
-                            : 'melee'
-                    ),
-                preferredRange: Math.max(
-                    1,
-                    monster.preferredRange ||
-                        Math.max(
-                            1,
-                            (monster.attackRange || 1) - 1
-                        )
-                ),
-                assistRange: monster.assistRange || 2,
-                leashRange:
-                    monster.leashRange ||
-                    (monster.agroRange || 5) + 3,
-                projectileKind:
-                    monster.projectileKind ||
-                    'monster-ranged',
-                lootGoldMin: monster.lootGoldMin || 0,
-                lootGoldMax: monster.lootGoldMax || 0,
-                lootItemName: monster.lootItemName || '',
-                lootItemChance:
-                    Number(monster.lootItemChance) || 0,
-                spawnX: monster.spawnX ?? monster.x,
-                spawnY: monster.spawnY ?? monster.y,
-                lastAttackAt: monster.lastAttackAt || 0,
-                isAggro: false,
-                returningHome: false,
-                moving: false,
-                attacking: false,
-                animationFrame: 0
-            }));
+            loadZoneEntities(
+                getZoneKeyByName(player.value.currentZone)
+            );
 
             startAnimationLoop();
             startCombatClock();
+            startAfkFarmLoop();
+            startResourceRegenerationLoop();
             startPlayerMovementLoop();
 
             startMonsterAI();
@@ -3363,8 +3559,24 @@ export default {
                 clearInterval(combatClockInterval);
             }
 
+            if (afkFarmInterval) {
+                clearInterval(afkFarmInterval);
+            }
+
+            if (resourceRegenInterval) {
+                clearInterval(resourceRegenInterval);
+            }
+
             if (playerAttackTimeout) {
                 clearTimeout(playerAttackTimeout);
+            }
+
+            if (npcResponseTimeout) {
+                clearTimeout(npcResponseTimeout);
+            }
+
+            if (questNotificationTimeout) {
+                clearTimeout(questNotificationTimeout);
             }
 
             clearRegenerationIntervals();
@@ -3378,6 +3590,10 @@ export default {
                 if (monster.attackAnimationTimeout) {
                     clearTimeout(monster.attackAnimationTimeout);
                 }
+
+                if (monster.respawnTimeout) {
+                    clearTimeout(monster.respawnTimeout);
+                }
             });
         });
 
@@ -3386,37 +3602,50 @@ export default {
             tileSize,
 
             gameMap,
+            currentZoneKey,
+            activeZone,
+            getZoneName,
 
             player,
 
             monsters,
-            groundDrops,
+            npcs,
+            portals,
+            quests,
+            inventory,
+            storageItems,
+            gold,
+            activeNpc,
+            npcResponse,
+            questNotification,
+            dailyQuestState,
+            merchantOpen,
+            storageOpen,
+            zoneBanner,
 
             selectedTarget,
+            afkFarmEnabled,
 
             floatingTexts,
-
-            lootLog,
 
             skillEffects,
 
             camera,
 
             tileImages,
+            uiAssets,
+            minimapAssets,
+            portalAssets,
+            npcAssets,
+            effectAssets,
 
             skillBar,
-
-            hpBar,
-            mpBar,
-            xpBar,
-
-            skillSlot,
-            equipmentSlots,
 
             getPlayerSprite,
             getMonsterSprite,
             getAvailableAttributePoints,
             getWeaponLabel,
+            getClassLabel,
             getDamageTypeLabel,
             getBasicAttackRange,
             getPlayerArmor,
@@ -3437,27 +3666,33 @@ export default {
             getSkillManaCost,
             canPaySkillMana,
             getDistanceToTarget,
-            getPlayerMaxHp,
-            getPlayerMaxMana,
-            getEffectiveAttribute,
-            getItemLabel,
-            getItemSymbol,
-            getItemDetailText,
-            getGroundDropLabel,
-            getEquipmentSlotLabel,
-            getEquippedItemId,
-            getEquippedItemLabel,
-            getInventoryEntries,
-            canEquipInventoryItem,
-            canUseInventoryItem,
-            equipInventoryItem,
-            useInventoryItem,
-            unequipItem,
-            pickupGroundDrop,
+            getVisibleQuests,
+            getQuestStatusLabel,
+            getQuestIcon,
+            getInventoryItem,
+            getItemIcon,
+            getItemFrame,
+            getItemTooltip,
+            getInventoryLimitLabel,
+            getStorageLimitLabel,
+            getMerchantItems,
+            buyMerchantItem,
+            sellInventoryItem,
+            moveItemToStorage,
+            moveItemFromStorage,
+            getMinimapStyle,
+            getDailyQuestSummary,
+            getBosses,
+            getSkillEffectImage,
+            openNpcDialog,
+            confirmNpcAction,
+            closeNpcDialog,
             spendAttributePoint,
             useSkill,
+            handleMapClick,
 
-            selectTarget
+            selectTarget,
+            engageTarget
         };
     }
 };
