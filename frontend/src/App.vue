@@ -5,18 +5,9 @@
       class="game-session"
     >
       <div class="session-bar">
-        <div class="session-user">
-          <span>
-            {{ session.user.user }} / {{ selectedCharacter.name }}
-          </span>
-
-          <small v-if="session.user.previousLastLoginAt">
-            Ultimo login: {{ formatSessionDate(session.user.previousLastLoginAt) }}
-          </small>
-
-          <small v-else>
-            Primeiro login registado nesta conta.
-          </small>
+        <div class="session-identity">
+          <strong>{{ session.user.user }}</strong>
+          <span>{{ selectedCharacter.name }} / sessao ativa {{ sessionDuration }}</span>
         </div>
 
         <button
@@ -48,7 +39,7 @@
         <div class="character-header">
           <div>
             <h1>Personagens</h1>
-            <p>{{ session.user.user }}</p>
+            <p>{{ session.user.user }} / sessao ativa {{ sessionDuration }}</p>
           </div>
 
           <button
@@ -59,45 +50,68 @@
           </button>
         </div>
 
-        <form
-          class="character-create"
-          @submit.prevent="submitCharacter"
+        <button
+          v-if="!showCharacterCreate"
+          type="button"
+          class="create-character-entry"
+          @click="openCharacterCreate"
         >
-          <label>
-            Nome do personagem
-            <input
-              v-model="characterForm.name"
-              maxlength="60"
-              type="text"
-              required
-            />
-          </label>
+          Criar personagem
+        </button>
 
-          <label>
-            Classe
-            <select
-              v-model="characterForm.characterClass"
-              required
+        <section
+          v-else
+          class="character-create-flow"
+        >
+          <div class="class-card-grid">
+            <button
+              v-for="characterClass in classOptions"
+              :key="characterClass.id"
+              type="button"
+              class="class-card"
+              :class="{ selected: characterForm.characterClass === characterClass.id }"
+              @click="selectCharacterClass(characterClass.id)"
             >
-              <option value="warrior">
-                Warrior
-              </option>
-              <option value="mage">
-                Mage
-              </option>
-              <option value="archer">
-                Archer
-              </option>
-            </select>
-          </label>
+              <img
+                :src="characterClass.sprite"
+                alt=""
+              />
+              <strong>{{ characterClass.name }}</strong>
+              <span>{{ characterClass.summary }}</span>
+              <small>{{ characterClass.stats }}</small>
+            </button>
+          </div>
 
-          <button
-            type="submit"
-            :disabled="characterLoading"
+          <form
+            v-if="characterForm.characterClass"
+            class="character-create"
+            @submit.prevent="submitCharacter"
           >
-            Criar
-          </button>
-        </form>
+            <label>
+              Nome do personagem
+              <input
+                v-model="characterForm.name"
+                maxlength="60"
+                type="text"
+                required
+              />
+            </label>
+
+            <button
+              type="submit"
+              :disabled="characterLoading"
+            >
+              Criar {{ getClassLabel(characterForm.characterClass) }}
+            </button>
+
+            <button
+              type="button"
+              @click="closeCharacterCreate"
+            >
+              Cancelar
+            </button>
+          </form>
+        </section>
 
         <p
           v-if="characterError"
@@ -112,7 +126,13 @@
             :key="character.id"
             class="character-row"
           >
-            <div>
+            <img
+              :src="getClassSprite(character.characterClass)"
+              class="character-row-sprite"
+              alt=""
+            />
+
+            <div class="character-row-info">
               <h2>{{ character.name }}</h2>
               <p>
                 {{ getClassLabel(character.characterClass) }}
@@ -201,7 +221,7 @@
       class="auth-page"
     >
       <section class="auth-panel">
-        <h1>Drakonys</h1>
+        <h1>Drakonys RPG Lite</h1>
 
         <div class="auth-tabs">
           <button
@@ -277,6 +297,7 @@
 
 <script>
 import Game from './components/Game/Game.vue';
+import { playerSprites } from './data/gameAssets';
 import {
   clearSession,
   getStoredSession,
@@ -303,13 +324,39 @@ export default {
       characterError: '',
       deleteError: '',
       session: getStoredSession(),
+      sessionClock: Date.now(),
+      sessionTimer: null,
       characters: [],
       selectedCharacter: null,
       characterToDelete: null,
       deleteConfirmation: '',
+      showCharacterCreate: false,
+      classOptions: [
+        {
+          id: 'warrior',
+          name: 'Warrior',
+          sprite: playerSprites.warrior.down.idle,
+          summary: 'Linha de frente resistente, dano fisico forte e mais vida por forca.',
+          stats: 'Forca alta / Armadura / HP'
+        },
+        {
+          id: 'mage',
+          name: 'Mage',
+          sprite: playerSprites.mage.down.idle,
+          summary: 'Controle arcano com mana alta, cura e dano magico em area.',
+          stats: 'Inteligencia alta / MP / Cooldown'
+        },
+        {
+          id: 'archer',
+          name: 'Archer',
+          sprite: playerSprites.archer.down.idle,
+          summary: 'Combate a distancia com precisao e ataques constantes.',
+          stats: 'Destreza alta / Range / Critico'
+        }
+      ],
       characterForm: {
         name: '',
-        characterClass: 'warrior'
+        characterClass: ''
       },
       form: {
         user: '',
@@ -324,12 +371,40 @@ export default {
       return this.mode === 'login'
         ? 'Entrar'
         : 'Criar conta';
+    },
+
+    sessionDuration() {
+      const loginAt = this.session?.loginAt
+        ? new Date(this.session.loginAt).getTime()
+        : this.sessionClock;
+      const elapsed = Math.max(
+        0,
+        Math.floor((this.sessionClock - loginAt) / 1000)
+      );
+      const hours = Math.floor(elapsed / 3600);
+      const minutes = Math.floor((elapsed % 3600) / 60);
+      const seconds = elapsed % 60;
+
+      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
     }
   },
 
   async mounted() {
+    this.sessionTimer = setInterval(() => {
+      this.sessionClock = Date.now();
+    }, 1000);
+
     if (this.session) {
+      if (!this.session.loginAt) {
+        this.session.loginAt = new Date().toISOString();
+      }
       await this.loadCharacters();
+    }
+  },
+
+  beforeUnmount() {
+    if (this.sessionTimer) {
+      clearInterval(this.sessionTimer);
     }
   },
 
@@ -354,6 +429,7 @@ export default {
 
         this.session = session;
         this.selectedCharacter = null;
+        this.showCharacterCreate = false;
         await this.loadCharacters();
       } catch (error) {
         this.error =
@@ -382,6 +458,11 @@ export default {
 
     async submitCharacter() {
 
+      if (!this.characterForm.characterClass) {
+        this.characterError = 'Escolhe uma classe antes de criar.';
+        return;
+      }
+
       this.characterLoading = true;
       this.characterError = '';
 
@@ -397,7 +478,8 @@ export default {
           ...this.characters
         ];
         this.characterForm.name = '';
-        this.characterForm.characterClass = 'warrior';
+        this.characterForm.characterClass = '';
+        this.showCharacterCreate = false;
       } catch (error) {
         this.characterError =
           error.response?.data?.message ||
@@ -411,6 +493,22 @@ export default {
       this.selectedCharacter = character;
     },
 
+    openCharacterCreate() {
+      this.showCharacterCreate = true;
+      this.characterForm.characterClass = '';
+      this.characterForm.name = '';
+    },
+
+    closeCharacterCreate() {
+      this.showCharacterCreate = false;
+      this.characterForm.characterClass = '';
+      this.characterForm.name = '';
+    },
+
+    selectCharacterClass(characterClass) {
+      this.characterForm.characterClass = characterClass;
+    },
+
     getClassLabel(characterClass) {
       const labels = {
         warrior: 'Warrior',
@@ -421,8 +519,16 @@ export default {
       return labels[characterClass] || 'Warrior';
     },
 
+    getClassSprite(characterClass) {
+      return (
+        playerSprites[characterClass]?.down?.idle ||
+        playerSprites.warrior.down.idle
+      );
+    },
+
     backToCharacters() {
       this.selectedCharacter = null;
+      this.showCharacterCreate = false;
       this.loadCharacters();
     },
 
@@ -469,22 +575,8 @@ export default {
       this.characters = [];
       this.selectedCharacter = null;
       this.characterToDelete = null;
+      this.showCharacterCreate = false;
       this.form.password = '';
-    },
-
-    formatSessionDate(value) {
-
-      if (!value) {
-        return '';
-      }
-
-      return new Intl.DateTimeFormat(
-        'pt-PT',
-        {
-          dateStyle: 'short',
-          timeStyle: 'short'
-        }
-      ).format(new Date(value));
     }
   }
 };

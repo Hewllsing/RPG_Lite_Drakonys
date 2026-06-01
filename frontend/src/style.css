@@ -1,7 +1,7 @@
 :root {
-  color: #f8fafc;
-  background: #111;
-  font-family: Arial, sans-serif;
+  color: #f4ead0;
+  background: #08070a;
+  font-family: "Trebuchet MS", Arial, sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -16,7 +16,11 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: #111;
+  background:
+    linear-gradient(90deg, rgba(5, 4, 8, 0.86), rgba(5, 4, 8, 0.2)),
+    url('./assets/ui/auth_dragon_battle_background.png') center / cover fixed,
+    radial-gradient(circle at top left, rgba(91, 33, 182, 0.22), transparent 32%),
+    linear-gradient(135deg, #07070a 0%, #171017 52%, #08070a 100%);
 }
 
 button,
@@ -36,7 +40,15 @@ button:disabled {
 
 .app-shell {
   min-height: 100vh;
-  background: #111;
+  background:
+    linear-gradient(90deg, rgba(5, 4, 8, 0.88) 0%, rgba(8, 7, 10, 0.72) 34%, rgba(8, 7, 10, 0.28) 100%),
+    radial-gradient(circle at 80% 12%, rgba(132, 73, 26, 0.22), transparent 28%),
+    radial-gradient(circle at 18% 80%, rgba(91, 33, 182, 0.16), transparent 34%),
+    linear-gradient(135deg, #07070a 0%, #151017 52%, #09080b 100%),
+    url('./assets/ui/auth_dragon_battle_background.png');
+  background-attachment: fixed;
+  background-position: center;
+  background-size: cover;
 }
 
 .game-session {
@@ -48,8 +60,31 @@ button:disabled {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  padding: 12px 20px 0;
-  color: #e5e7eb;
+  margin: 12px 20px 0;
+  padding: 10px 14px;
+  border: 1px solid rgba(71, 225, 122, 0.42);
+  border-radius: 8px;
+  background: rgba(8, 12, 10, 0.84);
+  color: #eadbb2;
+  box-shadow: 0 0 18px rgba(71, 225, 122, 0.22);
+  animation: activeSessionGlow 2.4s ease-in-out infinite;
+}
+
+.session-identity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.25;
+}
+
+.session-identity strong {
+  color: #b7ffd0;
+  text-shadow: 0 0 10px rgba(71, 225, 122, 0.48);
+}
+
+.session-identity span {
+  color: #bda16b;
+  font-size: 12px;
 }
 
 .session-user {
@@ -76,8 +111,9 @@ button:disabled {
 .auth-submit {
   border: 1px solid #3f3f46;
   border-radius: 6px;
-  background: #18181b;
-  color: #f8fafc;
+  background:
+    linear-gradient(180deg, #5a3d1c, #24150e);
+  color: #ffe3a1;
 }
 
 .session-bar button {
@@ -85,39 +121,99 @@ button:disabled {
 }
 
 .auth-page {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   display: grid;
   min-height: 100vh;
-  place-items: center;
-  padding: 24px;
+  place-items: center start;
+  padding: 40px clamp(20px, 7vw, 96px);
 }
 
 .character-page {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   display: grid;
   min-height: 100vh;
   place-items: start center;
-  padding: 24px;
+  padding: 40px 24px;
+}
+
+.auth-page::before,
+.character-page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background:
+    linear-gradient(90deg, rgba(5, 4, 8, 0.92) 0%, rgba(5, 4, 8, 0.62) 38%, rgba(5, 4, 8, 0.18) 100%),
+    radial-gradient(circle at 18% 45%, rgba(91, 33, 182, 0.2), transparent 28%),
+    url('./assets/ui/auth_dragon_battle_background.png') center / cover no-repeat;
+}
+
+.character-page::before {
+  background:
+    linear-gradient(180deg, rgba(5, 4, 8, 0.66), rgba(5, 4, 8, 0.9)),
+    radial-gradient(circle at 50% 16%, rgba(127, 29, 29, 0.2), transparent 28%),
+    url('./assets/ui/auth_dragon_battle_background.png') center / cover no-repeat;
+}
+
+.auth-page::after,
+.character-page::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 24%),
+    radial-gradient(circle at 50% 108%, rgba(0, 0, 0, 0.72), transparent 42%);
+}
+
+.auth-page > *,
+.character-page > * {
+  position: relative;
+  z-index: 2;
 }
 
 .auth-panel {
   width: min(420px, 100%);
-  padding: 24px;
-  border: 1px solid #3f3f46;
+  padding: 28px;
+  border: 1px solid #8a6a2f;
   border-radius: 8px;
-  background: #18181b;
+  background:
+    linear-gradient(180deg, rgba(58, 42, 30, 0.86), rgba(9, 8, 12, 0.94)),
+    #151018;
+  backdrop-filter: blur(8px);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 232, 160, 0.08),
+    0 24px 70px rgba(0, 0, 0, 0.62),
+    0 0 42px rgba(127, 29, 29, 0.18);
   text-align: left;
 }
 
 .character-panel {
-  width: min(900px, 100%);
+  width: min(1040px, 100%);
   padding: 24px;
+  border: 1px solid #8a6a2f;
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(42, 31, 27, 0.82), rgba(10, 9, 13, 0.94)),
+    #151018;
+  backdrop-filter: blur(8px);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 232, 160, 0.08),
+    0 24px 70px rgba(0, 0, 0, 0.56);
   text-align: left;
 }
 
 .auth-panel h1 {
   margin: 0 0 20px;
-  color: #f8fafc;
+  color: #ffe3a1;
   font-size: 32px;
   line-height: 1.1;
+  text-shadow: 0 2px 0 #2a1309;
 }
 
 .character-header {
@@ -130,8 +226,9 @@ button:disabled {
 
 .character-header h1 {
   margin: 0 0 6px;
-  color: #f8fafc;
+  color: #ffe3a1;
   font-size: 32px;
+  text-shadow: 0 2px 0 #2a1309;
 }
 
 .character-header p,
@@ -139,22 +236,152 @@ button:disabled {
 .empty-state,
 .delete-dialog p {
   margin: 0;
-  color: #a1a1aa;
+  color: #b9aa8a;
 }
 
 .character-create {
   display: grid;
-  grid-template-columns: 1fr 180px auto;
+  grid-template-columns: 1fr auto auto;
   gap: 12px;
   align-items: end;
   margin-bottom: 16px;
+}
+
+.create-character-entry {
+  width: 100%;
+  margin-bottom: 16px;
+  min-height: 76px;
+  padding: 18px;
+  position: relative;
+  overflow: hidden;
+  border-color: #8a6a2f !important;
+  border-radius: 18px !important;
+  background:
+    linear-gradient(135deg, rgba(109, 40, 217, 0.42), rgba(127, 29, 29, 0.56) 52%, rgba(20, 14, 18, 0.88)),
+    rgba(0, 0, 0, 0.38) !important;
+  color: #ffe3a1;
+  font-size: 17px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  text-shadow: 0 2px 0 #1b0907, 0 0 12px rgba(255, 211, 107, 0.34);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 232, 160, 0.16),
+    inset 0 -18px 28px rgba(0, 0, 0, 0.28),
+    0 0 0 1px rgba(127, 29, 29, 0.3),
+    0 16px 34px rgba(0, 0, 0, 0.34),
+    0 0 24px rgba(127, 29, 29, 0.18);
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+  animation: createButtonPulse 2.8s ease-in-out infinite;
+}
+
+.create-character-entry::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border: 1px solid rgba(255, 232, 160, 0.16);
+  border-radius: 15px;
+  pointer-events: none;
+}
+
+.create-character-entry::after {
+  content: "";
+  position: absolute;
+  top: -60%;
+  bottom: -60%;
+  left: -42%;
+  width: 34%;
+  background:
+    linear-gradient(90deg, transparent, rgba(255, 232, 160, 0.3), transparent);
+  transform: rotate(18deg);
+  animation: createButtonShine 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.create-character-entry:hover {
+  transform: translateY(-1px);
+  border-color: #d6b45f !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 232, 160, 0.22),
+    inset 0 -18px 28px rgba(0, 0, 0, 0.2),
+    0 0 0 1px rgba(255, 211, 107, 0.22),
+    0 18px 38px rgba(0, 0, 0, 0.42),
+    0 0 34px rgba(127, 29, 29, 0.3);
+}
+
+.character-create-flow {
+  margin-bottom: 16px;
+}
+
+.class-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.class-card {
+  min-height: 210px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid rgba(201, 163, 78, 0.48);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 50% 24%, rgba(201, 163, 78, 0.15), transparent 30%),
+    linear-gradient(180deg, rgba(38, 25, 22, 0.78), rgba(4, 4, 7, 0.78)),
+    rgba(0, 0, 0, 0.38);
+  color: #f4ead0;
+  text-align: left;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 232, 160, 0.06),
+    0 14px 28px rgba(0, 0, 0, 0.28);
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.class-card:hover {
+  transform: translateY(-2px);
+  border-color: #c9a34e;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 232, 160, 0.12),
+    0 18px 36px rgba(0, 0, 0, 0.38);
+}
+
+.class-card img {
+  width: 92px;
+  height: 92px;
+  align-self: center;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.55));
+}
+
+.class-card.selected {
+  border-color: #c9a34e;
+  background:
+    radial-gradient(circle at 50% 24%, rgba(201, 163, 78, 0.24), transparent 34%),
+    linear-gradient(180deg, rgba(65, 38, 27, 0.82), rgba(13, 10, 15, 0.9));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 232, 160, 0.16),
+    0 0 28px rgba(201, 163, 78, 0.24);
+}
+
+.class-card strong {
+  color: #ffe3a1;
+  font-size: 18px;
+}
+
+.class-card span,
+.class-card small {
+  color: #d8c7ff;
+  line-height: 1.35;
 }
 
 .character-create label {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  color: #d4d4d8;
+  color: #e6d7ad;
   font-size: 14px;
 }
 
@@ -162,11 +389,11 @@ button:disabled {
 .character-create select,
 .delete-dialog input {
   width: 100%;
-  border: 1px solid #3f3f46;
+  border: 1px solid #5f4824;
   border-radius: 6px;
   padding: 10px 12px;
-  background: #09090b;
-  color: #f8fafc;
+  background: #08070a;
+  color: #f4ead0;
 }
 
 .character-header button,
@@ -187,15 +414,39 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 14px;
-  border: 1px solid #27272a;
+  padding: 14px 16px;
+  border: 1px solid rgba(138, 106, 47, 0.42);
   border-radius: 8px;
-  background: #18181b;
+  background:
+    linear-gradient(90deg, rgba(25, 18, 19, 0.86), rgba(5, 5, 8, 0.72)),
+    rgba(0, 0, 0, 0.28);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 232, 160, 0.05),
+    0 12px 26px rgba(0, 0, 0, 0.24);
+}
+
+.character-row-sprite {
+  width: 74px;
+  height: 74px;
+  flex: 0 0 auto;
+  padding: 4px;
+  border: 1px solid rgba(201, 163, 78, 0.52);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle, rgba(91, 33, 182, 0.22), transparent 64%),
+    rgba(0, 0, 0, 0.32);
+  image-rendering: pixelated;
+  filter: drop-shadow(0 10px 12px rgba(0, 0, 0, 0.56));
+}
+
+.character-row-info {
+  flex: 1;
+  min-width: 0;
 }
 
 .character-row h2 {
   margin: 0 0 6px;
-  color: #f8fafc;
+  color: #ffe3a1;
   font-size: 20px;
 }
 
@@ -227,14 +478,16 @@ button:disabled {
   flex-direction: column;
   gap: 14px;
   padding: 22px;
-  border: 1px solid #3f3f46;
+  border: 1px solid #8a6a2f;
   border-radius: 8px;
-  background: #18181b;
+  background:
+    linear-gradient(180deg, rgba(48, 37, 30, 0.98), rgba(14, 11, 16, 0.98)),
+    #151018;
 }
 
 .delete-dialog h2 {
   margin: 0;
-  color: #f8fafc;
+  color: #ffe3a1;
   font-size: 22px;
 }
 
@@ -250,8 +503,8 @@ button:disabled {
 }
 
 .auth-tabs button.active {
-  border-color: #ef4444;
-  background: #27272a;
+  border-color: #c9a34e;
+  background: rgba(91, 33, 182, 0.32);
 }
 
 .auth-form {
@@ -264,17 +517,17 @@ button:disabled {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  color: #d4d4d8;
+  color: #e6d7ad;
   font-size: 14px;
 }
 
 .auth-form input {
   width: 100%;
-  border: 1px solid #3f3f46;
+  border: 1px solid #5f4824;
   border-radius: 6px;
   padding: 10px 12px;
-  background: #09090b;
-  color: #f8fafc;
+  background: #08070a;
+  color: #f4ead0;
 }
 
 .auth-error {
@@ -285,11 +538,57 @@ button:disabled {
 
 .auth-submit {
   padding: 11px 14px;
-  background: #7f1d1d;
+  background:
+    linear-gradient(180deg, #7f1d1d, #3d0808);
+}
+
+@keyframes createButtonPulse {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 232, 160, 0.16),
+      inset 0 -18px 28px rgba(0, 0, 0, 0.28),
+      0 0 0 1px rgba(127, 29, 29, 0.3),
+      0 16px 34px rgba(0, 0, 0, 0.34),
+      0 0 24px rgba(127, 29, 29, 0.18);
+  }
+
+  50% {
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 232, 160, 0.22),
+      inset 0 -18px 28px rgba(0, 0, 0, 0.22),
+      0 0 0 1px rgba(255, 211, 107, 0.2),
+      0 16px 34px rgba(0, 0, 0, 0.34),
+      0 0 36px rgba(127, 29, 29, 0.32);
+  }
+}
+
+@keyframes createButtonShine {
+  0%,
+  38% {
+    left: -42%;
+  }
+
+  62%,
+  100% {
+    left: 108%;
+  }
+}
+
+@keyframes activeSessionGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 16px rgba(71, 225, 122, 0.18);
+  }
+
+  50% {
+    box-shadow: 0 0 28px rgba(71, 225, 122, 0.36);
+  }
 }
 
 @media (max-width: 720px) {
   .character-create,
+  .class-card-grid,
   .character-row {
     grid-template-columns: 1fr;
     flex-direction: column;
