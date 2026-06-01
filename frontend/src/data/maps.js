@@ -34,6 +34,177 @@ export const BLOCKED_TILES = [
   'lava'
 ];
 
+const GOBLIN_FOREST_WIDTH = 80;
+const GOBLIN_FOREST_HEIGHT = 45;
+
+function createFilledMap(width, height, tile) {
+  return Array.from({ length: height }, () =>
+    Array.from({ length: width }, () => tile)
+  );
+}
+
+function setTile(map, x, y, tile) {
+  if (
+    y < 0 ||
+    y >= map.length ||
+    x < 0 ||
+    x >= map[y].length
+  ) {
+    return;
+  }
+
+  map[y][x] = tile;
+}
+
+function fillRect(map, startX, startY, width, height, tile) {
+  for (let y = startY; y < startY + height; y++) {
+    for (let x = startX; x < startX + width; x++) {
+      setTile(map, x, y, tile);
+    }
+  }
+}
+
+function clearFarmSpot(map, centerX, centerY) {
+  fillRect(map, centerX - 3, centerY - 2, 7, 5, G);
+}
+
+function createGoblinForestMap() {
+  const map = createFilledMap(
+    GOBLIN_FOREST_WIDTH,
+    GOBLIN_FOREST_HEIGHT,
+    G
+  );
+
+  fillRect(map, 0, 0, GOBLIN_FOREST_WIDTH, 1, W);
+  fillRect(map, 0, GOBLIN_FOREST_HEIGHT - 1, GOBLIN_FOREST_WIDTH, 1, W);
+  fillRect(map, 0, 0, 1, GOBLIN_FOREST_HEIGHT, W);
+  fillRect(map, GOBLIN_FOREST_WIDTH - 1, 0, 1, GOBLIN_FOREST_HEIGHT, W);
+
+  // Estradas principais criam rotas de farm e ligam os portais.
+  fillRect(map, 38, 1, 4, 43, R);
+  fillRect(map, 1, 22, 78, 3, R);
+  fillRect(map, 8, 24, 3, 19, R);
+  fillRect(map, 8, 37, 31, 3, R);
+
+  // Rio grande com pontes passaveis em pontos de rota.
+  for (let y = 4; y <= 34; y++) {
+    const curve = Math.floor(Math.sin(y / 4) * 3);
+    fillRect(map, 22 + curve, y, 5, 1, WA);
+  }
+  fillRect(map, 27, 12, 31, 4, WA);
+  fillRect(map, 38, 12, 4, 4, BR);
+  fillRect(map, 24, 22, 5, 3, BR);
+  fillRect(map, 8, 37, 3, 3, BR);
+
+  // Ruinas e paredes pequenas para quebrar linha de visao e navegação.
+  fillRect(map, 54, 30, 10, 1, W);
+  fillRect(map, 54, 30, 1, 7, W);
+  fillRect(map, 63, 30, 1, 7, W);
+  fillRect(map, 54, 36, 10, 1, W);
+  fillRect(map, 58, 36, 2, 1, G);
+  fillRect(map, 12, 27, 8, 1, W);
+  fillRect(map, 12, 27, 1, 6, W);
+  fillRect(map, 19, 27, 1, 6, W);
+  fillRect(map, 15, 32, 2, 1, G);
+
+  for (let y = 3; y < GOBLIN_FOREST_HEIGHT - 3; y += 4) {
+    for (let x = 4; x < GOBLIN_FOREST_WIDTH - 4; x += 5) {
+      if (
+        (x >= 36 && x <= 43) ||
+        (y >= 20 && y <= 26) ||
+        (x >= 20 && x <= 30 && y <= 35)
+      ) {
+        continue;
+      }
+
+      const tile = (x + y) % 11 === 0
+        ? K
+        : (x + y) % 7 === 0
+          ? B
+          : T;
+
+      setTile(map, x, y, tile);
+    }
+  }
+
+  [
+    [12, 8],
+    [32, 10],
+    [62, 9],
+    [48, 26],
+    [22, 31],
+    [59, 34],
+    [12, 34],
+    [68, 39]
+  ].forEach(([x, y]) => clearFarmSpot(map, x, y));
+
+  setTile(map, 39, 1, OUT);
+  setTile(map, 78, 22, OUT);
+  setTile(map, 2, 42, OUT);
+
+  return map;
+}
+
+function createGoblinForestMonsters() {
+  return [
+    { type: 'goblin', x: 10, y: 7 },
+    { type: 'goblin', x: 12, y: 7 },
+    { type: 'goblinArcher', x: 14, y: 8 },
+    { type: 'goblin', x: 11, y: 9 },
+    { type: 'goblinShaman', x: 13, y: 10 },
+    { type: 'goblin', x: 15, y: 10 },
+
+    { type: 'goblinArcher', x: 30, y: 9 },
+    { type: 'goblinArcher', x: 32, y: 9 },
+    { type: 'goblin', x: 34, y: 10 },
+    { type: 'goblinShaman', x: 31, y: 11 },
+    { type: 'goblin', x: 33, y: 12 },
+    { type: 'goblinArcher', x: 35, y: 12 },
+
+    { type: 'goblin', x: 60, y: 8 },
+    { type: 'goblin', x: 62, y: 8 },
+    { type: 'goblinArcher', x: 64, y: 9 },
+    { type: 'goblinShaman', x: 61, y: 10 },
+    { type: 'goblin', x: 63, y: 11 },
+    { type: 'goblinArcher', x: 65, y: 11 },
+
+    { type: 'goblin', x: 46, y: 25 },
+    { type: 'goblin', x: 48, y: 25 },
+    { type: 'goblinArcher', x: 50, y: 26 },
+    { type: 'goblinShaman', x: 47, y: 27 },
+    { type: 'goblin', x: 49, y: 28 },
+    { type: 'goblinArcher', x: 51, y: 28 },
+
+    { type: 'goblin', x: 20, y: 30 },
+    { type: 'goblin', x: 22, y: 30 },
+    { type: 'goblinArcher', x: 24, y: 31 },
+    { type: 'goblinShaman', x: 21, y: 32 },
+    { type: 'goblin', x: 23, y: 33 },
+    { type: 'goblinArcher', x: 25, y: 33 },
+
+    { type: 'goblin', x: 57, y: 33 },
+    { type: 'goblinArcher', x: 59, y: 33 },
+    { type: 'goblin', x: 61, y: 34 },
+    { type: 'goblinShaman', x: 58, y: 35 },
+    { type: 'goblinArcher', x: 60, y: 35 },
+    { type: 'goblin', x: 62, y: 35 },
+
+    { type: 'goblin', x: 10, y: 33 },
+    { type: 'goblinArcher', x: 12, y: 33 },
+    { type: 'goblin', x: 14, y: 34 },
+    { type: 'goblinShaman', x: 11, y: 35 },
+    { type: 'goblinArcher', x: 13, y: 36 },
+    { type: 'goblin', x: 15, y: 36 },
+
+    { type: 'goblinArcher', x: 66, y: 38 },
+    { type: 'goblin', x: 68, y: 38 },
+    { type: 'goblinShaman', x: 70, y: 39 },
+    { type: 'goblin', x: 67, y: 40 },
+    { type: 'goblinArcher', x: 69, y: 41 },
+    { type: 'goblin', x: 71, y: 41 }
+  ];
+}
+
 export const ZONES = {
   starterTown: {
     key: 'starterTown',
@@ -79,42 +250,21 @@ export const ZONES = {
     name: 'Goblin Forest',
     theme: 'Misty greenwood',
     assets: mapAssets.goblinForest,
-    map: [
-      [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
-      [W,G,G,G,T,G,G,G,R,R,G,G,G,T,G,G,G,G,G,W],
-      [W,G,T,G,T,G,B,G,R,R,G,B,G,T,G,K,G,G,G,W],
-      [W,G,T,G,G,G,G,G,R,R,G,G,G,G,G,G,G,T,G,W],
-      [W,G,G,G,K,G,G,G,R,R,G,G,T,T,G,G,G,T,G,W],
-      [W,G,B,G,G,G,WA,BR,BR,BR,WA,G,G,G,G,G,G,G,G,W],
-      [W,G,G,G,T,G,WA,WA,WA,BR,WA,G,K,G,T,G,G,G,G,W],
-      [W,G,G,G,T,G,G,G,R,R,G,G,G,G,T,G,G,B,G,W],
-      [W,G,K,G,G,G,G,G,R,R,G,G,B,G,G,G,G,G,G,W],
-      [W,G,G,G,T,T,G,G,R,R,G,G,T,T,G,G,K,G,G,W],
-      [W,G,G,G,G,G,G,G,R,R,G,G,G,G,G,G,G,G,G,W],
-      [W,G,T,G,K,G,B,G,R,R,G,B,G,K,G,G,T,G,G,W],
-      [W,G,G,G,G,G,G,G,R,R,G,G,G,G,G,G,G,G,G,W],
-      [W,G,G,T,G,G,G,G,R,R,G,G,G,G,T,G,G,G,G,W],
-      [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W]
-    ],
-    playerStart: { x: 5, y: 5 },
+    map: createGoblinForestMap(),
+    playerStart: { x: 39, y: 5 },
     portals: [
-      { x: 9, y: 1, to: 'starterTown', color: 'blue', label: 'Initial City' },
-      { x: 18, y: 10, to: 'orcCamp', color: 'blue', label: 'Orc Camp' },
-      { x: 2, y: 13, to: 'elfWoods', color: 'purple', label: 'Elf Woods' }
+      { x: 39, y: 1, to: 'starterTown', color: 'blue', label: 'Initial City' },
+      { x: 78, y: 22, to: 'orcCamp', color: 'blue', label: 'Orc Camp' },
+      { x: 2, y: 42, to: 'elfWoods', color: 'purple', label: 'Elf Woods' }
     ],
     npcs: [
-      { type: 'questMaster', x: 4, y: 3 },
-      { type: 'healer', x: 6, y: 3 },
-      { type: 'merchant', x: 5, y: 4 },
-      { type: 'guard', x: 8, y: 4 }
+      { type: 'questMaster', x: 35, y: 5 },
+      { type: 'healer', x: 37, y: 5 },
+      { type: 'merchant', x: 35, y: 7 },
+      { type: 'guard', x: 42, y: 6 }
     ],
-    monsters: [
-      { type: 'goblin', x: 11, y: 3 },
-      { type: 'goblinArcher', x: 14, y: 5 },
-      { type: 'goblinShaman', x: 13, y: 9 },
-      { type: 'goblin', x: 16, y: 11 }
-    ],
-    boss: { type: 'goblinKing', x: 16, y: 3 },
+    monsters: createGoblinForestMonsters(),
+    boss: { type: 'goblinKing', x: 72, y: 39 },
     quests: [
       'defeatGoblins',
       'defeatGoblinArchers',
