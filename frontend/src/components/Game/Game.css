@@ -198,6 +198,18 @@
     height: 44px;
 }
 
+.player-wrapper {
+    transition:
+        left 0.24s linear,
+        top 0.24s linear;
+    will-change: left, top;
+}
+
+.player-wrapper.moving .player {
+    animation: playerWalkBob 0.33s ease-in-out infinite;
+    transform-origin: center bottom;
+}
+
 .player,
 .monster,
 .npc,
@@ -566,7 +578,7 @@
 
 .attribute-row {
     display: grid;
-    grid-template-columns: 1fr 34px;
+    grid-template-columns: 1fr 34px 34px;
     gap: 8px;
     align-items: center;
     padding: 8px 0;
@@ -1261,6 +1273,17 @@
     100% {
         opacity: 0;
         margin-top: -120px;
+    }
+}
+
+@keyframes playerWalkBob {
+    0%,
+    100% {
+        transform: translateY(0) scaleY(1);
+    }
+
+    50% {
+        transform: translateY(-3px) scaleY(0.96);
     }
 }
 

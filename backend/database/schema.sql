@@ -1,3 +1,7 @@
+-- Schema consolidado para novos ambientes.
+-- Inclui o estado final das migrations atuais, entao nao e necessario
+-- executar cada arquivo de backend/database/migrations manualmente.
+
 CREATE DATABASE IF NOT EXISTS rpg_lite_drakonys
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;

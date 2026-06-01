@@ -99,6 +99,7 @@
 
           <div
             class="player-wrapper"
+            :class="{ moving: player.moving }"
             :style="{
               left: player.x * tileSize + 'px',
               top: player.y * tileSize + 'px'
@@ -320,6 +321,13 @@
           >
             +
           </button>
+          <button
+            type="button"
+            :disabled="!canRemoveAttributePoint('strength')"
+            @click="removeAttributePoint('strength')"
+          >
+            -
+          </button>
         </div>
         <div class="attribute-row">
           <div>
@@ -334,6 +342,13 @@
           >
             +
           </button>
+          <button
+            type="button"
+            :disabled="!canRemoveAttributePoint('intelligence')"
+            @click="removeAttributePoint('intelligence')"
+          >
+            -
+          </button>
         </div>
         <div class="attribute-row">
           <div>
@@ -347,6 +362,13 @@
             @click="spendAttributePoint('dexterity')"
           >
             +
+          </button>
+          <button
+            type="button"
+            :disabled="!canRemoveAttributePoint('dexterity')"
+            @click="removeAttributePoint('dexterity')"
+          >
+            -
           </button>
         </div>
         <p class="attack-speed-note">

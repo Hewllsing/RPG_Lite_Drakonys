@@ -121,6 +121,23 @@ const ATTRIBUTE_GAIN_BY_POINT = {
     },
     dexterity: {}
 };
+const BASE_ATTRIBUTES_BY_CLASS = {
+    warrior: {
+        strength: 8,
+        intelligence: 3,
+        dexterity: 5
+    },
+    mage: {
+        strength: 3,
+        intelligence: 9,
+        dexterity: 4
+    },
+    archer: {
+        strength: 5,
+        intelligence: 4,
+        dexterity: 9
+    }
+};
 
 function getDailyQuestDateKey() {
 
@@ -1342,7 +1359,29 @@ export default {
 
         function getXpRequiredForNextLevel() {
 
-            return 100 * (2 ** ((Number(player.value.level) || 1) - 1));
+            const level = Number(player.value.level) || 1;
+
+            if (level <= 10) {
+                return 100 * (2 ** (level - 1));
+            }
+
+            if (level <= 30) {
+                const extraLevels = level - 10;
+
+                return Math.floor(
+                    51200 +
+                    extraLevels * 6500 +
+                    (extraLevels ** 2) * 450
+                );
+            }
+
+            const highLevel = level - 30;
+
+            return Math.floor(
+                361200 +
+                highLevel * 18000 +
+                (highLevel ** 2) * 900
+            );
         }
 
         function getPlayerXpPercent() {
@@ -2852,6 +2891,63 @@ export default {
             persistCharacter();
         }
 
+        function getBaseAttributeValue(attribute) {
+
+            const baseAttributes =
+                BASE_ATTRIBUTES_BY_CLASS[getCharacterClass()] ||
+                BASE_ATTRIBUTES_BY_CLASS.warrior;
+
+            return baseAttributes[attribute] || 0;
+        }
+
+        function canRemoveAttributePoint(attribute) {
+
+            return (
+                Boolean(ATTRIBUTE_GAIN_BY_POINT[attribute]) &&
+                (Number(player.value[attribute]) || 0) >
+                    getBaseAttributeValue(attribute)
+            );
+        }
+
+        function removeAttributePoint(attribute) {
+
+            markPlayerActivity();
+
+            if (!canRemoveAttributePoint(attribute)) {
+                return;
+            }
+
+            player.value[attribute] =
+                Math.max(
+                    getBaseAttributeValue(attribute),
+                    (Number(player.value[attribute]) || 0) - 1
+                );
+            player.value.attributePoints =
+                getAvailableAttributePoints() + 1;
+
+            if (attribute === 'strength') {
+                const hpGain =
+                    ATTRIBUTE_GAIN_BY_POINT.strength.maxHp;
+
+                player.value.maxHp =
+                    Math.max(1, player.value.maxHp - hpGain);
+                player.value.hp =
+                    Math.min(player.value.hp, player.value.maxHp);
+            }
+
+            if (attribute === 'intelligence') {
+                const manaGain =
+                    ATTRIBUTE_GAIN_BY_POINT.intelligence.maxMana;
+
+                player.value.maxMana =
+                    Math.max(1, player.value.maxMana - manaGain);
+                player.value.mana =
+                    Math.min(player.value.mana, player.value.maxMana);
+            }
+
+            persistCharacter();
+        }
+
         function playerDeath(monster = null) {
 
             if (playerDeathTimeout || deathScreen.value) {
@@ -3898,6 +3994,8 @@ export default {
             confirmNpcAction,
             closeNpcDialog,
             spendAttributePoint,
+            removeAttributePoint,
+            canRemoveAttributePoint,
             useSkill,
             handleMapClick,
 
