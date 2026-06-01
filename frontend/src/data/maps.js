@@ -208,7 +208,12 @@ export const ZONES = {
       { type: 'darkElf', x: 17, y: 11 }
     ],
     boss: { type: 'ancientElf', x: 16, y: 4 },
-    quests: []
+    quests: [
+      'defeatElves',
+      'defeatElfMages',
+      'exploreElfWoods',
+      'defeatAncientElf'
+    ]
   },
   undeadCrypt: {
     key: 'undeadCrypt',
@@ -251,6 +256,8 @@ export const ZONES = {
     quests: [
       'defeatSkeletons',
       'defeatZombies',
+      'defeatGhosts',
+      'exploreUndeadCrypt',
       'defeatLichKing'
     ]
   },
@@ -294,6 +301,8 @@ export const ZONES = {
     boss: { type: 'demonLord', x: 16, y: 2 },
     quests: [
       'collectDemonKey',
+      'defeatDemons',
+      'defeatDemonMages',
       'exploreDemonGate',
       'defeatDemonLord'
     ]

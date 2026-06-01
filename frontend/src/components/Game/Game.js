@@ -229,6 +229,7 @@ export default {
         const levelUpEffect = ref(null);
         const deathScreen = ref(null);
         const expandedMapOpen = ref(false);
+        const selectedGlobalZoneKey = ref('starterTown');
         const gameViewportRef = ref(null);
         const viewportSize = ref({
             width: VIEWPORT_WIDTH,
@@ -321,11 +322,70 @@ export default {
         function toggleExpandedMap() {
 
             expandedMapOpen.value = !expandedMapOpen.value;
+
+            if (expandedMapOpen.value) {
+                selectedGlobalZoneKey.value = currentZoneKey.value;
+            }
         }
 
         function getGlobalMapZones() {
 
             return Object.values(ZONES);
+        }
+
+        function getSelectedGlobalZone() {
+
+            return (
+                ZONES[selectedGlobalZoneKey.value] ||
+                activeZone.value
+            );
+        }
+
+        function getGlobalZoneQuestCount(zone) {
+
+            return zone.quests?.length || 0;
+        }
+
+        function getGlobalZoneMonsterCount(zone) {
+
+            return (
+                (zone.monsters?.length || 0) +
+                (zone.boss ? 1 : 0)
+            );
+        }
+
+        function canTravelToGlobalZone(zone) {
+
+            if (!zone || zone.key === currentZoneKey.value) {
+                return false;
+            }
+
+            return portals.value.some(
+                portal => portal.to === zone.key
+            );
+        }
+
+        function selectGlobalZone(zone) {
+
+            selectedGlobalZoneKey.value = zone.key;
+        }
+
+        function travelToSelectedGlobalZone() {
+
+            const zone = getSelectedGlobalZone();
+
+            if (!canTravelToGlobalZone(zone)) {
+                createFloatingText(
+                    player.value.x,
+                    player.value.y,
+                    'Sem portal',
+                    'miss'
+                );
+                return;
+            }
+
+            expandedMapOpen.value = false;
+            transitionToZone(zone.key);
         }
 
         function getPlayerSpriteSet() {
@@ -3958,6 +4018,7 @@ export default {
             storageOpen,
             zoneBanner,
             expandedMapOpen,
+            selectedGlobalZoneKey,
             gameViewportRef,
 
             selectedTarget,
@@ -4023,9 +4084,15 @@ export default {
             getDailyQuestSummary,
             getAfkFarmStatusLabel,
             getGlobalMapZones,
+            getSelectedGlobalZone,
+            getGlobalZoneQuestCount,
+            getGlobalZoneMonsterCount,
+            canTravelToGlobalZone,
             getBosses,
             getSkillEffectImage,
             toggleExpandedMap,
+            selectGlobalZone,
+            travelToSelectedGlobalZone,
             openNpcDialog,
             confirmNpcAction,
             closeNpcDialog,

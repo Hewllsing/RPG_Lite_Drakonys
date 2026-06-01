@@ -198,11 +198,16 @@
     height: 52px;
 }
 
-.player-wrapper {
+.player-wrapper,
+.monster-wrapper {
     transition:
         left 0.24s linear,
         top 0.24s linear;
     will-change: left, top;
+}
+
+.monster-wrapper.dead {
+    transition: none;
 }
 
 .player-wrapper.moving .player {
@@ -1138,11 +1143,27 @@
     border: 1px solid rgba(138, 106, 47, 0.42);
     border-radius: 8px;
     background: rgba(0, 0, 0, 0.22);
+    cursor: pointer;
+    transition:
+        border-color 0.18s ease,
+        box-shadow 0.18s ease,
+        transform 0.18s ease;
+}
+
+.global-zone-card:hover,
+.global-zone-card.selected {
+    border-color: #c9a34e;
+    box-shadow: 0 0 18px rgba(201, 163, 78, 0.22);
+    transform: translateY(-1px);
 }
 
 .global-zone-card.current {
     border-color: #47e17a;
     box-shadow: 0 0 20px rgba(71, 225, 122, 0.3);
+}
+
+.global-zone-card.reachable:not(.current) {
+    border-color: rgba(167, 139, 250, 0.78);
 }
 
 .global-zone-card img {
@@ -1166,6 +1187,42 @@
 .global-zone-card em {
     color: #cbb98f;
     font-style: normal;
+}
+
+.global-map-detail {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(138, 106, 47, 0.42);
+}
+
+.global-map-detail strong,
+.global-map-detail span,
+.global-map-detail small {
+    display: block;
+}
+
+.global-map-detail strong {
+    color: #ffe3a1;
+}
+
+.global-map-detail span,
+.global-map-detail small {
+    color: #cbb98f;
+    font-size: 12px;
+}
+
+.global-map-detail button {
+    min-height: 36px;
+    padding: 0 14px;
+    border: 1px solid #7c5bd4;
+    border-radius: 6px;
+    background: linear-gradient(180deg, #5732a0, #180d2a);
+    color: #f2eaff;
+    font-weight: 800;
 }
 
 @keyframes portalPulse {

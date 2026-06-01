@@ -686,7 +686,13 @@
             v-for="zone in getGlobalMapZones()"
             :key="zone.key"
             class="global-zone-card"
-            :class="{ current: currentZoneKey === zone.key, safe: zone.safeZone }"
+            :class="{
+              current: currentZoneKey === zone.key,
+              selected: getSelectedGlobalZone().key === zone.key,
+              reachable: canTravelToGlobalZone(zone),
+              safe: zone.safeZone
+            }"
+            @click="selectGlobalZone(zone)"
           >
             <img
               v-if="zone.assets?.minimap"
@@ -695,10 +701,28 @@
             />
             <strong>{{ zone.name }}</strong>
             <span v-if="currentZoneKey === zone.key">Posicao atual</span>
+            <span v-else-if="canTravelToGlobalZone(zone)">Portal conectado</span>
             <small>{{ zone.safeZone ? 'Cidade / Safe Zone' : zone.theme }}</small>
-            <em>{{ zone.portals?.length || 0 }} portais</em>
+            <em>{{ zone.portals?.length || 0 }} portais / {{ getGlobalZoneQuestCount(zone) }} quests</em>
           </article>
         </div>
+        <footer class="global-map-detail">
+          <div>
+            <strong>{{ getSelectedGlobalZone().name }}</strong>
+            <span>{{ getSelectedGlobalZone().theme }}</span>
+            <small>
+              {{ getGlobalZoneMonsterCount(getSelectedGlobalZone()) }} criaturas /
+              {{ getGlobalZoneQuestCount(getSelectedGlobalZone()) }} quests
+            </small>
+          </div>
+          <button
+            type="button"
+            :disabled="!canTravelToGlobalZone(getSelectedGlobalZone())"
+            @click="travelToSelectedGlobalZone"
+          >
+            Viajar pelo portal
+          </button>
+        </footer>
       </section>
     </div>
   </div>
