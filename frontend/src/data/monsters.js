@@ -25,6 +25,8 @@ export function createMonster(type, x, y, idSuffix = '') {
     typeKey: type,
     x,
     y,
+    spawnX: x,
+    spawnY: y,
     hp: template.maxHp,
     maxHp: template.maxHp,
     moving: false,

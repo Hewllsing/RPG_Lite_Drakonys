@@ -39,6 +39,7 @@
 
         <div
           class="game-map"
+          @click="handleMapClick"
           :style="{
             transform: `translate(-${camera.x}px, -${camera.y}px)`
           }"
@@ -85,7 +86,7 @@
               left: npc.x * tileSize + 'px',
               top: npc.y * tileSize + 'px'
             }"
-            @click="openNpcDialog(npc)"
+            @click.stop="openNpcDialog(npc)"
           >
             <span class="entity-name npc-name">{{ npc.name }}</span>
             <img
@@ -101,6 +102,7 @@
               left: player.x * tileSize + 'px',
               top: player.y * tileSize + 'px'
             }"
+            @click.stop
           >
             <div class="player-overhead-bars">
               <div class="player-overhead-bar hp">
@@ -134,7 +136,7 @@
               left: monster.x * tileSize + 'px',
               top: monster.y * tileSize + 'px'
             }"
-            @click="selectTarget(monster)"
+            @click.stop="selectTarget(monster)"
             @dblclick.stop="engageTarget(monster)"
           >
             <span class="entity-name monster-name">{{ monster.name }}</span>
@@ -228,7 +230,10 @@
             <span class="eyebrow">Personagem</span>
             <h2>{{ player.name }}</h2>
           </div>
-          <strong class="level-badge">Lv {{ player.level }}</strong>
+          <div class="level-stack">
+            <span>{{ getClassLabel(player.characterClass) }}</span>
+            <strong class="level-badge">Lv {{ player.level }}</strong>
+          </div>
         </div>
 
         <div class="status-bars">
@@ -383,7 +388,7 @@
       <section class="ui-panel inventory-panel">
         <div class="panel-title-row">
           <h3>Inventario</h3>
-          <span>{{ inventory.length }} slots</span>
+          <span>{{ getInventoryLimitLabel() }}</span>
         </div>
         <div class="inventory-grid">
           <div
@@ -410,8 +415,11 @@
       <section class="ui-panel quests-panel">
         <div class="panel-title-row">
           <h3>Quests</h3>
-          <span>{{ getVisibleQuests().length }}</span>
+          <span>{{ getDailyQuestSummary() }}</span>
         </div>
+        <p class="quest-daily-note">
+          As primeiras 10 quests do dia dao 3x XP e gold. Limite diario: 30 quests.
+        </p>
         <div class="quest-list">
           <article
             v-for="quest in getVisibleQuests()"
@@ -495,6 +503,110 @@
     </div>
 
     <div
+      v-if="merchantOpen"
+      class="dialog-backdrop"
+      @click.self="merchantOpen = false"
+    >
+      <section class="trade-dialog">
+        <div class="panel-title-row">
+          <div>
+            <span class="eyebrow">Loja</span>
+            <h3>Merchant</h3>
+          </div>
+          <button
+            type="button"
+            @click="merchantOpen = false"
+          >
+            X
+          </button>
+        </div>
+        <p>Compra por preco alto e compra os teus itens por 1/3 do valor.</p>
+        <div class="trade-columns">
+          <div>
+            <h4>Comprar</h4>
+            <button
+              v-for="item in getMerchantItems()"
+              :key="`buy-${item.id}`"
+              type="button"
+              class="trade-row"
+              @click="buyMerchantItem(item.id)"
+            >
+              <img :src="item.icon" alt="" />
+              <span>{{ item.name }}</span>
+              <strong>{{ item.buyPrice }}g</strong>
+            </button>
+          </div>
+          <div>
+            <h4>Vender</h4>
+            <button
+              v-for="item in inventory.filter(slot => slot.id !== 'goldCoin')"
+              :key="`sell-${item.id}`"
+              type="button"
+              class="trade-row"
+              @click="sellInventoryItem(item)"
+            >
+              <img :src="getItemIcon(item)" alt="" />
+              <span>{{ getInventoryItem(item).name }}</span>
+              <strong>{{ Math.max(1, Math.floor((getInventoryItem(item).value || 3) / 3)) }}g</strong>
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div
+      v-if="storageOpen"
+      class="dialog-backdrop"
+      @click.self="storageOpen = false"
+    >
+      <section class="trade-dialog storage-dialog">
+        <div class="panel-title-row">
+          <div>
+            <span class="eyebrow">Casa</span>
+            <h3>Bau pessoal</h3>
+          </div>
+          <button
+            type="button"
+            @click="storageOpen = false"
+          >
+            X
+          </button>
+        </div>
+        <p>{{ getStorageLimitLabel() }} no bau. Move um item por clique.</p>
+        <div class="trade-columns">
+          <div>
+            <h4>Mochila</h4>
+            <button
+              v-for="item in inventory.filter(slot => slot.id !== 'goldCoin')"
+              :key="`store-${item.id}`"
+              type="button"
+              class="trade-row"
+              @click="moveItemToStorage(item)"
+            >
+              <img :src="getItemIcon(item)" alt="" />
+              <span>{{ getInventoryItem(item).name }}</span>
+              <strong>x{{ item.quantity }}</strong>
+            </button>
+          </div>
+          <div>
+            <h4>Bau</h4>
+            <button
+              v-for="item in storageItems"
+              :key="`take-${item.id}`"
+              type="button"
+              class="trade-row"
+              @click="moveItemFromStorage(item)"
+            >
+              <img :src="getItemIcon(item)" alt="" />
+              <span>{{ getInventoryItem(item).name }}</span>
+              <strong>x{{ item.quantity }}</strong>
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div
       v-if="npcResponse"
       class="npc-response-toast"
     >
@@ -506,6 +618,20 @@
         <strong>{{ npcResponse.name }}</strong>
         <span>{{ npcResponse.message }}</span>
       </div>
+    </div>
+
+    <div
+      v-if="questNotification"
+      class="quest-complete-toast"
+    >
+      <strong>Quest completa</strong>
+      <span>{{ questNotification.title }}</span>
+      <small>
+        +{{ questNotification.xpReward }} XP / +{{ questNotification.goldReward }} gold
+        <template v-if="questNotification.multiplier > 1">
+          / bonus {{ questNotification.multiplier }}x
+        </template>
+      </small>
     </div>
   </div>
 </template>

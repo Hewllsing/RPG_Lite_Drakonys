@@ -44,18 +44,28 @@ const MAP_WIDTH = 20;
 const MAP_HEIGHT = 15;
 const VIEWPORT_WIDTH = 880;
 const VIEWPORT_HEIGHT = 640;
+const PLAYER_START_ZONE = 'starterTown';
 const PLAYER_START_POSITION = {
-    x: 5,
-    y: 5
+    x: 9,
+    y: 8
 };
 const PLAYER_MOVE_INTERVAL = 330;
 const PLAYER_ATTACK_COOLDOWN = 900;
-const MIN_PLAYER_ATTACK_COOLDOWN = 450;
+const MIN_PLAYER_ATTACK_COOLDOWN = 550;
 const AUTO_COMBAT_INTERVAL = 180;
 const ATTRIBUTE_POINTS_PER_LEVEL = 3;
 const COMBAT_CLOCK_INTERVAL = 80;
 const AFK_FARM_DELAY = 30000;
 const AFK_FARM_CHECK_INTERVAL = 1000;
+const RESOURCE_REGEN_INTERVAL = 1000;
+const OUT_OF_COMBAT_DELAY = 5000;
+const OUT_OF_COMBAT_REGEN_MULTIPLIER = 3;
+const MONSTER_RESPAWN_DELAY = 10000;
+const INVENTORY_SLOT_LIMIT = 30;
+const STORAGE_SLOT_LIMIT = 90;
+const DAILY_QUEST_BONUS_LIMIT = 10;
+const DAILY_QUEST_LIMIT = 30;
+const DAILY_QUEST_STORAGE_KEY = 'rpg_lite_daily_quests';
 const WEAPON_PROFILES = {
     warrior: {
         weaponType: 'sword',
@@ -63,11 +73,11 @@ const WEAPON_PROFILES = {
         damageType: 'physical',
         damageLabel: 'Fisico',
         range: 1,
-        baseDamage: 6,
+        baseDamage: 8,
         primaryAttribute: 'strength',
-        primaryScale: 2,
+        primaryScale: 2.6,
         secondaryAttribute: 'dexterity',
-        secondaryScale: 0.4,
+        secondaryScale: 0.25,
         accuracyBonus: 0,
         criticalBonus: 0
     },
@@ -93,22 +103,62 @@ const WEAPON_PROFILES = {
         range: 4,
         baseDamage: 4,
         primaryAttribute: 'dexterity',
-        primaryScale: 1.7,
+        primaryScale: 1.25,
         secondaryAttribute: 'strength',
-        secondaryScale: 0.8,
+        secondaryScale: 1,
         accuracyBonus: 5,
-        criticalBonus: 5
+        criticalBonus: 2
     }
 };
 const ATTRIBUTE_GAIN_BY_POINT = {
     strength: {
-        maxHp: 5
+        maxHp: 10
     },
     intelligence: {
         maxMana: 8
     },
     dexterity: {}
 };
+
+function getDailyQuestDateKey() {
+
+    return new Date().toISOString().slice(0, 10);
+}
+
+function loadDailyQuestState() {
+
+    const fallback = {
+        date: getDailyQuestDateKey(),
+        completed: 0
+    };
+
+    if (typeof localStorage === 'undefined') {
+        return fallback;
+    }
+
+    try {
+        const stored = JSON.parse(
+            localStorage.getItem(DAILY_QUEST_STORAGE_KEY)
+        );
+
+        if (stored?.date === fallback.date) {
+            return {
+                ...fallback,
+                completed: Number(stored.completed) || 0
+            };
+        }
+    } catch (error) {
+        console.log('Nao foi possivel ler as quests diarias.');
+    }
+
+    localStorage.setItem(
+        DAILY_QUEST_STORAGE_KEY,
+        JSON.stringify(fallback)
+    );
+
+    return fallback;
+}
+
 export default {
 
     props: {
@@ -133,6 +183,7 @@ export default {
             mana: 50,
             maxMana: 50,
             characterClass: 'warrior',
+            currentZone: 'Initial City',
             strength: 5,
             intelligence: 5,
             dexterity: 5,
@@ -141,7 +192,8 @@ export default {
             moving: false,
             attacking: false,
             animationFrame: 0,
-            lastAttackAt: 0
+            lastAttackAt: 0,
+            lastCombatAt: 0
         });
 
         const monsters = ref([]);
@@ -153,6 +205,11 @@ export default {
         const floatingTexts = ref([]);
         const skillEffects = ref([]);
         const combatClock = ref(Date.now());
+        const questNotification = ref(null);
+        const dailyQuestState = ref(loadDailyQuestState());
+        const merchantOpen = ref(false);
+        const storageOpen = ref(false);
+        const storageItems = ref([]);
 
         let animationInterval = null;
         let monsterAIInterval = null;
@@ -160,9 +217,12 @@ export default {
         let autoCombatInterval = null;
         let combatClockInterval = null;
         let afkFarmInterval = null;
+        let resourceRegenInterval = null;
         let playerAttackTimeout = null;
         let playerAttackInProgress = false;
         let lastPlayerMoveAt = 0;
+        let clickMovePath = [];
+        let questNotificationTimeout = null;
         const regenerationIntervals = [];
         const pressedMovementKeys = new Set();
 
@@ -181,7 +241,8 @@ export default {
         const quests = ref(createQuestState());
         const inventory = ref(
             STARTER_INVENTORY.map(item => ({
-                ...item
+                id: item.id || item.itemId,
+                quantity: item.quantity
             }))
         );
         const gold = ref(25);
@@ -396,7 +457,8 @@ export default {
                 healer: 'Pronto. Os teus ferimentos fecharam e a mana voltou a correr.',
                 questMaster: 'Contrato aceito. Volta com provas, e talvez com todos os dedos.',
                 trainer: 'Treino anotado. O corpo aprende antes da cabeca admitir.',
-                guard: 'Entendido. Mantem-te na estrada e evita fazer barulho perto das ruinas.'
+                guard: 'Entendido. Mantem-te na estrada e evita fazer barulho perto das ruinas.',
+                storageChest: 'Bau aberto. A casa guarda melhor do que a mochila.'
             };
 
             return messages[npc.type] || 'Certo. Esta combinado.';
@@ -425,7 +487,10 @@ export default {
             quests.value = quests.value.map(quest => {
 
                 if (
-                    quest.zone !== currentZoneKey.value ||
+                    (
+                        currentZoneKey.value !== PLAYER_START_ZONE &&
+                        quest.zone !== currentZoneKey.value
+                    ) ||
                     quest.status !== 'available'
                 ) {
                     return quest;
@@ -458,6 +523,14 @@ export default {
                 acceptZoneQuests();
             }
 
+            if (npc.type === 'merchant') {
+                merchantOpen.value = true;
+            }
+
+            if (npc.type === 'storageChest') {
+                storageOpen.value = true;
+            }
+
             updateQuestProgress('talk', npc.type);
             activeNpc.value = null;
             showNpcResponse(
@@ -474,12 +547,15 @@ export default {
 
         function updateQuestProgress(objectiveType, targetType, amount = 1) {
 
+            const completedQuests = [];
+
             quests.value = quests.value.map(quest => {
 
                 if (
                     quest.objectiveType !== objectiveType ||
                     !quest.targetTypes.includes(targetType) ||
-                    quest.status === 'complete'
+                    quest.status === 'complete' ||
+                    quest.rewardClaimed
                 ) {
                     return quest;
                 }
@@ -489,7 +565,7 @@ export default {
                     quest.progress + amount
                 );
 
-                return {
+                const updatedQuest = {
                     ...quest,
                     progress,
                     status:
@@ -497,6 +573,20 @@ export default {
                             ? 'complete'
                             : 'inProgress'
                 };
+
+                if (
+                    updatedQuest.status === 'complete' &&
+                    quest.status !== 'complete'
+                ) {
+                    updatedQuest.rewardClaimed = true;
+                    completedQuests.push(updatedQuest);
+                }
+
+                return updatedQuest;
+            });
+
+            completedQuests.forEach(quest => {
+                grantQuestReward(quest);
             });
         }
 
@@ -533,6 +623,128 @@ export default {
             return questAssets.available;
         }
 
+        function persistDailyQuestState() {
+
+            if (typeof localStorage === 'undefined') {
+                return;
+            }
+
+            localStorage.setItem(
+                DAILY_QUEST_STORAGE_KEY,
+                JSON.stringify(dailyQuestState.value)
+            );
+        }
+
+        function refreshDailyQuestState() {
+
+            if (
+                dailyQuestState.value.date ===
+                getDailyQuestDateKey()
+            ) {
+                return;
+            }
+
+            dailyQuestState.value = {
+                date: getDailyQuestDateKey(),
+                completed: 0
+            };
+            persistDailyQuestState();
+        }
+
+        function getDailyQuestBonusRemaining() {
+
+            refreshDailyQuestState();
+
+            return Math.max(
+                0,
+                DAILY_QUEST_BONUS_LIMIT -
+                    dailyQuestState.value.completed
+            );
+        }
+
+        function getDailyQuestRemaining() {
+
+            refreshDailyQuestState();
+
+            return Math.max(
+                0,
+                DAILY_QUEST_LIMIT -
+                    dailyQuestState.value.completed
+            );
+        }
+
+        function getDailyQuestSummary() {
+
+            refreshDailyQuestState();
+
+            return `${dailyQuestState.value.completed}/${DAILY_QUEST_LIMIT} hoje - ${getDailyQuestBonusRemaining()} bonus 3x restantes`;
+        }
+
+        function showQuestNotification(quest, xpReward, goldReward, multiplier) {
+
+            questNotification.value = {
+                title: quest.title,
+                xpReward,
+                goldReward,
+                multiplier
+            };
+
+            if (questNotificationTimeout) {
+                clearTimeout(questNotificationTimeout);
+            }
+
+            questNotificationTimeout = setTimeout(() => {
+                questNotification.value = null;
+                questNotificationTimeout = null;
+            }, 3600);
+        }
+
+        function grantQuestReward(quest) {
+
+            refreshDailyQuestState();
+
+            if (dailyQuestState.value.completed >= DAILY_QUEST_LIMIT) {
+                createFloatingText(
+                    player.value.x,
+                    player.value.y,
+                    'Limite diario',
+                    'miss'
+                );
+                return;
+            }
+
+            const multiplier =
+                dailyQuestState.value.completed <
+                DAILY_QUEST_BONUS_LIMIT
+                    ? 3
+                    : 1;
+            const xpReward =
+                (Number(quest.xpReward) || 0) * multiplier;
+            const goldReward =
+                (Number(quest.goldReward) || 0) * multiplier;
+
+            player.value.xp += xpReward;
+            gold.value += goldReward;
+
+            (quest.itemRewards || []).forEach(itemReward => {
+                addItem(
+                    itemReward.itemId,
+                    itemReward.quantity || 1
+                );
+            });
+
+            dailyQuestState.value.completed++;
+            persistDailyQuestState();
+            showQuestNotification(
+                quest,
+                xpReward,
+                goldReward,
+                multiplier
+            );
+            checkLevelUp();
+            persistCharacter();
+        }
+
         function addItem(itemId, quantity = 1) {
 
             const definition = ITEM_DEFINITIONS[itemId];
@@ -552,6 +764,16 @@ export default {
 
             if (existingItem) {
                 existingItem.quantity += quantity;
+                return;
+            }
+
+            if (inventory.value.length >= INVENTORY_SLOT_LIMIT) {
+                createFloatingText(
+                    player.value.x,
+                    player.value.y,
+                    'Inventario cheio',
+                    'miss'
+                );
                 return;
             }
 
@@ -610,6 +832,187 @@ export default {
             return `${definition.name || item.id} - ${definition.rarity || 'common'} - ${definition.type || 'item'}`;
         }
 
+        function getInventoryLimitLabel() {
+
+            return `${inventory.value.length}/${INVENTORY_SLOT_LIMIT} slots`;
+        }
+
+        function getStorageLimitLabel() {
+
+            return `${storageItems.value.length}/${STORAGE_SLOT_LIMIT} slots`;
+        }
+
+        function getMerchantItems() {
+
+            return Object.values(ITEM_DEFINITIONS)
+                .filter(item => item.id !== 'goldCoin')
+                .map(item => ({
+                    ...item,
+                    buyPrice: Math.ceil((item.value || 100) * 1.8),
+                    sellPrice: Math.max(
+                        1,
+                        Math.floor((item.value || 3) / 3)
+                    )
+                }));
+        }
+
+        function buyMerchantItem(itemId) {
+
+            const item = getMerchantItems().find(
+                merchantItem => merchantItem.id === itemId
+            );
+
+            if (!item) {
+                return;
+            }
+
+            if (
+                !inventory.value.some(slot => slot.id === itemId) &&
+                inventory.value.length >= INVENTORY_SLOT_LIMIT
+            ) {
+                createFloatingText(
+                    player.value.x,
+                    player.value.y,
+                    'Inventario cheio',
+                    'miss'
+                );
+                return;
+            }
+
+            if (gold.value < item.buyPrice) {
+                createFloatingText(
+                    player.value.x,
+                    player.value.y,
+                    'Sem gold',
+                    'miss'
+                );
+                return;
+            }
+
+            gold.value -= item.buyPrice;
+            addItem(itemId);
+            createFloatingText(
+                player.value.x,
+                player.value.y,
+                'Comprado',
+                'heal'
+            );
+        }
+
+        function removeInventoryItem(itemId, quantity = 1) {
+
+            const item = inventory.value.find(
+                slot => slot.id === itemId
+            );
+
+            if (!item) {
+                return false;
+            }
+
+            item.quantity -= quantity;
+
+            if (item.quantity <= 0) {
+                inventory.value = inventory.value.filter(
+                    slot => slot.id !== itemId
+                );
+            }
+
+            return true;
+        }
+
+        function sellInventoryItem(item) {
+
+            const definition = getInventoryItem(item);
+
+            if (!definition.id || definition.id === 'goldCoin') {
+                return;
+            }
+
+            if (!removeInventoryItem(item.id)) {
+                return;
+            }
+
+            const value = Math.max(
+                1,
+                Math.floor((definition.value || 3) / 3)
+            );
+
+            gold.value += value;
+            createFloatingText(
+                player.value.x,
+                player.value.y,
+                `+${value}g`,
+                'gold'
+            );
+        }
+
+        function moveItemToStorage(item) {
+
+            const stored = storageItems.value.find(
+                slot => slot.id === item.id
+            );
+
+            if (
+                !stored &&
+                storageItems.value.length >= STORAGE_SLOT_LIMIT
+            ) {
+                createFloatingText(
+                    player.value.x,
+                    player.value.y,
+                    'Bau cheio',
+                    'miss'
+                );
+                return;
+            }
+
+            if (!removeInventoryItem(item.id)) {
+                return;
+            }
+
+            if (stored) {
+                stored.quantity++;
+            } else {
+                storageItems.value.push({
+                    id: item.id,
+                    quantity: 1
+                });
+            }
+        }
+
+        function moveItemFromStorage(item) {
+
+            if (
+                !inventory.value.some(slot => slot.id === item.id) &&
+                inventory.value.length >= INVENTORY_SLOT_LIMIT
+            ) {
+                createFloatingText(
+                    player.value.x,
+                    player.value.y,
+                    'Inventario cheio',
+                    'miss'
+                );
+                return;
+            }
+
+            const stored = storageItems.value.find(
+                slot => slot.id === item.id
+            );
+
+            if (!stored) {
+                return;
+            }
+
+            stored.quantity--;
+
+            if (stored.quantity <= 0) {
+                storageItems.value = storageItems.value.filter(
+                    slot => slot.id !== item.id
+                );
+            }
+
+            addItem(item.id);
+        }
+
         function getMinimapStyle(entity) {
 
             return {
@@ -652,6 +1055,17 @@ export default {
             return player.value.characterClass || 'warrior';
         }
 
+        function getClassLabel(characterClass = getCharacterClass()) {
+
+            const labels = {
+                warrior: 'Warrior',
+                mage: 'Mage',
+                archer: 'Archer'
+            };
+
+            return labels[characterClass] || 'Warrior';
+        }
+
         function getWeaponProfile() {
 
             return (
@@ -678,17 +1092,17 @@ export default {
         function getPlayerArmor() {
 
             return Math.floor(
-                (Number(player.value.strength) || 0) * 0.55 +
-                    (Number(player.value.level) || 1) * 0.4
+                (Number(player.value.strength) || 0) * 0.9 +
+                    (Number(player.value.level) || 1) * 0.5
             );
         }
 
         function getPlayerCriticalChance() {
 
             return Math.min(
-                45,
-                4 +
-                    (Number(player.value.dexterity) || 0) * 1.5 +
+                35,
+                3 +
+                    (Number(player.value.dexterity) || 0) * 0.8 +
                     getWeaponProfile().criticalBonus
             );
         }
@@ -696,9 +1110,9 @@ export default {
         function getPlayerAccuracy() {
 
             return Math.min(
-                98,
-                76 +
-                    (Number(player.value.dexterity) || 0) * 1.2 +
+                96,
+                74 +
+                    (Number(player.value.dexterity) || 0) * 0.7 +
                     (Number(player.value.level) || 1) * 0.3 +
                     getWeaponProfile().accuracyBonus
             );
@@ -707,10 +1121,10 @@ export default {
         function getPlayerEvasionChance() {
 
             return Math.min(
-                35,
+                22,
                 Math.floor(
                     3 +
-                        (Number(player.value.dexterity) || 0) * 1.4 +
+                        (Number(player.value.dexterity) || 0) * 0.55 +
                         (Number(player.value.level) || 1) * 0.2
                 )
             );
@@ -734,7 +1148,7 @@ export default {
             return Math.max(
                 MIN_PLAYER_ATTACK_COOLDOWN,
                 PLAYER_ATTACK_COOLDOWN -
-                    (Number(player.value.dexterity) || 0) * 20
+                    (Number(player.value.dexterity) || 0) * 10
             );
         }
 
@@ -1003,6 +1417,81 @@ export default {
             }, COMBAT_CLOCK_INTERVAL);
         }
 
+        function getOutOfCombatMultiplier(entity) {
+
+            return Date.now() - (entity.lastCombatAt || 0) >=
+                OUT_OF_COMBAT_DELAY
+                ? OUT_OF_COMBAT_REGEN_MULTIPLIER
+                : 1;
+        }
+
+        function getPlayerHpRegenPerSecond() {
+
+            return Math.max(
+                1,
+                Math.floor((Number(player.value.maxHp) || 100) * 0.01)
+            );
+        }
+
+        function getPlayerManaRegenPerSecond() {
+
+            return Math.max(
+                1,
+                Math.floor((Number(player.value.maxMana) || 50) * 0.018)
+            );
+        }
+
+        function regenerateEntityResources() {
+
+            const playerMultiplier =
+                getOutOfCombatMultiplier(player.value);
+            const hpRegen =
+                getPlayerHpRegenPerSecond() * playerMultiplier;
+            const manaRegen =
+                getPlayerManaRegenPerSecond() * playerMultiplier;
+
+            if (player.value.hp > 0) {
+                player.value.hp = Math.min(
+                    player.value.maxHp,
+                    player.value.hp + hpRegen
+                );
+                player.value.mana = Math.min(
+                    player.value.maxMana,
+                    player.value.mana + manaRegen
+                );
+            }
+
+            monsters.value.forEach(monster => {
+
+                if (monster.dead || monster.hp <= 0) {
+                    return;
+                }
+
+                const monsterMultiplier =
+                    getOutOfCombatMultiplier(monster);
+                const monsterRegen = Math.max(
+                    1,
+                    Math.floor((monster.maxHp || 1) * 0.012)
+                ) * monsterMultiplier;
+
+                monster.hp = Math.min(
+                    monster.maxHp,
+                    monster.hp + monsterRegen
+                );
+            });
+        }
+
+        function startResourceRegenerationLoop() {
+
+            if (resourceRegenInterval) {
+                return;
+            }
+
+            resourceRegenInterval = setInterval(() => {
+                regenerateEntityResources();
+            }, RESOURCE_REGEN_INTERVAL);
+        }
+
         function startAfkFarmLoop() {
 
             if (afkFarmInterval) {
@@ -1102,6 +1591,136 @@ export default {
             );
         }
 
+        function isBlockedMapPosition(x, y) {
+
+            if (
+                x < 0 ||
+                y < 0 ||
+                x >= getMapWidth() ||
+                y >= getMapHeight()
+            ) {
+                return true;
+            }
+
+            return BLOCKED_TILES.includes(
+                gameMap.value[y]?.[x]
+            );
+        }
+
+        function hasLineOfSight(fromX, fromY, toX, toY) {
+
+            let x = fromX;
+            let y = fromY;
+            const dx = Math.abs(toX - fromX);
+            const dy = Math.abs(toY - fromY);
+            const stepX = fromX < toX ? 1 : -1;
+            const stepY = fromY < toY ? 1 : -1;
+            let error = dx - dy;
+
+            while (!(x === toX && y === toY)) {
+                const doubleError = error * 2;
+
+                if (doubleError > -dy) {
+                    error -= dy;
+                    x += stepX;
+                }
+
+                if (doubleError < dx) {
+                    error += dx;
+                    y += stepY;
+                }
+
+                if (x === toX && y === toY) {
+                    return true;
+                }
+
+                if (isBlockedMapPosition(x, y)) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        function canPlayerAttackTarget(target) {
+
+            if (!target) {
+                return false;
+            }
+
+            if (getBasicAttackRange() <= 1) {
+                return true;
+            }
+
+            return hasLineOfSight(
+                player.value.x,
+                player.value.y,
+                target.x,
+                target.y
+            );
+        }
+
+        function findPath(start, target, canWalk) {
+
+            if (start.x === target.x && start.y === target.y) {
+                return [];
+            }
+
+            const queue = [{
+                ...start,
+                path: []
+            }];
+            const visited = new Set([
+                `${start.x},${start.y}`
+            ]);
+            const directions = [
+                { x: 1, y: 0 },
+                { x: -1, y: 0 },
+                { x: 0, y: 1 },
+                { x: 0, y: -1 }
+            ];
+
+            while (queue.length) {
+                const current = queue.shift();
+
+                for (const direction of directions) {
+                    const next = {
+                        x: current.x + direction.x,
+                        y: current.y + direction.y
+                    };
+                    const key = `${next.x},${next.y}`;
+
+                    if (visited.has(key)) {
+                        continue;
+                    }
+
+                    if (!canWalk(next.x, next.y)) {
+                        continue;
+                    }
+
+                    const path = [
+                        ...current.path,
+                        next
+                    ];
+
+                    if (
+                        next.x === target.x &&
+                        next.y === target.y
+                    ) {
+                        return path;
+                    }
+
+                    visited.add(key);
+                    queue.push({
+                        ...next,
+                        path
+                    });
+                }
+            }
+
+            return [];
+        }
+
         function movePlayer(dx, dy) {
 
             if (dx === 0 && dy === 0) {
@@ -1125,6 +1744,81 @@ export default {
             checkPortalCollision();
             updateCamera();
             persistCharacter();
+
+            return true;
+        }
+
+        function findPlayerAttackPath(target) {
+
+            const candidates = [];
+            const range = getBasicAttackRange();
+
+            for (let y = 0; y < getMapHeight(); y++) {
+                for (let x = 0; x < getMapWidth(); x++) {
+                    const distance = Math.max(
+                        Math.abs(x - target.x),
+                        Math.abs(y - target.y)
+                    );
+
+                    if (
+                        distance === 0 ||
+                        distance > range ||
+                        !canPlayerMoveTo(x, y)
+                    ) {
+                        continue;
+                    }
+
+                    if (
+                        range > 1 &&
+                        !hasLineOfSight(x, y, target.x, target.y)
+                    ) {
+                        continue;
+                    }
+
+                    candidates.push({
+                        x,
+                        y,
+                        score:
+                            Math.abs(player.value.x - x) +
+                            Math.abs(player.value.y - y)
+                    });
+                }
+            }
+
+            return candidates
+                .sort((first, second) => first.score - second.score)
+                .map(candidate =>
+                    findPath(
+                        {
+                            x: player.value.x,
+                            y: player.value.y
+                        },
+                        candidate,
+                        canPlayerMoveTo
+                    )
+                )
+                .find(path => path.length) || [];
+        }
+
+        function followClickMovePath() {
+
+            if (!clickMovePath.length) {
+                return false;
+            }
+
+            const next = clickMovePath.shift();
+            const dx = next.x - player.value.x;
+            const dy = next.y - player.value.y;
+
+            if (Math.abs(dx) + Math.abs(dy) !== 1) {
+                clickMovePath = [];
+                return false;
+            }
+
+            if (!movePlayer(dx, dy)) {
+                clickMovePath = [];
+                return false;
+            }
 
             return true;
         }
@@ -1187,7 +1881,12 @@ export default {
             }
 
             playerMovementInterval = setInterval(() => {
-                movePlayerFromPressedKeys();
+                if (pressedMovementKeys.size > 0) {
+                    movePlayerFromPressedKeys();
+                    return;
+                }
+
+                followClickMovePath();
             }, PLAYER_MOVE_INTERVAL);
         }
 
@@ -1377,24 +2076,60 @@ export default {
                 }
             }
 
-            setTimeout(() => {
-                monsters.value =
-                    monsters.value.filter(
-                        item => item.id !== monster.id
-                    );
+            if (
+                selectedTarget.value &&
+                selectedTarget.value.id === monster.id
+            ) {
+                selectedTarget.value = null;
+            }
 
-                if (
-                    selectedTarget.value &&
-                    selectedTarget.value.id === monster.id
-                ) {
-                    selectedTarget.value = null;
-                }
-            }, 560);
+            monster.respawnTimeout = setTimeout(() => {
+                respawnMonster(monster);
+            }, MONSTER_RESPAWN_DELAY);
 
             checkLevelUp();
             persistCharacter();
 
             return true;
+        }
+
+        function findRespawnPosition(monster) {
+
+            const origin = {
+                x: monster.spawnX ?? monster.x,
+                y: monster.spawnY ?? monster.y
+            };
+            const candidates = [
+                origin,
+                { x: origin.x + 1, y: origin.y },
+                { x: origin.x - 1, y: origin.y },
+                { x: origin.x, y: origin.y + 1 },
+                { x: origin.x, y: origin.y - 1 }
+            ];
+
+            return candidates.find(candidate =>
+                canMonsterMoveTo(
+                    candidate.x,
+                    candidate.y,
+                    monster
+                )
+            ) || origin;
+        }
+
+        function respawnMonster(monster) {
+
+            const position = findRespawnPosition(monster);
+
+            monster.x = position.x;
+            monster.y = position.y;
+            monster.hp = monster.maxHp;
+            monster.dead = false;
+            monster.moving = false;
+            monster.attacking = false;
+            monster.animationFrame = 0;
+            monster.lastAttackAt = Date.now();
+            monster.lastCombatAt = 0;
+            monster.respawnTimeout = null;
         }
 
         function damageMonster(
@@ -1425,6 +2160,8 @@ export default {
                 0,
                 monster.hp - damage
             );
+            monster.lastCombatAt = Date.now();
+            player.value.lastCombatAt = Date.now();
 
             createFloatingText(
                 monster.x,
@@ -1550,8 +2287,22 @@ export default {
                 return false;
             }
 
-            if (getDistanceToTarget(target) <= getBasicAttackRange()) {
+            if (
+                getDistanceToTarget(target) <= getBasicAttackRange() &&
+                canPlayerAttackTarget(target)
+            ) {
                 return true;
+            }
+
+            const pathToAttackTile = findPlayerAttackPath(target);
+
+            if (pathToAttackTile.length) {
+                const next = pathToAttackTile[0];
+
+                return movePlayer(
+                    next.x - player.value.x,
+                    next.y - player.value.y
+                );
             }
 
             const deltaX = target.x - player.value.x;
@@ -1621,7 +2372,7 @@ export default {
             );
         }
 
-        function canMonsterMoveTo(x, y) {
+        function canMonsterMoveTo(x, y, movingMonster = null) {
 
             if (
                 x < 0 ||
@@ -1657,13 +2408,97 @@ export default {
 
             return !monsters.value.some(
                 monster =>
+                    monster.id !== movingMonster?.id &&
                     !monster.dead &&
                     monster.x === x &&
                     monster.y === y
             );
         }
 
+        function canMonsterAttackPlayer(monster) {
+
+            if ((monster.attackRange || 1) <= 1) {
+                return true;
+            }
+
+            return hasLineOfSight(
+                monster.x,
+                monster.y,
+                player.value.x,
+                player.value.y
+            );
+        }
+
+        function findMonsterAttackPath(monster) {
+
+            const candidates = [];
+            const range = monster.attackRange || 1;
+
+            for (let y = 0; y < getMapHeight(); y++) {
+                for (let x = 0; x < getMapWidth(); x++) {
+                    const distance = Math.max(
+                        Math.abs(x - player.value.x),
+                        Math.abs(y - player.value.y)
+                    );
+
+                    if (
+                        distance === 0 ||
+                        distance > range ||
+                        !canMonsterMoveTo(x, y, monster)
+                    ) {
+                        continue;
+                    }
+
+                    if (
+                        range > 1 &&
+                        !hasLineOfSight(
+                            x,
+                            y,
+                            player.value.x,
+                            player.value.y
+                        )
+                    ) {
+                        continue;
+                    }
+
+                    candidates.push({
+                        x,
+                        y,
+                        score:
+                            Math.abs(monster.x - x) +
+                            Math.abs(monster.y - y)
+                    });
+                }
+            }
+
+            return candidates
+                .sort((first, second) => first.score - second.score)
+                .map(candidate =>
+                    findPath(
+                        {
+                            x: monster.x,
+                            y: monster.y
+                        },
+                        candidate,
+                        (x, y) => canMonsterMoveTo(x, y, monster)
+                    )
+                )
+                .find(path => path.length) || [];
+        }
+
         function moveMonsterTowardsPlayer(monster) {
+
+            const pathToAttackTile = findMonsterAttackPath(monster);
+
+            if (pathToAttackTile.length) {
+                const next = pathToAttackTile[0];
+
+                monster.x = next.x;
+                monster.y = next.y;
+                monster.moving = true;
+                stopMonsterMovementAnimation(monster);
+                return;
+            }
 
             const deltaX = player.value.x - monster.x;
             const deltaY = player.value.y - monster.y;
@@ -1705,7 +2540,8 @@ export default {
 
                 return canMonsterMoveTo(
                     monster.x + step.x,
-                    monster.y + step.y
+                    monster.y + step.y,
+                    monster
                 );
             });
 
@@ -1732,7 +2568,14 @@ export default {
                 return;
             }
 
+            if (!canMonsterAttackPlayer(monster)) {
+                moveMonsterTowardsPlayer(monster);
+                return;
+            }
+
             monster.lastAttackAt = now;
+            monster.lastCombatAt = now;
+            player.value.lastCombatAt = now;
             playMonsterAttackAnimation(monster);
 
             const monsterAccuracy = Math.min(
@@ -1803,8 +2646,12 @@ export default {
             stopAutoCombat();
             clearRegenerationIntervals();
             pressedMovementKeys.clear();
+            clickMovePath = [];
+            loadZoneEntities(PLAYER_START_ZONE);
             player.value.x = PLAYER_START_POSITION.x;
             player.value.y = PLAYER_START_POSITION.y;
+            player.value.currentZone =
+                ZONES[PLAYER_START_ZONE].name;
             player.value.hp =
                 player.value.maxHp || 100;
             player.value.mana =
@@ -1847,7 +2694,10 @@ export default {
                         return;
                     }
 
-                    if (distance <= attackRange) {
+                    if (
+                        distance <= attackRange &&
+                        canMonsterAttackPlayer(monster)
+                    ) {
                         attackPlayer(monster);
                         return;
                     }
@@ -1906,8 +2756,21 @@ export default {
                 return false;
             }
 
+            if (!canPlayerAttackTarget(selectedTarget.value)) {
+                createFloatingText(
+                    selectedTarget.value.x,
+                    selectedTarget.value.y,
+                    'Sem linha',
+                    'miss'
+                );
+
+                return false;
+            }
+
             playerAttackInProgress = true;
             player.value.lastAttackAt = now;
+            player.value.lastCombatAt = now;
+            selectedTarget.value.lastCombatAt = now;
 
             try {
                 const result = await attackMonsterRequest(
@@ -1998,7 +2861,8 @@ export default {
 
             if (
                 getDistanceToTarget(selectedTarget.value) >
-                getBasicAttackRange()
+                    getBasicAttackRange() ||
+                !canPlayerAttackTarget(selectedTarget.value)
             ) {
                 movePlayerTowardsTarget(selectedTarget.value);
                 return;
@@ -2108,6 +2972,24 @@ export default {
                     selectedTarget.value.x,
                     selectedTarget.value.y,
                     'Fora',
+                    'miss'
+                );
+                return null;
+            }
+
+            if (
+                skill.range > 1 &&
+                !hasLineOfSight(
+                    player.value.x,
+                    player.value.y,
+                    selectedTarget.value.x,
+                    selectedTarget.value.y
+                )
+            ) {
+                createFloatingText(
+                    selectedTarget.value.x,
+                    selectedTarget.value.y,
+                    'Sem linha',
                     'miss'
                 );
                 return null;
@@ -2446,6 +3328,7 @@ export default {
                 const wasPressed =
                     pressedMovementKeys.has(movementKey);
                 pressedMovementKeys.add(movementKey);
+                clickMovePath = [];
                 stopAutoCombat();
                 if (!wasPressed) {
                     movePlayerFromPressedKeys();
@@ -2502,7 +3385,61 @@ export default {
 
         function handleWindowBlur() {
             pressedMovementKeys.clear();
+            clickMovePath = [];
             player.value.moving = false;
+        }
+
+        function handleMapClick(event) {
+
+            markPlayerActivity();
+            stopAutoCombat();
+
+            const viewport =
+                event.currentTarget.closest('.game-viewport');
+
+            if (!viewport) {
+                return;
+            }
+
+            const rect = viewport.getBoundingClientRect();
+            const targetX = Math.floor(
+                (event.clientX - rect.left + camera.value.x) /
+                    tileSize
+            );
+            const targetY = Math.floor(
+                (event.clientY - rect.top + camera.value.y) /
+                    tileSize
+            );
+
+            if (
+                targetX === player.value.x &&
+                targetY === player.value.y
+            ) {
+                clickMovePath = [];
+                return;
+            }
+
+            if (!canPlayerMoveTo(targetX, targetY)) {
+                createFloatingText(
+                    player.value.x,
+                    player.value.y,
+                    'Bloq',
+                    'miss'
+                );
+                return;
+            }
+
+            clickMovePath = findPath(
+                {
+                    x: player.value.x,
+                    y: player.value.y
+                },
+                {
+                    x: targetX,
+                    y: targetY
+                },
+                canPlayerMoveTo
+            );
         }
 
         onMounted(async () => {
@@ -2532,7 +3469,8 @@ export default {
                 direction: 'down',
                 moving: false,
                 attacking: false,
-                animationFrame: 0
+                animationFrame: 0,
+                lastCombatAt: 0
             };
 
             loadZoneEntities(
@@ -2542,6 +3480,7 @@ export default {
             startAnimationLoop();
             startCombatClock();
             startAfkFarmLoop();
+            startResourceRegenerationLoop();
             startPlayerMovementLoop();
 
             startMonsterAI();
@@ -2588,12 +3527,20 @@ export default {
                 clearInterval(afkFarmInterval);
             }
 
+            if (resourceRegenInterval) {
+                clearInterval(resourceRegenInterval);
+            }
+
             if (playerAttackTimeout) {
                 clearTimeout(playerAttackTimeout);
             }
 
             if (npcResponseTimeout) {
                 clearTimeout(npcResponseTimeout);
+            }
+
+            if (questNotificationTimeout) {
+                clearTimeout(questNotificationTimeout);
             }
 
             clearRegenerationIntervals();
@@ -2606,6 +3553,10 @@ export default {
 
                 if (monster.attackAnimationTimeout) {
                     clearTimeout(monster.attackAnimationTimeout);
+                }
+
+                if (monster.respawnTimeout) {
+                    clearTimeout(monster.respawnTimeout);
                 }
             });
         });
@@ -2626,9 +3577,14 @@ export default {
             portals,
             quests,
             inventory,
+            storageItems,
             gold,
             activeNpc,
             npcResponse,
+            questNotification,
+            dailyQuestState,
+            merchantOpen,
+            storageOpen,
             zoneBanner,
 
             selectedTarget,
@@ -2653,6 +3609,7 @@ export default {
             getMonsterSprite,
             getAvailableAttributePoints,
             getWeaponLabel,
+            getClassLabel,
             getDamageTypeLabel,
             getBasicAttackRange,
             getPlayerArmor,
@@ -2680,7 +3637,15 @@ export default {
             getItemIcon,
             getItemFrame,
             getItemTooltip,
+            getInventoryLimitLabel,
+            getStorageLimitLabel,
+            getMerchantItems,
+            buyMerchantItem,
+            sellInventoryItem,
+            moveItemToStorage,
+            moveItemFromStorage,
             getMinimapStyle,
+            getDailyQuestSummary,
             getBosses,
             getSkillEffectImage,
             openNpcDialog,
@@ -2688,6 +3653,7 @@ export default {
             closeNpcDialog,
             spendAttributePoint,
             useSkill,
+            handleMapClick,
 
             selectTarget,
             engageTarget

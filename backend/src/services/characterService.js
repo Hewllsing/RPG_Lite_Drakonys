@@ -164,9 +164,9 @@ async function createCharacterForUser(userId, name, characterClass = 'warrior') 
           :intelligence,
           :dexterity,
           0,
-          'Goblin Forest',
-          5,
-          5
+          'Initial City',
+          9,
+          8
         )
       `,
       {

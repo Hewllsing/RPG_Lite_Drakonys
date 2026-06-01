@@ -3,11 +3,11 @@ const WEAPON_PROFILES = {
     weaponType: 'sword',
     damageType: 'physical',
     range: 1,
-    baseDamage: 6,
+    baseDamage: 8,
     primaryAttribute: 'strength',
-    primaryScale: 2,
+    primaryScale: 2.6,
     secondaryAttribute: 'dexterity',
-    secondaryScale: 0.4,
+    secondaryScale: 0.25,
     accuracyBonus: 0,
     criticalBonus: 0
   },
@@ -29,11 +29,11 @@ const WEAPON_PROFILES = {
     range: 4,
     baseDamage: 4,
     primaryAttribute: 'dexterity',
-    primaryScale: 1.7,
+    primaryScale: 1.25,
     secondaryAttribute: 'strength',
-    secondaryScale: 0.8,
+    secondaryScale: 1,
     accuracyBonus: 0.05,
-    criticalBonus: 0.05
+    criticalBonus: 0.02
   }
 };
 
@@ -116,12 +116,12 @@ function calculateAttack(player, monster) {
   const secondaryValue =
     getNumber(player[profile.secondaryAttribute]);
   const accuracyChance = Math.min(
-    0.98,
-    0.76 + dexterity * 0.012 + level * 0.003 + profile.accuracyBonus
+    0.96,
+    0.74 + dexterity * 0.007 + level * 0.003 + profile.accuracyBonus
   );
   const criticalChance = Math.min(
-    0.45,
-    0.04 + dexterity * 0.015 + profile.criticalBonus
+    0.35,
+    0.03 + dexterity * 0.008 + profile.criticalBonus
   );
   const hit = Math.random() <= accuracyChance;
   const dodged =

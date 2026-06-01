@@ -15,6 +15,8 @@ export function createBoss(type, x, y) {
     typeKey: type,
     x,
     y,
+    spawnX: x,
+    spawnY: y,
     hp: template.maxHp,
     maxHp: template.maxHp,
     isBoss: true,

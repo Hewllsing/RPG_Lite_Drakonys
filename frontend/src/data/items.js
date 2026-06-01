@@ -6,6 +6,7 @@ export const ITEM_DEFINITIONS = {
     name: 'Gold Coin',
     type: 'currency',
     rarity: 'common',
+    value: 1,
     icon: itemAssets.goldCoin,
     frame: rarityFrames.common
   },
@@ -14,6 +15,7 @@ export const ITEM_DEFINITIONS = {
     name: 'Health Potion',
     type: 'consumable',
     rarity: 'common',
+    value: 45,
     icon: itemAssets.healthPotion,
     frame: rarityFrames.common
   },
@@ -22,6 +24,7 @@ export const ITEM_DEFINITIONS = {
     name: 'Mana Potion',
     type: 'consumable',
     rarity: 'common',
+    value: 50,
     icon: itemAssets.manaPotion,
     frame: rarityFrames.common
   },
@@ -30,6 +33,7 @@ export const ITEM_DEFINITIONS = {
     name: 'Iron Sword',
     type: 'weapon',
     rarity: 'rare',
+    value: 420,
     icon: itemAssets.ironSword,
     frame: rarityFrames.rare
   },
@@ -38,6 +42,7 @@ export const ITEM_DEFINITIONS = {
     name: 'Apprentice Staff',
     type: 'weapon',
     rarity: 'rare',
+    value: 460,
     icon: itemAssets.staff,
     frame: rarityFrames.rare
   },
@@ -46,6 +51,7 @@ export const ITEM_DEFINITIONS = {
     name: 'Hunter Bow',
     type: 'weapon',
     rarity: 'rare',
+    value: 440,
     icon: itemAssets.bow,
     frame: rarityFrames.rare
   },
@@ -54,6 +60,7 @@ export const ITEM_DEFINITIONS = {
     name: 'Worn Chestplate',
     type: 'armor',
     rarity: 'common',
+    value: 280,
     icon: itemAssets.commonChest,
     frame: rarityFrames.common
   },
@@ -62,6 +69,7 @@ export const ITEM_DEFINITIONS = {
     name: 'Goblin Totem',
     type: 'quest',
     rarity: 'rare',
+    value: 180,
     icon: itemAssets.goblinTotem,
     frame: rarityFrames.rare
   },
@@ -70,6 +78,7 @@ export const ITEM_DEFINITIONS = {
     name: 'Demon Key',
     type: 'quest',
     rarity: 'epic',
+    value: 900,
     icon: itemAssets.demonKey,
     frame: rarityFrames.epic
   },
@@ -78,6 +87,7 @@ export const ITEM_DEFINITIONS = {
     name: 'Magic Crystal',
     type: 'material',
     rarity: 'rare',
+    value: 240,
     icon: itemAssets.crystal,
     frame: rarityFrames.rare
   },
@@ -86,6 +96,7 @@ export const ITEM_DEFINITIONS = {
     name: 'Demon Essence',
     type: 'material',
     rarity: 'legendary',
+    value: 1200,
     icon: itemAssets.demonEssence,
     frame: rarityFrames.legendary
   }
