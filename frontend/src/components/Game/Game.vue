@@ -21,7 +21,10 @@
         </div>
       </header>
 
-      <div class="game-viewport">
+      <div
+        ref="gameViewportRef"
+        class="game-viewport"
+      >
         <div
           v-if="zoneBanner"
           class="zone-banner"

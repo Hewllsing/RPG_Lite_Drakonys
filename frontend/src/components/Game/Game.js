@@ -42,14 +42,15 @@ import { SKILL_DEFINITIONS } from '../../data/skills';
 
 const MAP_WIDTH = 20;
 const MAP_HEIGHT = 15;
-const VIEWPORT_WIDTH = 880;
-const VIEWPORT_HEIGHT = 640;
+const TILE_SIZE = 52;
+const VIEWPORT_WIDTH = 1040;
+const VIEWPORT_HEIGHT = 720;
 const PLAYER_START_ZONE = 'starterTown';
 const PLAYER_START_POSITION = {
     x: 9,
     y: 8
 };
-const PLAYER_MOVE_INTERVAL = 330;
+const PLAYER_MOVE_INTERVAL = 380;
 const PLAYER_ATTACK_COOLDOWN = 900;
 const MIN_PLAYER_ATTACK_COOLDOWN = 550;
 const AUTO_COMBAT_INTERVAL = 180;
@@ -189,7 +190,7 @@ export default {
 
     setup(props) {
 
-        const tileSize = 44;
+        const tileSize = TILE_SIZE;
 
         const player = ref({
             name: 'Hero',
@@ -228,6 +229,11 @@ export default {
         const levelUpEffect = ref(null);
         const deathScreen = ref(null);
         const expandedMapOpen = ref(false);
+        const gameViewportRef = ref(null);
+        const viewportSize = ref({
+            width: VIEWPORT_WIDTH,
+            height: VIEWPORT_HEIGHT
+        });
         const dailyQuestState = ref(loadDailyQuestState());
         const merchantOpen = ref(false);
         const storageOpen = ref(false);
@@ -415,20 +421,22 @@ export default {
 
             const mapPixelWidth = getMapWidth() * tileSize;
             const mapPixelHeight = getMapHeight() * tileSize;
+            const viewportWidth = viewportSize.value.width || VIEWPORT_WIDTH;
+            const viewportHeight = viewportSize.value.height || VIEWPORT_HEIGHT;
             const maxCameraX = Math.max(
                 0,
-                mapPixelWidth - VIEWPORT_WIDTH
+                mapPixelWidth - viewportWidth
             );
             const maxCameraY = Math.max(
                 0,
-                mapPixelHeight - VIEWPORT_HEIGHT
+                mapPixelHeight - viewportHeight
             );
 
             camera.value.x = Math.min(
                 maxCameraX,
                 Math.max(
                     0,
-                    player.value.x * tileSize - VIEWPORT_WIDTH / 2
+                    player.value.x * tileSize - viewportWidth / 2
                 )
             );
 
@@ -436,9 +444,27 @@ export default {
                 maxCameraY,
                 Math.max(
                     0,
-                    player.value.y * tileSize - VIEWPORT_HEIGHT / 2
+                    player.value.y * tileSize - viewportHeight / 2
                 )
             );
+        }
+
+        function syncViewportSize() {
+
+            const viewport = gameViewportRef.value;
+
+            if (!viewport) {
+                return;
+            }
+
+            const rect = viewport.getBoundingClientRect();
+
+            viewportSize.value = {
+                width: Math.max(1, Math.round(rect.width)),
+                height: Math.max(1, Math.round(rect.height))
+            };
+
+            updateCamera();
         }
 
         function persistCharacter() {
@@ -3770,6 +3796,10 @@ export default {
                 'blur',
                 handleWindowBlur
             );
+            window.addEventListener(
+                'resize',
+                syncViewportSize
+            );
 
             const character =
                 await getCharacter(props.characterId);
@@ -3815,7 +3845,8 @@ export default {
 
             startMonsterAI();
 
-            updateCamera();
+            syncViewportSize();
+            window.requestAnimationFrame(syncViewportSize);
         });
 
         onUnmounted(() => {
@@ -3831,6 +3862,10 @@ export default {
             window.removeEventListener(
                 'blur',
                 handleWindowBlur
+            );
+            window.removeEventListener(
+                'resize',
+                syncViewportSize
             );
 
             if (animationInterval) {
@@ -3923,6 +3958,7 @@ export default {
             storageOpen,
             zoneBanner,
             expandedMapOpen,
+            gameViewportRef,
 
             selectedTarget,
             afkFarmEnabled,
