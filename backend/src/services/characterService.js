@@ -171,8 +171,8 @@ async function createCharacterForUser(userId, name, characterClass = 'warrior') 
           :dexterity,
           0,
           0,
-          '[]',
-          '{"weapon":null,"armor":null,"accessory":null}',
+          :inventoryJson,
+          :equipmentJson,
           'Goblin Forest',
           5,
           5
@@ -182,6 +182,8 @@ async function createCharacterForUser(userId, name, characterClass = 'warrior') 
         userId,
         name: characterName,
         characterClass: selectedClass,
+        inventoryJson: '[]',
+        equipmentJson: '{"weapon":null,"armor":null,"accessory":null}',
         ...baseStats
       }
     );
