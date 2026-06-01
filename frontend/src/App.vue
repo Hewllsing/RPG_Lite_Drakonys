@@ -72,6 +72,10 @@
               :class="{ selected: characterForm.characterClass === characterClass.id }"
               @click="selectCharacterClass(characterClass.id)"
             >
+              <img
+                :src="characterClass.sprite"
+                alt=""
+              />
               <strong>{{ characterClass.name }}</strong>
               <span>{{ characterClass.summary }}</span>
               <small>{{ characterClass.stats }}</small>
@@ -287,6 +291,7 @@
 
 <script>
 import Game from './components/Game/Game.vue';
+import { playerSprites } from './data/gameAssets';
 import {
   clearSession,
   getStoredSession,
@@ -324,18 +329,21 @@ export default {
         {
           id: 'warrior',
           name: 'Warrior',
+          sprite: playerSprites.warrior.down.idle,
           summary: 'Linha de frente resistente, dano fisico forte e mais vida por forca.',
           stats: 'Forca alta / Armadura / HP'
         },
         {
           id: 'mage',
           name: 'Mage',
+          sprite: playerSprites.mage.down.idle,
           summary: 'Controle arcano com mana alta, cura e dano magico em area.',
           stats: 'Inteligencia alta / MP / Cooldown'
         },
         {
           id: 'archer',
           name: 'Archer',
+          sprite: playerSprites.archer.down.idle,
           summary: 'Combate a distancia com precisao e ataques constantes.',
           stats: 'Destreza alta / Range / Critico'
         }
