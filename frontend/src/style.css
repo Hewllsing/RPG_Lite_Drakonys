@@ -39,9 +39,14 @@ button:disabled {
 .app-shell {
   min-height: 100vh;
   background:
+    linear-gradient(90deg, rgba(5, 4, 8, 0.88) 0%, rgba(8, 7, 10, 0.72) 34%, rgba(8, 7, 10, 0.28) 100%),
     radial-gradient(circle at 80% 12%, rgba(132, 73, 26, 0.22), transparent 28%),
     radial-gradient(circle at 18% 80%, rgba(91, 33, 182, 0.16), transparent 34%),
-    linear-gradient(135deg, #07070a 0%, #151017 52%, #09080b 100%);
+    linear-gradient(135deg, #07070a 0%, #151017 52%, #09080b 100%),
+    url('./assets/ui/auth_dragon_battle_background.png');
+  background-attachment: fixed;
+  background-position: center;
+  background-size: cover;
 }
 
 .game-session {
@@ -94,40 +99,49 @@ button:disabled {
 .auth-page {
   display: grid;
   min-height: 100vh;
-  place-items: center;
-  padding: 24px;
+  place-items: center start;
+  padding: 40px clamp(20px, 7vw, 96px);
+  background:
+    linear-gradient(90deg, rgba(5, 4, 8, 0.9) 0%, rgba(5, 4, 8, 0.62) 42%, rgba(5, 4, 8, 0.16) 100%);
 }
 
 .character-page {
   display: grid;
   min-height: 100vh;
   place-items: start center;
-  padding: 24px;
+  padding: 40px 24px;
+  background:
+    linear-gradient(180deg, rgba(5, 4, 8, 0.68), rgba(5, 4, 8, 0.88));
 }
 
 .auth-panel {
   width: min(420px, 100%);
-  padding: 24px;
+  padding: 28px;
   border: 1px solid #8a6a2f;
   border-radius: 8px;
   background:
-    linear-gradient(180deg, rgba(48, 37, 30, 0.96), rgba(14, 11, 16, 0.98)),
+    linear-gradient(180deg, rgba(58, 42, 30, 0.86), rgba(9, 8, 12, 0.94)),
     #151018;
+  backdrop-filter: blur(8px);
   box-shadow:
     inset 0 0 0 1px rgba(255, 232, 160, 0.08),
-    0 24px 70px rgba(0, 0, 0, 0.55);
+    0 24px 70px rgba(0, 0, 0, 0.62),
+    0 0 42px rgba(127, 29, 29, 0.18);
   text-align: left;
 }
 
 .character-panel {
-  width: min(900px, 100%);
+  width: min(1040px, 100%);
   padding: 24px;
   border: 1px solid #8a6a2f;
   border-radius: 8px;
   background:
-    linear-gradient(180deg, rgba(48, 37, 30, 0.92), rgba(14, 11, 16, 0.96)),
+    linear-gradient(180deg, rgba(42, 31, 27, 0.82), rgba(10, 9, 13, 0.94)),
     #151018;
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 232, 160, 0.08),
+    0 24px 70px rgba(0, 0, 0, 0.56);
   text-align: left;
 }
 
@@ -173,9 +187,20 @@ button:disabled {
 .create-character-entry {
   width: 100%;
   margin-bottom: 16px;
-  padding: 14px;
+  min-height: 76px;
+  padding: 18px;
   border-color: #8a6a2f !important;
-  background: rgba(0, 0, 0, 0.28) !important;
+  background:
+    linear-gradient(90deg, rgba(127, 29, 29, 0.44), rgba(91, 33, 182, 0.24)),
+    rgba(0, 0, 0, 0.38) !important;
+  color: #ffe3a1;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 232, 160, 0.08),
+    0 14px 30px rgba(0, 0, 0, 0.28);
 }
 
 .character-create-flow {
@@ -190,21 +215,36 @@ button:disabled {
 }
 
 .class-card {
-  min-height: 132px;
+  min-height: 210px;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 14px;
-  border: 1px solid #5f4824;
+  padding: 16px;
+  border: 1px solid rgba(201, 163, 78, 0.48);
   border-radius: 8px;
-  background: rgba(0, 0, 0, 0.28);
+  background:
+    radial-gradient(circle at 50% 24%, rgba(201, 163, 78, 0.15), transparent 30%),
+    linear-gradient(180deg, rgba(38, 25, 22, 0.78), rgba(4, 4, 7, 0.78)),
+    rgba(0, 0, 0, 0.38);
   color: #f4ead0;
   text-align: left;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 232, 160, 0.06),
+    0 14px 28px rgba(0, 0, 0, 0.28);
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.class-card:hover {
+  transform: translateY(-2px);
+  border-color: #c9a34e;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 232, 160, 0.12),
+    0 18px 36px rgba(0, 0, 0, 0.38);
 }
 
 .class-card img {
-  width: 64px;
-  height: 64px;
+  width: 92px;
+  height: 92px;
   align-self: center;
   image-rendering: pixelated;
   filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.55));
@@ -212,7 +252,12 @@ button:disabled {
 
 .class-card.selected {
   border-color: #c9a34e;
-  box-shadow: 0 0 20px rgba(201, 163, 78, 0.22);
+  background:
+    radial-gradient(circle at 50% 24%, rgba(201, 163, 78, 0.24), transparent 34%),
+    linear-gradient(180deg, rgba(65, 38, 27, 0.82), rgba(13, 10, 15, 0.9));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 232, 160, 0.16),
+    0 0 28px rgba(201, 163, 78, 0.24);
 }
 
 .class-card strong {
@@ -263,10 +308,34 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 14px;
-  border: 1px solid #27272a;
+  padding: 14px 16px;
+  border: 1px solid rgba(138, 106, 47, 0.42);
   border-radius: 8px;
-  background: rgba(0, 0, 0, 0.24);
+  background:
+    linear-gradient(90deg, rgba(25, 18, 19, 0.86), rgba(5, 5, 8, 0.72)),
+    rgba(0, 0, 0, 0.28);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 232, 160, 0.05),
+    0 12px 26px rgba(0, 0, 0, 0.24);
+}
+
+.character-row-sprite {
+  width: 74px;
+  height: 74px;
+  flex: 0 0 auto;
+  padding: 4px;
+  border: 1px solid rgba(201, 163, 78, 0.52);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle, rgba(91, 33, 182, 0.22), transparent 64%),
+    rgba(0, 0, 0, 0.32);
+  image-rendering: pixelated;
+  filter: drop-shadow(0 10px 12px rgba(0, 0, 0, 0.56));
+}
+
+.character-row-info {
+  flex: 1;
+  min-width: 0;
 }
 
 .character-row h2 {

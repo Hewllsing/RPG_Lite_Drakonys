@@ -126,7 +126,13 @@
             :key="character.id"
             class="character-row"
           >
-            <div>
+            <img
+              :src="getClassSprite(character.characterClass)"
+              class="character-row-sprite"
+              alt=""
+            />
+
+            <div class="character-row-info">
               <h2>{{ character.name }}</h2>
               <p>
                 {{ getClassLabel(character.characterClass) }}
@@ -511,6 +517,13 @@ export default {
       };
 
       return labels[characterClass] || 'Warrior';
+    },
+
+    getClassSprite(characterClass) {
+      return (
+        playerSprites[characterClass]?.down?.idle ||
+        playerSprites.warrior.down.idle
+      );
     },
 
     backToCharacters() {
