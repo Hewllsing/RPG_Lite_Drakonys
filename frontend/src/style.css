@@ -60,8 +60,14 @@ button:disabled {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  padding: 12px 20px 0;
+  margin: 12px 20px 0;
+  padding: 10px 14px;
+  border: 1px solid rgba(71, 225, 122, 0.42);
+  border-radius: 8px;
+  background: rgba(8, 12, 10, 0.84);
   color: #eadbb2;
+  box-shadow: 0 0 18px rgba(71, 225, 122, 0.22);
+  animation: activeSessionGlow 2.4s ease-in-out infinite;
 }
 
 .session-identity {
@@ -72,7 +78,8 @@ button:disabled {
 }
 
 .session-identity strong {
-  color: #ffe3a1;
+  color: #b7ffd0;
+  text-shadow: 0 0 10px rgba(71, 225, 122, 0.48);
 }
 
 .session-identity span {
@@ -565,6 +572,17 @@ button:disabled {
   62%,
   100% {
     left: 108%;
+  }
+}
+
+@keyframes activeSessionGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 16px rgba(71, 225, 122, 0.18);
+  }
+
+  50% {
+    box-shadow: 0 0 28px rgba(71, 225, 122, 0.36);
   }
 }
 

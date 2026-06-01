@@ -57,6 +57,8 @@ const ATTRIBUTE_POINTS_PER_LEVEL = 3;
 const COMBAT_CLOCK_INTERVAL = 80;
 const AFK_FARM_DELAY = 30000;
 const AFK_FARM_CHECK_INTERVAL = 1000;
+const QUEST_COMPLETE_DISPLAY_TIME = 4200;
+const PLAYER_RESPAWN_DELAY = 3000;
 const RESOURCE_REGEN_INTERVAL = 1000;
 const OUT_OF_COMBAT_DELAY = 5000;
 const OUT_OF_COMBAT_REGEN_MULTIPLIER = 3;
@@ -206,6 +208,9 @@ export default {
         const skillEffects = ref([]);
         const combatClock = ref(Date.now());
         const questNotification = ref(null);
+        const levelUpEffect = ref(null);
+        const deathScreen = ref(null);
+        const expandedMapOpen = ref(false);
         const dailyQuestState = ref(loadDailyQuestState());
         const merchantOpen = ref(false);
         const storageOpen = ref(false);
@@ -223,6 +228,8 @@ export default {
         let lastPlayerMoveAt = 0;
         let clickMovePath = [];
         let questNotificationTimeout = null;
+        let playerDeathTimeout = null;
+        let gameStartedAt = Date.now();
         const regenerationIntervals = [];
         const pressedMovementKeys = new Set();
 
@@ -258,6 +265,45 @@ export default {
                 return cooldowns;
             }, {})
         );
+
+        const afkFarmCooldownRemaining = computed(() => {
+            if (afkFarmEnabled.value) {
+                return 0;
+            }
+
+            return Math.max(
+                0,
+                Math.ceil(
+                    (
+                        AFK_FARM_DELAY -
+                        (combatClock.value - lastPlayerActivityAt.value)
+                    ) / 1000
+                )
+            );
+        });
+
+        function getAfkFarmStatusLabel() {
+
+            if (afkFarmEnabled.value) {
+                return 'AFK FARM ATIVO';
+            }
+
+            const remaining = afkFarmCooldownRemaining.value;
+
+            return remaining > 0
+                ? `AFK em ${remaining}s`
+                : 'AFK pronto';
+        }
+
+        function toggleExpandedMap() {
+
+            expandedMapOpen.value = !expandedMapOpen.value;
+        }
+
+        function getGlobalMapZones() {
+
+            return Object.values(ZONES);
+        }
 
         function getPlayerSpriteSet() {
 
@@ -350,24 +396,47 @@ export default {
 
         function updateCamera() {
 
-            camera.value.x =
-                player.value.x * tileSize - VIEWPORT_WIDTH / 2;
+            const mapPixelWidth = getMapWidth() * tileSize;
+            const mapPixelHeight = getMapHeight() * tileSize;
+            const maxCameraX = Math.max(
+                0,
+                mapPixelWidth - VIEWPORT_WIDTH
+            );
+            const maxCameraY = Math.max(
+                0,
+                mapPixelHeight - VIEWPORT_HEIGHT
+            );
 
-            camera.value.y =
-                player.value.y * tileSize - VIEWPORT_HEIGHT / 2;
+            camera.value.x = Math.min(
+                maxCameraX,
+                Math.max(
+                    0,
+                    player.value.x * tileSize - VIEWPORT_WIDTH / 2
+                )
+            );
 
-            if (camera.value.x < 0) {
-                camera.value.x = 0;
-            }
-
-            if (camera.value.y < 0) {
-                camera.value.y = 0;
-            }
+            camera.value.y = Math.min(
+                maxCameraY,
+                Math.max(
+                    0,
+                    player.value.y * tileSize - VIEWPORT_HEIGHT / 2
+                )
+            );
         }
 
         function persistCharacter() {
 
-            saveCharacter(props.characterId, player.value).catch(() => {
+            saveCharacter(
+                props.characterId,
+                {
+                    ...player.value,
+                    gold: gold.value,
+                    inventoryJson: JSON.stringify(inventory.value),
+                    equipmentJson:
+                        player.value.equipmentJson ||
+                        '{"weapon":null,"armor":null,"accessory":null}'
+                }
+            ).catch(() => {
                 console.log('Nao foi possivel guardar o personagem.');
             });
         }
@@ -508,23 +577,46 @@ export default {
 
         function acceptZoneQuests() {
 
+            const zoneQuestIds = activeZone.value.quests || [];
+
             quests.value = quests.value.map(quest => {
 
                 if (
-                    (
-                        currentZoneKey.value !== PLAYER_START_ZONE &&
-                        quest.zone !== currentZoneKey.value
-                    ) ||
-                    quest.status !== 'available'
+                    !zoneQuestIds.includes(quest.id) ||
+                    quest.status === 'inProgress'
                 ) {
                     return quest;
                 }
 
+                const progress =
+                    quest.objectiveType === 'level'
+                        ? Math.min(
+                            Math.max(0, quest.required - 1),
+                            Number(player.value.level) || 1
+                        )
+                        : 0;
+
                 return {
                     ...quest,
-                    status: 'inProgress'
+                    progress,
+                    status: 'inProgress',
+                    rewardClaimed: false
                 };
             });
+
+            quests.value
+                .filter(quest =>
+                    zoneQuestIds.includes(quest.id) &&
+                    quest.objectiveType === 'level' &&
+                    (Number(player.value.level) || 1) >= quest.required
+                )
+                .forEach(quest => {
+                    updateQuestProgress(
+                        quest.objectiveType,
+                        String(quest.required),
+                        1
+                    );
+                });
         }
 
         function confirmNpcAction(npc) {
@@ -578,6 +670,7 @@ export default {
                 if (
                     quest.objectiveType !== objectiveType ||
                     !quest.targetTypes.includes(targetType) ||
+                    quest.status !== 'inProgress' ||
                     quest.status === 'complete' ||
                     quest.rewardClaimed
                 ) {
@@ -611,6 +704,29 @@ export default {
 
             completedQuests.forEach(quest => {
                 grantQuestReward(quest);
+                setTimeout(() => {
+                    resetQuestForRepeat(quest.id);
+                }, QUEST_COMPLETE_DISPLAY_TIME);
+            });
+        }
+
+        function resetQuestForRepeat(questId) {
+
+            quests.value = quests.value.map(quest => {
+
+                if (
+                    quest.id !== questId ||
+                    quest.status !== 'complete'
+                ) {
+                    return quest;
+                }
+
+                return {
+                    ...quest,
+                    progress: 0,
+                    status: 'available',
+                    rewardClaimed: false
+                };
             });
         }
 
@@ -618,8 +734,23 @@ export default {
 
             return quests.value.filter(
                 quest =>
-                    quest.zone === currentZoneKey.value ||
+                    (activeZone.value.quests || []).includes(quest.id) ||
                     quest.status !== 'available'
+            );
+        }
+
+        function getQuestProgressPercent(quest) {
+
+            return Math.max(
+                0,
+                Math.min(
+                    100,
+                    Math.round(
+                        ((Number(quest.progress) || 0) /
+                            (Number(quest.required) || 1)) *
+                            100
+                    )
+                )
             );
         }
 
@@ -637,7 +768,7 @@ export default {
         function getQuestIcon(quest) {
 
             if (quest.status === 'complete') {
-                return questAssets.completed;
+                return questAssets.complete;
             }
 
             if (quest.status === 'inProgress') {
@@ -707,6 +838,7 @@ export default {
         function showQuestNotification(quest, xpReward, goldReward, multiplier) {
 
             questNotification.value = {
+                id: `${quest.id}-${Date.now()}`,
                 title: quest.title,
                 xpReward,
                 goldReward,
@@ -779,6 +911,7 @@ export default {
 
             if (itemId === 'goldCoin') {
                 gold.value += quantity;
+                persistCharacter();
                 return;
             }
 
@@ -788,6 +921,8 @@ export default {
 
             if (existingItem) {
                 existingItem.quantity += quantity;
+                updateQuestProgress('collect', itemId, quantity);
+                persistCharacter();
                 return;
             }
 
@@ -806,9 +941,8 @@ export default {
                 quantity
             });
 
-            if (itemId === 'demonKey') {
-                updateQuestProgress('collect', 'demonKey');
-            }
+            updateQuestProgress('collect', itemId, quantity);
+            persistCharacter();
         }
 
         function addDrops(monster) {
@@ -1208,7 +1342,7 @@ export default {
 
         function getXpRequiredForNextLevel() {
 
-            return (Number(player.value.level) || 1) * 100;
+            return 100 * (2 ** ((Number(player.value.level) || 1) - 1));
         }
 
         function getPlayerXpPercent() {
@@ -2663,7 +2797,7 @@ export default {
             );
 
             if (player.value.hp <= 0) {
-                playerDeath();
+                playerDeath(monster);
             }
         }
 
@@ -2675,10 +2809,21 @@ export default {
             regenerationIntervals.length = 0;
         }
 
-        function playerDeath() {
+        function getSurvivalTimeLabel() {
+
+            const totalSeconds = Math.max(
+                0,
+                Math.floor((Date.now() - gameStartedAt) / 1000)
+            );
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+
+            return `${minutes}m ${seconds}s`;
+        }
+
+        function finishPlayerRespawn() {
 
             // Respawn simples: volta ao ponto inicial com recursos cheios.
-            markPlayerActivity();
             stopAutoCombat();
             clearRegenerationIntervals();
             pressedMovementKeys.clear();
@@ -2695,6 +2840,9 @@ export default {
             player.value.moving = false;
             player.value.direction = 'down';
             player.value.animationFrame = 0;
+            deathScreen.value = null;
+            playerDeathTimeout = null;
+            gameStartedAt = Date.now();
 
             monsters.value.forEach(monster => {
                 monster.lastAttackAt = Date.now();
@@ -2702,6 +2850,29 @@ export default {
 
             updateCamera();
             persistCharacter();
+        }
+
+        function playerDeath(monster = null) {
+
+            if (playerDeathTimeout || deathScreen.value) {
+                return;
+            }
+
+            markPlayerActivity();
+            stopAutoCombat();
+            clearRegenerationIntervals();
+            pressedMovementKeys.clear();
+            clickMovePath = [];
+
+            deathScreen.value = {
+                monsterName: monster?.name || selectedTarget.value?.name || 'Desconhecido',
+                playerLevel: player.value.level,
+                survivalTime: getSurvivalTimeLabel()
+            };
+
+            playerDeathTimeout = setTimeout(() => {
+                finishPlayerRespawn();
+            }, PLAYER_RESPAWN_DELAY);
         }
 
         function startMonsterAI() {
@@ -2957,7 +3128,18 @@ export default {
                 player.value.hp = player.value.maxHp;
                 player.value.mana = player.value.maxMana;
 
-                console.log('Subiste de level!');
+                levelUpEffect.value = {
+                    id: Date.now(),
+                    level: player.value.level
+                };
+                updateQuestProgress(
+                    'level',
+                    String(player.value.level),
+                    player.value.level
+                );
+                setTimeout(() => {
+                    levelUpEffect.value = null;
+                }, 2200);
                 persistCharacter();
             }
         }
@@ -3509,6 +3691,22 @@ export default {
                 lastCombatAt: 0
             };
 
+            gold.value = Number(character.gold) || gold.value;
+
+            if (character.inventoryJson) {
+                try {
+                    const savedInventory = JSON.parse(
+                        character.inventoryJson
+                    );
+
+                    if (Array.isArray(savedInventory)) {
+                        inventory.value = savedInventory;
+                    }
+                } catch (error) {
+                    console.log('Inventario salvo invalido.');
+                }
+            }
+
             loadZoneEntities(
                 getZoneKeyByName(player.value.currentZone)
             );
@@ -3579,6 +3777,10 @@ export default {
                 clearTimeout(questNotificationTimeout);
             }
 
+            if (playerDeathTimeout) {
+                clearTimeout(playerDeathTimeout);
+            }
+
             clearRegenerationIntervals();
 
             monsters.value.forEach(monster => {
@@ -3618,13 +3820,17 @@ export default {
             activeNpc,
             npcResponse,
             questNotification,
+            levelUpEffect,
+            deathScreen,
             dailyQuestState,
             merchantOpen,
             storageOpen,
             zoneBanner,
+            expandedMapOpen,
 
             selectedTarget,
             afkFarmEnabled,
+            afkFarmCooldownRemaining,
 
             floatingTexts,
 
@@ -3669,6 +3875,7 @@ export default {
             getVisibleQuests,
             getQuestStatusLabel,
             getQuestIcon,
+            getQuestProgressPercent,
             getInventoryItem,
             getItemIcon,
             getItemFrame,
@@ -3682,8 +3889,11 @@ export default {
             moveItemFromStorage,
             getMinimapStyle,
             getDailyQuestSummary,
+            getAfkFarmStatusLabel,
+            getGlobalMapZones,
             getBosses,
             getSkillEffectImage,
+            toggleExpandedMap,
             openNpcDialog,
             confirmNpcAction,
             closeNpcDialog,

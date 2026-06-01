@@ -72,7 +72,7 @@ export const ZONES = {
       { type: 'storageChest', x: 9, y: 6 }
     ],
     monsters: [],
-    quests: []
+    quests: ['reachLevel5']
   },
   goblinForest: {
     key: 'goblinForest',
@@ -115,7 +115,13 @@ export const ZONES = {
       { type: 'goblin', x: 16, y: 11 }
     ],
     boss: { type: 'goblinKing', x: 16, y: 3 },
-    quests: ['defeatGoblins', 'defeatGoblinKing', 'speakHealer']
+    quests: [
+      'defeatGoblins',
+      'defeatGoblinArchers',
+      'collectGoblinTotems',
+      'defeatGoblinKing',
+      'speakHealer'
+    ]
   },
   orcCamp: {
     key: 'orcCamp',
@@ -145,6 +151,7 @@ export const ZONES = {
       { x: 18, y: 2, to: 'undeadCrypt', color: 'purple', label: 'Undead Crypt' }
     ],
     npcs: [
+      { type: 'questMaster', x: 4, y: 5 },
       { type: 'blacksmith', x: 5, y: 5 },
       { type: 'trainer', x: 7, y: 6 },
       { type: 'guard', x: 2, y: 2 }
@@ -156,7 +163,12 @@ export const ZONES = {
       { type: 'orc', x: 17, y: 12 }
     ],
     boss: { type: 'orcWarlord', x: 16, y: 3 },
-    quests: []
+    quests: [
+      'defeatOrcs',
+      'defeatOrcBerserkers',
+      'defeatOrcWarlord',
+      'exploreOrcCamp'
+    ]
   },
   elfWoods: {
     key: 'elfWoods',
@@ -226,6 +238,7 @@ export const ZONES = {
       { x: 18, y: 13, to: 'demonGate', color: 'red', label: 'Demon Gate' }
     ],
     npcs: [
+      { type: 'questMaster', x: 4, y: 12 },
       { type: 'guard', x: 3, y: 12 }
     ],
     monsters: [
@@ -235,7 +248,11 @@ export const ZONES = {
       { type: 'skeleton', x: 16, y: 12 }
     ],
     boss: { type: 'lichKing', x: 16, y: 2 },
-    quests: []
+    quests: [
+      'defeatSkeletons',
+      'defeatZombies',
+      'defeatLichKing'
+    ]
   },
   demonGate: {
     key: 'demonGate',
@@ -265,6 +282,7 @@ export const ZONES = {
       { x: 18, y: 13, to: 'undeadCrypt', color: 'purple', label: 'Undead Crypt' }
     ],
     npcs: [
+      { type: 'questMaster', x: 4, y: 12 },
       { type: 'guard', x: 3, y: 12 }
     ],
     monsters: [
@@ -274,7 +292,11 @@ export const ZONES = {
       { type: 'demon', x: 16, y: 12 }
     ],
     boss: { type: 'demonLord', x: 16, y: 2 },
-    quests: ['collectDemonKey', 'exploreDemonGate']
+    quests: [
+      'collectDemonKey',
+      'exploreDemonGate',
+      'defeatDemonLord'
+    ]
   }
 };
 

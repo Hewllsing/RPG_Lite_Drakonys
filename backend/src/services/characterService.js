@@ -17,6 +17,9 @@ function mapCharacter(row) {
     intelligence: row.intelligence,
     dexterity: row.dexterity,
     attributePoints: row.attribute_points,
+    gold: row.gold,
+    inventoryJson: row.inventory_json,
+    equipmentJson: row.equipment_json,
     currentZone: row.current_zone,
     x: row.x,
     y: row.y,
@@ -146,6 +149,9 @@ async function createCharacterForUser(userId, name, characterClass = 'warrior') 
           intelligence,
           dexterity,
           attribute_points,
+          gold,
+          inventory_json,
+          equipment_json,
           current_zone,
           x,
           y
@@ -164,9 +170,12 @@ async function createCharacterForUser(userId, name, characterClass = 'warrior') 
           :intelligence,
           :dexterity,
           0,
-          'Initial City',
-          9,
-          8
+          0,
+          '[]',
+          '{"weapon":null,"armor":null,"accessory":null}',
+          'Goblin Forest',
+          5,
+          5
         )
       `,
       {
@@ -224,6 +233,9 @@ async function updateCharacterByIdForUser(userId, characterId, character) {
     intelligence: normalize(character.intelligence),
     dexterity: normalize(character.dexterity),
     attributePoints: normalize(character.attributePoints),
+    gold: normalize(character.gold),
+    inventoryJson: normalize(character.inventoryJson),
+    equipmentJson: normalize(character.equipmentJson),
     currentZone: normalize(character.currentZone),
     x: normalize(character.x),
     y: normalize(character.y)
@@ -249,6 +261,9 @@ async function updateCharacterByIdForUser(userId, characterId, character) {
           intelligence = COALESCE(:intelligence, intelligence),
           dexterity = COALESCE(:dexterity, dexterity),
           attribute_points = COALESCE(:attributePoints, attribute_points),
+          gold = COALESCE(:gold, gold),
+          inventory_json = COALESCE(:inventoryJson, inventory_json),
+          equipment_json = COALESCE(:equipmentJson, equipment_json),
           current_zone = COALESCE(:currentZone, current_zone),
           x = COALESCE(:x, x),
           y = COALESCE(:y, y)

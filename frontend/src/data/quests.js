@@ -1,20 +1,50 @@
 export const QUEST_DEFINITIONS = {
   defeatGoblins: {
     id: 'defeatGoblins',
-    title: 'Derrotar 5 Goblins',
+    title: 'Caca: Goblins da floresta',
+    type: 'Caca',
     zone: 'goblinForest',
-    description: 'Reduza a patrulha goblin que assombra a floresta.',
+    description: 'Mate 5 goblins que assombram a rota da floresta.',
     objectiveType: 'kill',
-    targetTypes: ['goblin', 'goblinArcher', 'goblinShaman'],
+    targetTypes: ['goblin'],
     required: 5,
     xpReward: 80,
     goldReward: 25,
     reward: '80 XP, 25 gold',
     status: 'available'
   },
+  defeatGoblinArchers: {
+    id: 'defeatGoblinArchers',
+    title: 'Caca: Arqueiros Goblin',
+    type: 'Caca',
+    zone: 'goblinForest',
+    description: 'Elimine 3 Goblin Archers antes que dominem as pontes.',
+    objectiveType: 'kill',
+    targetTypes: ['goblinArcher'],
+    required: 3,
+    xpReward: 90,
+    goldReward: 30,
+    reward: '90 XP, 30 gold',
+    status: 'available'
+  },
+  collectGoblinTotems: {
+    id: 'collectGoblinTotems',
+    title: 'Coleta: Totens Goblin',
+    type: 'Coleta',
+    zone: 'goblinForest',
+    description: 'Colete 1 Goblin Totem dos rituais da floresta.',
+    objectiveType: 'collect',
+    targetTypes: ['goblinTotem'],
+    required: 1,
+    xpReward: 120,
+    goldReward: 45,
+    reward: '120 XP, 45 gold',
+    status: 'available'
+  },
   defeatGoblinKing: {
     id: 'defeatGoblinKing',
-    title: 'Derrotar o Goblin King',
+    title: 'Elite: Goblin King',
+    type: 'Elite',
     zone: 'goblinForest',
     description: 'A coroa podre da floresta precisa cair.',
     objectiveType: 'kill',
@@ -28,7 +58,8 @@ export const QUEST_DEFINITIONS = {
   },
   speakHealer: {
     id: 'speakHealer',
-    title: 'Falar com o Healer',
+    title: 'Exploracao: Falar com o Healer',
+    type: 'Exploracao',
     zone: 'goblinForest',
     description: 'Procure o healer e aprenda onde recuperar recursos.',
     objectiveType: 'talk',
@@ -40,9 +71,122 @@ export const QUEST_DEFINITIONS = {
     reward: '2 potions',
     status: 'available'
   },
+  defeatOrcs: {
+    id: 'defeatOrcs',
+    title: 'Caca: Linha de frente Orc',
+    type: 'Caca',
+    zone: 'orcCamp',
+    description: 'Mate 4 Orcs no acampamento de guerra.',
+    objectiveType: 'kill',
+    targetTypes: ['orc', 'orcWarrior'],
+    required: 4,
+    xpReward: 150,
+    goldReward: 55,
+    reward: '150 XP, 55 gold',
+    status: 'available'
+  },
+  defeatOrcBerserkers: {
+    id: 'defeatOrcBerserkers',
+    title: 'Caca: Berserkers Orc',
+    type: 'Caca',
+    zone: 'orcCamp',
+    description: 'Derrube 2 Orc Berserkers antes do proximo ataque.',
+    objectiveType: 'kill',
+    targetTypes: ['orcBerserker'],
+    required: 2,
+    xpReward: 180,
+    goldReward: 70,
+    reward: '180 XP, 70 gold',
+    status: 'available'
+  },
+  defeatOrcWarlord: {
+    id: 'defeatOrcWarlord',
+    title: 'Elite: Orc Warlord',
+    type: 'Elite',
+    zone: 'orcCamp',
+    description: 'Derrote o chefe que mantem o acampamento unido.',
+    objectiveType: 'kill',
+    targetTypes: ['orcWarlord'],
+    required: 1,
+    xpReward: 300,
+    goldReward: 140,
+    reward: '300 XP, 140 gold',
+    status: 'available'
+  },
+  exploreOrcCamp: {
+    id: 'exploreOrcCamp',
+    title: 'Exploracao: Orc Camp',
+    type: 'Exploracao',
+    zone: 'orcCamp',
+    description: 'Visite o territorio dos orcs e marque uma rota segura.',
+    objectiveType: 'explore',
+    targetTypes: ['orcCamp'],
+    required: 1,
+    xpReward: 90,
+    goldReward: 35,
+    reward: '90 XP, 35 gold',
+    status: 'available'
+  },
+  defeatSkeletons: {
+    id: 'defeatSkeletons',
+    title: 'Caca: Skeletons',
+    type: 'Caca',
+    zone: 'undeadCrypt',
+    description: 'Quebre 4 Skeletons nas galerias antigas.',
+    objectiveType: 'kill',
+    targetTypes: ['skeleton'],
+    required: 4,
+    xpReward: 170,
+    goldReward: 60,
+    reward: '170 XP, 60 gold',
+    status: 'available'
+  },
+  defeatZombies: {
+    id: 'defeatZombies',
+    title: 'Caca: Zombies',
+    type: 'Caca',
+    zone: 'undeadCrypt',
+    description: 'Limpe 3 Zombies antes que alcancem a saida.',
+    objectiveType: 'kill',
+    targetTypes: ['zombie'],
+    required: 3,
+    xpReward: 165,
+    goldReward: 58,
+    reward: '165 XP, 58 gold',
+    status: 'available'
+  },
+  defeatLichKing: {
+    id: 'defeatLichKing',
+    title: 'Elite: Lich King',
+    type: 'Elite',
+    zone: 'undeadCrypt',
+    description: 'Silencie o rei morto da cripta.',
+    objectiveType: 'kill',
+    targetTypes: ['lichKing'],
+    required: 1,
+    xpReward: 480,
+    goldReward: 220,
+    reward: '480 XP, 220 gold',
+    status: 'available'
+  },
+  reachLevel5: {
+    id: 'reachLevel5',
+    title: 'Progressao: Nivel 5',
+    type: 'Progressao',
+    zone: 'starterTown',
+    description: 'Alcance o nivel 5 e prove que esta pronto para contratos maiores.',
+    objectiveType: 'level',
+    targetTypes: ['5'],
+    required: 5,
+    xpReward: 160,
+    goldReward: 80,
+    reward: '160 XP, 80 gold',
+    status: 'available'
+  },
   collectDemonKey: {
     id: 'collectDemonKey',
-    title: 'Recolher Demon Key',
+    title: 'Coleta: Demon Key',
+    type: 'Coleta',
     zone: 'demonGate',
     description: 'Uma chave infernal abre os portoes internos.',
     objectiveType: 'collect',
@@ -55,7 +199,8 @@ export const QUEST_DEFINITIONS = {
   },
   exploreDemonGate: {
     id: 'exploreDemonGate',
-    title: 'Explorar Demon Gate',
+    title: 'Exploracao: Demon Gate',
+    type: 'Exploracao',
     zone: 'demonGate',
     description: 'Atravesse o portal vermelho e sobreviva ao primeiro passo.',
     objectiveType: 'explore',
@@ -65,12 +210,27 @@ export const QUEST_DEFINITIONS = {
     goldReward: 45,
     reward: '120 XP',
     status: 'available'
+  },
+  defeatDemonLord: {
+    id: 'defeatDemonLord',
+    title: 'Elite: Demon Lord',
+    type: 'Elite',
+    zone: 'demonGate',
+    description: 'Derrote o senhor do portal e segure a invasao.',
+    objectiveType: 'kill',
+    targetTypes: ['demonLord'],
+    required: 1,
+    xpReward: 760,
+    goldReward: 400,
+    reward: '760 XP, 400 gold',
+    status: 'available'
   }
 };
 
 export function createQuestState() {
   return Object.values(QUEST_DEFINITIONS).map(quest => ({
     ...quest,
-    progress: 0
+    progress: 0,
+    rewardClaimed: false
   }));
 }

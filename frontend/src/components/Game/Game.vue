@@ -3,15 +3,16 @@
     <section class="game-stage">
       <header class="zone-header">
         <div>
-          <span class="eyebrow">Dark Fantasy RPG</span>
+          <span class="eyebrow">Drakonys RPG Lite</span>
           <h1>{{ getZoneName() }}</h1>
         </div>
         <div class="zone-actions">
           <div
-            v-if="afkFarmEnabled"
             class="afk-farm-badge"
+            :class="{ active: afkFarmEnabled }"
           >
-            AFK Farm
+            <span class="afk-orb"></span>
+            {{ getAfkFarmStatusLabel() }}
           </div>
           <div class="resource-pill">
             <span>Gold</span>
@@ -185,42 +186,6 @@
           </div>
         </div>
       </div>
-
-      <div class="hotbar">
-        <button
-          v-for="skill in skillBar"
-          :key="skill.key"
-          type="button"
-          class="skill-wrapper"
-          :class="{ unavailable: !canPaySkillMana(skill) }"
-          :title="`${skill.name} - MP ${getSkillManaCost(skill)} - ${skill.description || ''}`"
-          @click="useSkill(skill.key.toLowerCase())"
-        >
-          <img
-            :src="skill.icon"
-            class="skill-icon"
-            alt=""
-          />
-          <div
-            v-if="isSkillCoolingDown(skill)"
-            class="skill-cooldown"
-            :style="{ height: getSkillCooldownPercent(skill) + '%' }"
-          ></div>
-          <span
-            v-if="isSkillCoolingDown(skill)"
-            class="skill-cooldown-text"
-          >
-            {{ getSkillCooldownText(skill) }}
-          </span>
-          <span class="skill-key">{{ skill.key }}</span>
-          <span
-            v-if="getSkillManaCost(skill) > 0"
-            class="skill-mana"
-          >
-            {{ getSkillManaCost(skill) }}
-          </span>
-        </button>
-      </div>
     </section>
 
     <aside class="player-ui">
@@ -231,7 +196,7 @@
             <h2>{{ player.name }}</h2>
           </div>
           <div class="level-stack">
-            <span>{{ getClassLabel(player.characterClass) }}</span>
+            <span class="class-glow">{{ getClassLabel(player.characterClass) }}</span>
             <strong class="level-badge">Lv {{ player.level }}</strong>
           </div>
         </div>
@@ -294,7 +259,13 @@
       <section class="ui-panel minimap-panel">
         <div class="panel-title-row">
           <h3>Minimap</h3>
-          <span>{{ getZoneName() }}</span>
+          <button
+            type="button"
+            class="map-expand-button"
+            @click="toggleExpandedMap"
+          >
+            Expandir Mapa
+          </button>
         </div>
         <div class="minimap">
           <img
@@ -420,7 +391,7 @@
         <p class="quest-daily-note">
           As primeiras 10 quests do dia dao 3x XP e gold. Limite diario: 30 quests.
         </p>
-        <div class="quest-list">
+        <div class="quest-list scroll-panel">
           <article
             v-for="quest in getVisibleQuests()"
             :key="quest.id"
@@ -433,8 +404,13 @@
             />
             <div>
               <strong>{{ quest.title }}</strong>
+              <em>{{ quest.type }}</em>
               <p>{{ quest.description }}</p>
               <span>{{ quest.progress }}/{{ quest.required }} - {{ getQuestStatusLabel(quest.status) }}</span>
+              <div class="quest-progress">
+                <div :style="{ width: getQuestProgressPercent(quest) + '%' }"></div>
+              </div>
+              <small>{{ getQuestProgressPercent(quest) }}%</small>
               <small>{{ quest.reward }}</small>
             </div>
           </article>
@@ -446,12 +422,18 @@
           <h3>Skills</h3>
           <span>{{ player.characterClass }}</span>
         </div>
-        <div class="skill-list">
-          <div
+        <div class="skill-list scroll-panel">
+          <button
             v-for="skill in skillBar"
             :key="`skill-info-${skill.id}`"
+            type="button"
             class="skill-info"
+            :class="{
+              unavailable: !canPaySkillMana(skill),
+              cooling: isSkillCoolingDown(skill)
+            }"
             :title="skill.description"
+            @click="useSkill(skill.key.toLowerCase())"
           >
             <img
               :src="skill.icon"
@@ -459,9 +441,14 @@
             />
             <div>
               <strong>{{ skill.name }}</strong>
-              <span>MP {{ getSkillManaCost(skill) }} / {{ skill.key }}</span>
+              <span>Tecla {{ skill.key }} / MP {{ getSkillManaCost(skill) }}</span>
+              <small>Cooldown {{ getSkillCooldownText(skill) }}</small>
+              <p>{{ skill.description || skill.tooltip }}</p>
+              <em>
+                {{ isSkillCoolingDown(skill) ? 'Em cooldown' : canPaySkillMana(skill) ? 'Disponivel' : 'Mana insuficiente' }}
+              </em>
             </div>
-          </div>
+          </button>
         </div>
       </section>
     </aside>
@@ -632,6 +619,62 @@
           / bonus {{ questNotification.multiplier }}x
         </template>
       </small>
+    </div>
+
+    <div
+      v-if="levelUpEffect"
+      class="level-up-effect"
+    >
+      <strong>LEVEL UP!</strong>
+      <span>Nivel {{ levelUpEffect.level }}</span>
+      <i v-for="index in 10" :key="index"></i>
+    </div>
+
+    <div
+      v-if="deathScreen"
+      class="death-screen"
+    >
+      <section>
+        <h2>VOCE MORREU</h2>
+        <p>Monstro responsavel: <strong>{{ deathScreen.monsterName }}</strong></p>
+        <p>Nivel do jogador: <strong>{{ deathScreen.playerLevel }}</strong></p>
+        <p>Tempo de sobrevivencia: <strong>{{ deathScreen.survivalTime }}</strong></p>
+        <small>Retornando para a Safe Zone em 3 segundos...</small>
+      </section>
+    </div>
+
+    <div
+      v-if="expandedMapOpen"
+      class="dialog-backdrop"
+      @click.self="toggleExpandedMap"
+    >
+      <section class="global-map-dialog">
+        <div class="panel-title-row">
+          <div>
+            <span class="eyebrow">Mapa Global</span>
+            <h3>Territorios de Drakonys</h3>
+          </div>
+          <button type="button" @click="toggleExpandedMap">X</button>
+        </div>
+        <div class="global-map-grid">
+          <article
+            v-for="zone in getGlobalMapZones()"
+            :key="zone.key"
+            class="global-zone-card"
+            :class="{ current: currentZoneKey === zone.key, safe: zone.safeZone }"
+          >
+            <img
+              v-if="zone.assets?.minimap"
+              :src="zone.assets.minimap"
+              alt=""
+            />
+            <strong>{{ zone.name }}</strong>
+            <span v-if="currentZoneKey === zone.key">Posicao atual</span>
+            <small>{{ zone.safeZone ? 'Cidade / Safe Zone' : zone.theme }}</small>
+            <em>{{ zone.portals?.length || 0 }} portais</em>
+          </article>
+        </div>
+      </section>
     </div>
   </div>
 </template>

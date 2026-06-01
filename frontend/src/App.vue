@@ -221,7 +221,7 @@
       class="auth-page"
     >
       <section class="auth-panel">
-        <h1>Drakonys</h1>
+        <h1>Drakonys RPG Lite</h1>
 
         <div class="auth-tabs">
           <button

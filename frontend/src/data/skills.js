@@ -9,7 +9,8 @@ export const SKILL_DEFINITIONS = [
     manaCost: 0,
     cooldown: 0,
     range: 1,
-    tooltip: 'Ataque fisico rapido com a arma equipada.'
+    tooltip: 'Ataque fisico rapido com a arma equipada.',
+    description: 'Ataque fisico rapido com a arma equipada.'
   },
   {
     id: 'fireball',
@@ -19,7 +20,8 @@ export const SKILL_DEFINITIONS = [
     manaCost: 18,
     cooldown: 2800,
     range: 5,
-    tooltip: 'Projeta fogo arcano contra o target.'
+    tooltip: 'Projeta fogo arcano contra o target.',
+    description: 'Projeta fogo arcano contra o target.'
   },
   {
     id: 'powerShot',
@@ -29,7 +31,8 @@ export const SKILL_DEFINITIONS = [
     manaCost: 16,
     cooldown: 3600,
     range: 5,
-    tooltip: 'Disparo preciso que escala com destreza.'
+    tooltip: 'Disparo preciso que escala com destreza.',
+    description: 'Disparo preciso que escala com destreza.'
   },
   {
     id: 'heal',
@@ -38,7 +41,8 @@ export const SKILL_DEFINITIONS = [
     name: 'Heal',
     manaCost: 20,
     cooldown: 6000,
-    tooltip: 'Recupera vida imediatamente.'
+    tooltip: 'Recupera vida imediatamente.',
+    description: 'Recupera vida imediatamente.'
   },
   {
     id: 'shadowStep',
@@ -48,7 +52,8 @@ export const SKILL_DEFINITIONS = [
     manaCost: 12,
     cooldown: 4200,
     range: 3,
-    tooltip: 'Avanca nas sombras na direcao atual.'
+    tooltip: 'Avanca nas sombras na direcao atual.',
+    description: 'Avanca nas sombras na direcao atual.'
   },
   {
     id: 'curse',
@@ -58,6 +63,7 @@ export const SKILL_DEFINITIONS = [
     manaCost: 24,
     cooldown: 9000,
     range: 4,
-    tooltip: 'Enfraquece e fere o target com magia sombria.'
+    tooltip: 'Enfraquece e fere o target com magia sombria.',
+    description: 'Enfraquece e fere o target com magia sombria.'
   }
 ];
