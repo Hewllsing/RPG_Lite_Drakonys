@@ -226,6 +226,7 @@ export default {
         const skillEffects = ref([]);
         const combatClock = ref(Date.now());
         const questNotification = ref(null);
+        const questNotificationQueue = ref([]);
         const levelUpEffect = ref(null);
         const deathScreen = ref(null);
         const expandedMapOpen = ref(false);
@@ -319,6 +320,45 @@ export default {
                 : 'AFK pronto';
         }
 
+        function toggleAfkFarmMode() {
+
+            if (afkFarmEnabled.value) {
+                afkFarmEnabled.value = false;
+                stopAutoCombat();
+                createFloatingText(
+                    player.value.x,
+                    player.value.y,
+                    'AFK off',
+                    'miss'
+                );
+                return;
+            }
+
+            if (player.value.hp <= 0 || !hasAliveMonsters()) {
+                createFloatingText(
+                    player.value.x,
+                    player.value.y,
+                    'Sem alvo',
+                    'miss'
+                );
+                return;
+            }
+
+            // O botao permite ativar manualmente, enquanto o timer continua
+            // indicando quando o modo entraria sozinho por inatividade.
+            lastPlayerActivityAt.value = Date.now() - AFK_FARM_DELAY;
+            afkFarmEnabled.value = true;
+            createFloatingText(
+                player.value.x,
+                player.value.y,
+                'AFK Farm',
+                'magic'
+            );
+            startAutoCombat({
+                userAction: false
+            });
+        }
+
         function toggleExpandedMap() {
 
             expandedMapOpen.value = !expandedMapOpen.value;
@@ -331,6 +371,82 @@ export default {
         function getGlobalMapZones() {
 
             return Object.values(ZONES);
+        }
+
+        function getGlobalMapPosition(zone) {
+
+            const positions = {
+                starterTown: { left: '50%', top: '52%' },
+                goblinForest: { left: '30%', top: '38%' },
+                orcCamp: { left: '56%', top: '22%' },
+                elfWoods: { left: '24%', top: '72%' },
+                undeadCrypt: { left: '78%', top: '36%' },
+                demonGate: { left: '70%', top: '76%' }
+            };
+
+            return positions[zone.key] || {
+                left: '50%',
+                top: '50%'
+            };
+        }
+
+        function getGlobalMapNodeStyle(zone) {
+
+            return getGlobalMapPosition(zone);
+        }
+
+        function getGlobalConnectionStyle(fromZone, toZone) {
+
+            const from = getGlobalMapPosition(fromZone);
+            const to = getGlobalMapPosition(toZone);
+            const fromX = Number.parseFloat(from.left);
+            const fromY = Number.parseFloat(from.top);
+            const toX = Number.parseFloat(to.left);
+            const toY = Number.parseFloat(to.top);
+            const deltaX = toX - fromX;
+            const deltaY = toY - fromY;
+            const length = Math.sqrt(deltaX ** 2 + deltaY ** 2);
+            const angle = Math.atan2(deltaY, deltaX) * 180 / Math.PI;
+
+            return {
+                left: `${fromX}%`,
+                top: `${fromY}%`,
+                width: `${length}%`,
+                transform: `rotate(${angle}deg)`
+            };
+        }
+
+        function getGlobalMapConnections() {
+
+            const seen = new Set();
+            const connections = [];
+
+            Object.values(ZONES).forEach(zone => {
+                (zone.portals || []).forEach(portal => {
+                    const target = ZONES[portal.to];
+
+                    if (!target) {
+                        return;
+                    }
+
+                    const key = [zone.key, target.key]
+                        .sort()
+                        .join(':');
+
+                    if (seen.has(key)) {
+                        return;
+                    }
+
+                    seen.add(key);
+                    connections.push({
+                        key,
+                        from: zone,
+                        to: target
+                    });
+                });
+            });
+
+            return connections;
         }
 
         function getSelectedGlobalZone() {
@@ -938,24 +1054,59 @@ export default {
             return `${dailyQuestState.value.completed}/${DAILY_QUEST_LIMIT} hoje - ${getDailyQuestBonusRemaining()} bonus 3x restantes`;
         }
 
-        function showQuestNotification(quest, xpReward, goldReward, multiplier) {
+        function displayNextQuestNotification() {
 
-            questNotification.value = {
-                id: `${quest.id}-${Date.now()}`,
-                title: quest.title,
-                xpReward,
-                goldReward,
-                multiplier
-            };
+            if (
+                questNotification.value ||
+                questNotificationQueue.value.length === 0
+            ) {
+                return;
+            }
+
+            const [nextNotification, ...remainingNotifications] =
+                questNotificationQueue.value;
+
+            questNotification.value = nextNotification;
+            questNotificationQueue.value = remainingNotifications;
 
             if (questNotificationTimeout) {
                 clearTimeout(questNotificationTimeout);
+                questNotificationTimeout = null;
             }
 
             questNotificationTimeout = setTimeout(() => {
                 questNotification.value = null;
                 questNotificationTimeout = null;
+                displayNextQuestNotification();
             }, 3600);
+        }
+
+        function showQuestNotification(quest, xpReward, goldReward, multiplier) {
+
+            const alreadyVisible =
+                questNotification.value?.questId === quest.id;
+            const alreadyQueued =
+                questNotificationQueue.value.some(
+                    notification => notification.questId === quest.id
+                );
+
+            if (alreadyVisible || alreadyQueued) {
+                return;
+            }
+
+            questNotificationQueue.value = [
+                ...questNotificationQueue.value,
+                {
+                id: `${quest.id}-${Date.now()}`,
+                questId: quest.id,
+                title: quest.title,
+                xpReward,
+                goldReward,
+                multiplier
+                }
+            ];
+
+            displayNextQuestNotification();
         }
 
         function grantQuestReward(quest) {
@@ -4083,7 +4234,11 @@ export default {
             getMinimapStyle,
             getDailyQuestSummary,
             getAfkFarmStatusLabel,
+            toggleAfkFarmMode,
             getGlobalMapZones,
+            getGlobalMapNodeStyle,
+            getGlobalConnectionStyle,
+            getGlobalMapConnections,
             getSelectedGlobalZone,
             getGlobalZoneQuestCount,
             getGlobalZoneMonsterCount,

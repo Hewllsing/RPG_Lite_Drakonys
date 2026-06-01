@@ -7,13 +7,15 @@
           <h1>{{ getZoneName() }}</h1>
         </div>
         <div class="zone-actions">
-          <div
+          <button
+            type="button"
             class="afk-farm-badge"
             :class="{ active: afkFarmEnabled }"
+            @click="toggleAfkFarmMode"
           >
             <span class="afk-orb"></span>
             {{ getAfkFarmStatusLabel() }}
-          </div>
+          </button>
           <div class="resource-pill">
             <span>Gold</span>
             <strong>{{ gold }}</strong>
@@ -680,6 +682,33 @@
             <h3>Territorios de Drakonys</h3>
           </div>
           <button type="button" @click="toggleExpandedMap">X</button>
+        </div>
+        <div class="global-map-board">
+          <span
+            v-for="connection in getGlobalMapConnections()"
+            :key="connection.key"
+            class="global-map-line"
+            :class="{ active: currentZoneKey === connection.from.key || currentZoneKey === connection.to.key }"
+            :style="getGlobalConnectionStyle(connection.from, connection.to)"
+          ></span>
+          <button
+            v-for="zone in getGlobalMapZones()"
+            :key="`node-${zone.key}`"
+            type="button"
+            class="global-map-node"
+            :class="{
+              current: currentZoneKey === zone.key,
+              selected: getSelectedGlobalZone().key === zone.key,
+              reachable: canTravelToGlobalZone(zone),
+              safe: zone.safeZone
+            }"
+            :style="getGlobalMapNodeStyle(zone)"
+            @click="selectGlobalZone(zone)"
+          >
+            <span>{{ zone.name }}</span>
+            <small v-if="currentZoneKey === zone.key">Voce esta aqui</small>
+            <small v-else-if="canTravelToGlobalZone(zone)">Portal direto</small>
+          </button>
         </div>
         <div class="global-map-grid">
           <article
