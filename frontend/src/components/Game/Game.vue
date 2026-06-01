@@ -50,25 +50,20 @@
             transform: `translate(-${camera.x}px, -${camera.y}px)`
           }"
         >
-          <template
-            v-for="(row, rowIndex) in gameMap"
-            :key="rowIndex"
-          >
-            <img
-              v-for="(tile, colIndex) in row"
-              :key="`${rowIndex}-${colIndex}`"
-              class="tile"
-              :src="tileImages[tile]"
-              :style="{
-                left: colIndex * tileSize + 'px',
-                top: rowIndex * tileSize + 'px'
-              }"
-              alt=""
-            />
-          </template>
+          <img
+            v-for="tile in visibleTiles"
+            :key="tile.key"
+            class="tile"
+            :src="tileImages[tile.tile]"
+            :style="{
+              left: tile.x * tileSize + 'px',
+              top: tile.y * tileSize + 'px'
+            }"
+            alt=""
+          />
 
           <div
-            v-for="portal in portals"
+            v-for="portal in visiblePortals"
             :key="`${portal.to}-${portal.x}-${portal.y}`"
             class="portal-wrapper"
             :style="{
@@ -85,7 +80,7 @@
           </div>
 
           <div
-            v-for="npc in npcs"
+            v-for="npc in visibleNPCs"
             :key="`${npc.type}-${npc.x}-${npc.y}`"
             class="npc-wrapper"
             :style="{
@@ -135,7 +130,7 @@
           </div>
 
           <div
-            v-for="monster in monsters"
+            v-for="monster in visibleMonsters"
             :key="monster.id"
             class="monster-wrapper"
             :class="{ boss: monster.isBoss, elite: monster.elite, dead: monster.dead }"
@@ -162,7 +157,7 @@
           </div>
 
           <div
-            v-for="text in floatingTexts"
+            v-for="text in visibleFloatingTexts"
             :key="text.id"
             class="floating-text"
             :class="text.kind"
@@ -175,7 +170,7 @@
           </div>
 
           <div
-            v-for="effect in skillEffects"
+            v-for="effect in visibleSkillEffects"
             :key="effect.id"
             class="skill-effect"
             :class="effect.kind"
@@ -284,22 +279,22 @@
             :style="getMinimapStyle(player)"
           ></span>
           <span
-            v-for="npc in npcs"
-            :key="`mini-npc-${npc.type}-${npc.x}`"
+            v-for="marker in minimapNpcMarkers"
+            :key="marker.key"
             class="minimap-marker npc-marker"
-            :style="getMinimapStyle(npc)"
+            :style="marker.style"
           ></span>
           <span
-            v-for="portal in portals"
-            :key="`mini-portal-${portal.to}`"
+            v-for="marker in minimapPortalMarkers"
+            :key="marker.key"
             class="minimap-marker portal-marker"
-            :style="getMinimapStyle(portal)"
+            :style="marker.style"
           ></span>
           <span
-            v-for="boss in getBosses()"
-            :key="`mini-boss-${boss.id}`"
+            v-for="marker in minimapBossMarkers"
+            :key="marker.key"
             class="minimap-marker boss-marker"
-            :style="getMinimapStyle(boss)"
+            :style="marker.style"
           ></span>
           <span
             class="minimap-marker party-marker"

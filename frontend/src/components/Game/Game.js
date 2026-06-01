@@ -45,6 +45,9 @@ const MAP_HEIGHT = 15;
 const TILE_SIZE = 52;
 const VIEWPORT_WIDTH = 1040;
 const VIEWPORT_HEIGHT = 720;
+const CAMERA_RENDER_MARGIN_TILES = 4;
+const ENTITY_RENDER_MARGIN_TILES = 5;
+const MONSTER_ACTIVE_DISTANCE = 14;
 const PLAYER_START_ZONE = 'starterTown';
 const PLAYER_START_POSITION = {
     x: 9,
@@ -289,6 +292,156 @@ export default {
                 cooldowns[skill.id] = 0;
                 return cooldowns;
             }, {})
+        );
+
+        const cameraTileBounds = computed(() => {
+            const viewportWidth =
+                viewportSize.value.width || VIEWPORT_WIDTH;
+            const viewportHeight =
+                viewportSize.value.height || VIEWPORT_HEIGHT;
+            const margin = CAMERA_RENDER_MARGIN_TILES;
+
+            return {
+                startX: Math.max(
+                    0,
+                    Math.floor(camera.value.x / tileSize) - margin
+                ),
+                endX: Math.min(
+                    getMapWidth() - 1,
+                    Math.ceil((camera.value.x + viewportWidth) / tileSize) + margin
+                ),
+                startY: Math.max(
+                    0,
+                    Math.floor(camera.value.y / tileSize) - margin
+                ),
+                endY: Math.min(
+                    getMapHeight() - 1,
+                    Math.ceil((camera.value.y + viewportHeight) / tileSize) + margin
+                )
+            };
+        });
+
+        const entityTileBounds = computed(() => {
+            const bounds = cameraTileBounds.value;
+            const margin =
+                ENTITY_RENDER_MARGIN_TILES -
+                CAMERA_RENDER_MARGIN_TILES;
+
+            return {
+                startX: Math.max(0, bounds.startX - margin),
+                endX: Math.min(getMapWidth() - 1, bounds.endX + margin),
+                startY: Math.max(0, bounds.startY - margin),
+                endY: Math.min(getMapHeight() - 1, bounds.endY + margin)
+            };
+        });
+
+        function isWithinBounds(entity, bounds) {
+
+            return (
+                entity.x >= bounds.startX &&
+                entity.x <= bounds.endX &&
+                entity.y >= bounds.startY &&
+                entity.y <= bounds.endY
+            );
+        }
+
+        const visibleTiles = computed(() => {
+            const bounds = cameraTileBounds.value;
+            const tiles = [];
+
+            for (let y = bounds.startY; y <= bounds.endY; y++) {
+                const row = gameMap.value[y] || [];
+
+                for (let x = bounds.startX; x <= bounds.endX; x++) {
+                    const tile = row[x];
+
+                    if (!tile) {
+                        continue;
+                    }
+
+                    tiles.push({
+                        key: `${y}-${x}`,
+                        tile,
+                        x,
+                        y
+                    });
+                }
+            }
+
+            return tiles;
+        });
+
+        const visibleMonsters = computed(() => {
+            const bounds = entityTileBounds.value;
+
+            return monsters.value.filter(monster =>
+                isWithinBounds(monster, bounds)
+            );
+        });
+
+        const activeMonsters = computed(() =>
+            monsters.value.filter(monster =>
+                !monster.dead &&
+                monster.hp > 0 &&
+                getDistanceToPlayer(monster) <=
+                    Math.max(
+                        MONSTER_ACTIVE_DISTANCE,
+                        (Number(monster.agroRange) || 5) + 4
+                    )
+            )
+        );
+
+        const visibleNPCs = computed(() => {
+            const bounds = entityTileBounds.value;
+
+            return npcs.value.filter(npc =>
+                isWithinBounds(npc, bounds)
+            );
+        });
+
+        const visiblePortals = computed(() => {
+            const bounds = entityTileBounds.value;
+
+            return portals.value.filter(portal =>
+                isWithinBounds(portal, bounds)
+            );
+        });
+
+        const visibleFloatingTexts = computed(() => {
+            const bounds = entityTileBounds.value;
+
+            return floatingTexts.value.filter(text =>
+                isWithinBounds(text, bounds)
+            );
+        });
+
+        const visibleSkillEffects = computed(() => {
+            const bounds = entityTileBounds.value;
+
+            return skillEffects.value.filter(effect =>
+                isWithinBounds(effect, bounds)
+            );
+        });
+
+        const minimapNpcMarkers = computed(() =>
+            npcs.value.map(npc => ({
+                key: `mini-npc-${npc.type}-${npc.x}-${npc.y}`,
+                style: getMinimapStyle(npc)
+            }))
+        );
+
+        const minimapPortalMarkers = computed(() =>
+            portals.value.map(portal => ({
+                key: `mini-portal-${portal.to}-${portal.x}-${portal.y}`,
+                style: getMinimapStyle(portal)
+            }))
+        );
+
+        const minimapBossMarkers = computed(() =>
+            getBosses().map(boss => ({
+                key: `mini-boss-${boss.id}`,
+                style: getMinimapStyle(boss)
+            }))
         );
 
         const afkFarmCooldownRemaining = computed(() => {
@@ -1829,7 +1982,7 @@ export default {
                         Math.max(1, playerWalkFrames.length);
                 }
 
-                monsters.value.forEach(monster => {
+                visibleMonsters.value.forEach(monster => {
 
                     if (!monster.moving) {
                         return;
@@ -2355,7 +2508,7 @@ export default {
 
         function findNearestMonster() {
 
-            return monsters.value
+            return activeMonsters.value
                 .filter(monster => !monster.dead && monster.hp > 0)
                 .sort((first, second) =>
                     getDistanceToTarget(first) -
@@ -3218,7 +3371,7 @@ export default {
 
             monsterAIInterval = setInterval(() => {
 
-                monsters.value.forEach(monster => {
+                activeMonsters.value.forEach(monster => {
 
                     if (monster.hp <= 0) {
                         return;
@@ -4155,6 +4308,16 @@ export default {
             player,
 
             monsters,
+            visibleTiles,
+            visibleMonsters,
+            activeMonsters,
+            visibleNPCs,
+            visiblePortals,
+            visibleFloatingTexts,
+            visibleSkillEffects,
+            minimapNpcMarkers,
+            minimapPortalMarkers,
+            minimapBossMarkers,
             npcs,
             portals,
             quests,
