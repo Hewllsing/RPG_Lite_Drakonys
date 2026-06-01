@@ -101,8 +101,7 @@
             class="player-wrapper"
             :class="{ moving: player.moving }"
             :style="{
-              left: player.x * tileSize + 'px',
-              top: player.y * tileSize + 'px'
+              transform: `translate3d(${player.x * tileSize}px, ${player.y * tileSize}px, 0)`
             }"
             @click.stop
           >

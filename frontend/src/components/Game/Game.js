@@ -54,6 +54,7 @@ const PLAYER_START_POSITION = {
     y: 8
 };
 const PLAYER_MOVE_INTERVAL = 380;
+const PLAYER_MOVEMENT_POLL_INTERVAL = 32;
 const PLAYER_ATTACK_COOLDOWN = 900;
 const MIN_PLAYER_ATTACK_COOLDOWN = 550;
 const AUTO_COMBAT_INTERVAL = 180;
@@ -2488,7 +2489,7 @@ export default {
                 }
 
                 followClickMovePath();
-            }, PLAYER_MOVE_INTERVAL);
+            }, PLAYER_MOVEMENT_POLL_INTERVAL);
         }
 
         function selectTarget(monster, {
