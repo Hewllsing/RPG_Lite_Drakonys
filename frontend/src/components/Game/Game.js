@@ -48,6 +48,7 @@ const VIEWPORT_HEIGHT = 720;
 const CAMERA_RENDER_MARGIN_TILES = 4;
 const ENTITY_RENDER_MARGIN_TILES = 5;
 const MONSTER_ACTIVE_DISTANCE = 14;
+const CHARACTER_PERSIST_DEBOUNCE = 900;
 const PLAYER_START_ZONE = 'starterTown';
 const PLAYER_START_POSITION = {
     x: 9,
@@ -59,7 +60,7 @@ const PLAYER_ATTACK_COOLDOWN = 900;
 const MIN_PLAYER_ATTACK_COOLDOWN = 550;
 const AUTO_COMBAT_INTERVAL = 180;
 const ATTRIBUTE_POINTS_PER_LEVEL = 3;
-const COMBAT_CLOCK_INTERVAL = 80;
+const COMBAT_CLOCK_INTERVAL = 200;
 const AFK_FARM_DELAY = 30000;
 const AFK_FARM_CHECK_INTERVAL = 1000;
 const QUEST_COMPLETE_DISPLAY_TIME = 4200;
@@ -256,6 +257,7 @@ export default {
         let playerAttackInProgress = false;
         let lastPlayerMoveAt = 0;
         let clickMovePath = [];
+        let characterPersistTimeout = null;
         let questNotificationTimeout = null;
         let playerDeathTimeout = null;
         let gameStartedAt = Date.now();
@@ -423,6 +425,21 @@ export default {
                 isWithinBounds(effect, bounds)
             );
         });
+
+        const mapPixelStyle = computed(() => ({
+            width: `${getMapWidth() * tileSize}px`,
+            height: `${getMapHeight() * tileSize}px`,
+            transform:
+                `translate3d(-${camera.value.x}px, -${camera.value.y}px, 0)`
+        }));
+
+        function getEntityPositionStyle(entity) {
+
+            return {
+                transform:
+                    `translate3d(${entity.x * tileSize}px, ${entity.y * tileSize}px, 0)`
+            };
+        }
 
         const minimapNpcMarkers = computed(() =>
             npcs.value.map(npc => ({
@@ -797,21 +814,57 @@ export default {
             updateCamera();
         }
 
-        function persistCharacter() {
+        function getCharacterSavePayload() {
+
+            return {
+                ...player.value,
+                gold: gold.value,
+                inventoryJson: JSON.stringify(inventory.value),
+                equipmentJson:
+                    player.value.equipmentJson ||
+                    '{"weapon":null,"armor":null,"accessory":null}'
+            };
+        }
+
+        function saveCharacterState() {
 
             saveCharacter(
                 props.characterId,
-                {
-                    ...player.value,
-                    gold: gold.value,
-                    inventoryJson: JSON.stringify(inventory.value),
-                    equipmentJson:
-                        player.value.equipmentJson ||
-                        '{"weapon":null,"armor":null,"accessory":null}'
-                }
+                getCharacterSavePayload()
             ).catch(() => {
                 console.log('Nao foi possivel guardar o personagem.');
             });
+        }
+
+        function persistCharacter({
+            immediate = false
+        } = {}) {
+
+            if (characterPersistTimeout) {
+                clearTimeout(characterPersistTimeout);
+                characterPersistTimeout = null;
+            }
+
+            if (immediate) {
+                saveCharacterState();
+                return;
+            }
+
+            characterPersistTimeout = setTimeout(() => {
+                characterPersistTimeout = null;
+                saveCharacterState();
+            }, CHARACTER_PERSIST_DEBOUNCE);
+        }
+
+        function flushCharacterPersist() {
+
+            if (!characterPersistTimeout) {
+                return;
+            }
+
+            clearTimeout(characterPersistTimeout);
+            characterPersistTimeout = null;
+            saveCharacterState();
         }
 
         function getMapWidth() {
@@ -891,7 +944,9 @@ export default {
 
             updateQuestProgress('explore', zone.key);
             updateCamera();
-            persistCharacter();
+            persistCharacter({
+                immediate: true
+            });
 
             setTimeout(() => {
                 zoneBanner.value = null;
@@ -3281,7 +3336,9 @@ export default {
             });
 
             updateCamera();
-            persistCharacter();
+            persistCharacter({
+                immediate: true
+            });
         }
 
         function getBaseAttributeValue(attribute) {
@@ -4267,6 +4324,8 @@ export default {
                 clearTimeout(playerAttackTimeout);
             }
 
+            flushCharacterPersist();
+
             if (npcResponseTimeout) {
                 clearTimeout(npcResponseTimeout);
             }
@@ -4316,6 +4375,7 @@ export default {
             visiblePortals,
             visibleFloatingTexts,
             visibleSkillEffects,
+            mapPixelStyle,
             minimapNpcMarkers,
             minimapPortalMarkers,
             minimapBossMarkers,
@@ -4359,6 +4419,7 @@ export default {
 
             getPlayerSprite,
             getMonsterSprite,
+            getEntityPositionStyle,
             getAvailableAttributePoints,
             getWeaponLabel,
             getClassLabel,

@@ -46,9 +46,7 @@
         <div
           class="game-map"
           @click="handleMapClick"
-          :style="{
-            transform: `translate(-${camera.x}px, -${camera.y}px)`
-          }"
+          :style="mapPixelStyle"
         >
           <img
             v-for="tile in visibleTiles"
@@ -56,8 +54,7 @@
             class="tile"
             :src="tileImages[tile.tile]"
             :style="{
-              left: tile.x * tileSize + 'px',
-              top: tile.y * tileSize + 'px'
+              transform: `translate3d(${tile.x * tileSize}px, ${tile.y * tileSize}px, 0)`
             }"
             alt=""
           />
@@ -66,10 +63,7 @@
             v-for="portal in visiblePortals"
             :key="`${portal.to}-${portal.x}-${portal.y}`"
             class="portal-wrapper"
-            :style="{
-              left: portal.x * tileSize + 'px',
-              top: portal.y * tileSize + 'px'
-            }"
+            :style="getEntityPositionStyle(portal)"
             :title="portal.label"
           >
             <img
@@ -83,10 +77,7 @@
             v-for="npc in visibleNPCs"
             :key="`${npc.type}-${npc.x}-${npc.y}`"
             class="npc-wrapper"
-            :style="{
-              left: npc.x * tileSize + 'px',
-              top: npc.y * tileSize + 'px'
-            }"
+            :style="getEntityPositionStyle(npc)"
             @click.stop="openNpcDialog(npc)"
           >
             <span class="entity-name npc-name">{{ npc.name }}</span>
@@ -100,9 +91,7 @@
           <div
             class="player-wrapper"
             :class="{ moving: player.moving }"
-            :style="{
-              transform: `translate3d(${player.x * tileSize}px, ${player.y * tileSize}px, 0)`
-            }"
+            :style="getEntityPositionStyle(player)"
             @click.stop
           >
             <div class="player-overhead-bars">
@@ -133,10 +122,7 @@
             :key="monster.id"
             class="monster-wrapper"
             :class="{ boss: monster.isBoss, elite: monster.elite, dead: monster.dead }"
-            :style="{
-              left: monster.x * tileSize + 'px',
-              top: monster.y * tileSize + 'px'
-            }"
+            :style="getEntityPositionStyle(monster)"
             @click.stop="selectTarget(monster)"
             @dblclick.stop="engageTarget(monster)"
           >
@@ -160,10 +146,7 @@
             :key="text.id"
             class="floating-text"
             :class="text.kind"
-            :style="{
-              left: text.x * tileSize + 'px',
-              top: text.y * tileSize + 'px'
-            }"
+            :style="getEntityPositionStyle(text)"
           >
             {{ text.text }}
           </div>
@@ -173,10 +156,7 @@
             :key="effect.id"
             class="skill-effect"
             :class="effect.kind"
-            :style="{
-              left: effect.x * tileSize + 'px',
-              top: effect.y * tileSize + 'px'
-            }"
+            :style="getEntityPositionStyle(effect)"
           >
             <img
               v-if="getSkillEffectImage(effect)"
