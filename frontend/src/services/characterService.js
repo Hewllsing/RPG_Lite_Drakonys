@@ -2,8 +2,11 @@ import axios from 'axios';
 import {
   getAuthToken
 } from './authService';
+import {
+  apiUrl
+} from './apiConfig';
 
-const API_URL = 'http://localhost:3000/api/character';
+const API_URL = apiUrl('/api/character');
 
 function getAuthHeaders() {
 

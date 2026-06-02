@@ -169,6 +169,7 @@ async function loginUser({
 }) {
 
   const login = identifier?.trim();
+  const normalizedLogin = login?.toLowerCase();
 
   if (!login || !password) {
     const error = new Error('User/email e password sao obrigatorios.');
@@ -185,11 +186,13 @@ async function loginUser({
         password_hash,
         last_login_at
       FROM users
-      WHERE username = :login OR email = :login
+      -- Login flexivel: aceita user ou email sem depender de maiusculas/minusculas.
+      WHERE LOWER(username) = :normalizedLogin
+        OR LOWER(email) = :normalizedLogin
       LIMIT 1
     `,
     {
-      login
+      normalizedLogin
     }
   );
 

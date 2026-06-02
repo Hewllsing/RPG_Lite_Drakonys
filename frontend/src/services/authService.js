@@ -1,6 +1,9 @@
 import axios from 'axios';
+import {
+  apiUrl
+} from './apiConfig';
 
-const API_URL = 'http://localhost:3000/api/auth';
+const API_URL = apiUrl('/api/auth');
 const SESSION_KEY = 'rpg_lite_session';
 
 export function getStoredSession() {

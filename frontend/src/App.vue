@@ -434,7 +434,7 @@ export default {
       } catch (error) {
         this.error =
           error.response?.data?.message ||
-          'Nao foi possivel autenticar.';
+          'Nao foi possivel contactar o servidor de autenticacao. Confere se o backend esta rodando.';
       } finally {
         this.loading = false;
       }
