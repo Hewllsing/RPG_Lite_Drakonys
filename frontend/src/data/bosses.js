@@ -1,5 +1,5 @@
 export const BOSS_TYPES = {
-  goblinKing: { name: 'Goblin King', spriteKey: 'goblinKing', level: 5, maxHp: 320, damage: 20, xp: 180, gold: 80, attackRange: 1, agroRange: 8, attackCooldown: 1500, drops: ['goldCoin', 'goblinTotem', 'ironSword'] },
+  goblinKing: { name: 'Goblin King', spriteKey: 'goblinKing', level: 5, maxHp: 640, damage: 20, xp: 180, gold: 80, attackRange: 1, agroRange: 8, attackCooldown: 1500, drops: ['goldCoin', 'goblinTotem', 'ironSword'] },
   orcWarlord: { name: 'Orc Warlord', spriteKey: 'orcWarlord', level: 8, maxHp: 520, damage: 30, xp: 300, gold: 140, attackRange: 1, agroRange: 8, attackCooldown: 1500, drops: ['goldCoin', 'ironSword', 'commonChest'] },
   ancientElf: { name: 'Ancient Elf', spriteKey: 'ancientElf', level: 10, maxHp: 460, damage: 36, xp: 360, gold: 160, attackRange: 4, agroRange: 9, attackCooldown: 1900, drops: ['goldCoin', 'crystal', 'bow'] },
   lichKing: { name: 'Lich King', spriteKey: 'lichKing', level: 12, maxHp: 620, damage: 42, xp: 480, gold: 220, attackRange: 4, agroRange: 9, attackCooldown: 2100, drops: ['goldCoin', 'crystal', 'staff'] },
