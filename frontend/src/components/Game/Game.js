@@ -939,6 +939,7 @@ export default {
             zoneBanner.value = {
                 name: zone.name,
                 theme: zone.theme,
+                recommendedLevel: zone.recommendedLevel,
                 image: zone.assets?.banner
             };
 

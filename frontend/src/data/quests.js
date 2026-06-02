@@ -1,4 +1,54 @@
-export const QUEST_DEFINITIONS = {
+const QUEST_REWARD_MULTIPLIERS = {
+  starterTown: 1,
+  goblinForest: 1,
+  orcCamp: 3,
+  elfWoods: 9,
+  undeadCrypt: 27,
+  demonGate: 81
+};
+
+function scaleReward(value, multiplier) {
+  return Math.max(1, Math.round(value * multiplier));
+}
+
+function createRewardText(quest) {
+  const rewards = [];
+
+  if (quest.itemRewards?.length) {
+    rewards.push(
+      quest.itemRewards
+        .map(item => `${item.quantity}x ${item.itemId}`)
+        .join(', ')
+    );
+  }
+
+  if (quest.xpReward) {
+    rewards.push(`${quest.xpReward} XP`);
+  }
+
+  if (quest.goldReward) {
+    rewards.push(`${quest.goldReward} gold`);
+  }
+
+  return rewards.join(', ');
+}
+
+function applyQuestBalance(quest) {
+  const multiplier =
+    QUEST_REWARD_MULTIPLIERS[quest.zone] || 1;
+  const balancedQuest = {
+    ...quest,
+    xpReward: scaleReward(quest.xpReward || 0, multiplier),
+    goldReward: scaleReward(quest.goldReward || 0, multiplier)
+  };
+
+  return {
+    ...balancedQuest,
+    reward: createRewardText(balancedQuest)
+  };
+}
+
+const BASE_QUEST_DEFINITIONS = {
   defeatGoblins: {
     id: 'defeatGoblins',
     title: 'Caca: Goblins da floresta',
@@ -338,6 +388,13 @@ export const QUEST_DEFINITIONS = {
     status: 'available'
   }
 };
+
+export const QUEST_DEFINITIONS = Object.fromEntries(
+  Object.entries(BASE_QUEST_DEFINITIONS).map(([id, quest]) => [
+    id,
+    applyQuestBalance(quest)
+  ])
+);
 
 export function createQuestState() {
   return Object.values(QUEST_DEFINITIONS).map(quest => ({

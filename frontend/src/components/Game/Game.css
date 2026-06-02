@@ -78,6 +78,23 @@
     text-shadow: 0 2px 0 #2a1309;
 }
 
+.zone-level-recommendation,
+.global-map-node em,
+.global-zone-card b,
+.global-map-detail em {
+    display: inline-flex;
+    width: fit-content;
+    margin-top: 5px;
+    padding: 3px 7px;
+    border: 1px solid rgba(201, 163, 78, 0.58);
+    border-radius: 999px;
+    color: #ffe3a1;
+    background: rgba(0, 0, 0, 0.28);
+    font-size: 11px;
+    font-style: normal;
+    font-weight: 900;
+}
+
 .eyebrow {
     display: block;
     margin-bottom: 4px;
@@ -1259,7 +1276,8 @@
 }
 
 .global-map-node span,
-.global-map-node small {
+.global-map-node small,
+.global-map-node em {
     display: block;
 }
 
@@ -1272,6 +1290,11 @@
 .global-map-node small {
     color: #cbb98f;
     font-size: 10px;
+}
+
+.global-map-node em {
+    margin: 4px auto;
+    font-size: 9px;
 }
 
 .global-map-node.current {
@@ -1341,6 +1364,11 @@
     color: #ffe3a1;
 }
 
+.global-zone-card b {
+    margin-top: 0;
+    font-size: 10px;
+}
+
 .global-zone-card span {
     color: #8ff0b2;
     font-weight: 800;
@@ -1364,7 +1392,8 @@
 
 .global-map-detail strong,
 .global-map-detail span,
-.global-map-detail small {
+.global-map-detail small,
+.global-map-detail em {
     display: block;
 }
 
@@ -1376,6 +1405,10 @@
 .global-map-detail small {
     color: #cbb98f;
     font-size: 12px;
+}
+
+.global-map-detail em {
+    margin-top: 5px;
 }
 
 .global-map-detail button {

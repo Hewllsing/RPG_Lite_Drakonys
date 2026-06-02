@@ -1,5 +1,6 @@
 import { mapAssets } from './gameAssets';
 import { MONSTER_TYPES } from './monsters';
+import { BOSS_TYPES } from './bosses';
 
 const W = 'wall';
 const WD = 'wallDungeon';
@@ -47,6 +48,41 @@ const FARM_SPOTS = [
   [12, 34],
   [68, 39]
 ];
+const ZONE_BALANCE = {
+  starterTown: {
+    recommendedLevel: 'Safe Zone'
+  },
+  goblinForest: {
+    recommendedLevel: 'Lv 1-20',
+    statMultiplier: 1,
+    rewardMultiplier: 1,
+    levelBonus: 0
+  },
+  orcCamp: {
+    recommendedLevel: 'Lv 20-40',
+    statMultiplier: 2,
+    rewardMultiplier: 3,
+    levelBonus: 20
+  },
+  elfWoods: {
+    recommendedLevel: 'Lv 40-60',
+    statMultiplier: 4,
+    rewardMultiplier: 9,
+    levelBonus: 40
+  },
+  undeadCrypt: {
+    recommendedLevel: 'Lv 60-80',
+    statMultiplier: 8,
+    rewardMultiplier: 27,
+    levelBonus: 60
+  },
+  demonGate: {
+    recommendedLevel: 'Lv 80-100',
+    statMultiplier: 16,
+    rewardMultiplier: 81,
+    levelBonus: 80
+  }
+};
 
 const GOBLIN_FOREST_WIDTH = LARGE_ZONE_WIDTH;
 const GOBLIN_FOREST_HEIGHT = LARGE_ZONE_HEIGHT;
@@ -122,8 +158,31 @@ function addRouteNetwork(map, tile = R) {
   fillRect(map, 63, 8, 3, 35, tile);
 }
 
-function createEliteMonster(type, x, y) {
+function scaleReward(value, multiplier) {
+  return Math.max(1, Math.round(value * multiplier));
+}
+
+function applyZoneMonsterBalance(monster, balance) {
+  if (!balance) {
+    return monster;
+  }
+
+  return {
+    ...monster,
+    level:
+      (monster.level || MONSTER_TYPES[monster.type]?.level || 1) +
+      (balance.levelBonus || 0),
+    maxHp: scaleReward(monster.maxHp, balance.statMultiplier),
+    damage: scaleReward(monster.damage, balance.statMultiplier),
+    xp: scaleReward(monster.xp, balance.rewardMultiplier),
+    gold: scaleReward(monster.gold, balance.rewardMultiplier)
+  };
+}
+
+function createEliteMonster(type, x, y, balance = ZONE_BALANCE.goblinForest) {
   const template = MONSTER_TYPES[type];
+  const scaledTemplate =
+    applyZoneMonsterBalance(template, balance);
 
   return {
     type,
@@ -131,16 +190,21 @@ function createEliteMonster(type, x, y) {
     y,
     elite: true,
     name: `Elite ${template.name}`,
-    maxHp: Math.round(template.maxHp * 3),
-    damage: Math.round(template.damage * 3),
-    xp: Math.round(template.xp * 3),
-    gold: Math.round(template.gold * 3),
+    level: scaledTemplate.level,
+    maxHp: Math.round(scaledTemplate.maxHp * 3),
+    damage: Math.round(scaledTemplate.damage * 3),
+    xp: Math.round(scaledTemplate.xp * 3),
+    gold: Math.round(scaledTemplate.gold * 3),
     agroRange: Math.max(template.agroRange, 8),
     attackCooldown: Math.max(1200, template.attackCooldown - 250)
   };
 }
 
-function createFarmRouteMonsters(spotTypes, eliteTypes) {
+function createFarmRouteMonsters(
+  spotTypes,
+  eliteTypes,
+  balance = ZONE_BALANCE.goblinForest
+) {
   const offsets = [
     [-2, -1],
     [0, -1],
@@ -149,6 +213,10 @@ function createFarmRouteMonsters(spotTypes, eliteTypes) {
   ];
   const normalMonsters = FARM_SPOTS.flatMap(([spotX, spotY], spotIndex) =>
     spotTypes[spotIndex % spotTypes.length].map((type, index) => ({
+      ...applyZoneMonsterBalance(
+        MONSTER_TYPES[type],
+        balance
+      ),
       type,
       x: spotX + offsets[index][0],
       y: spotY + offsets[index][1]
@@ -158,7 +226,8 @@ function createFarmRouteMonsters(spotTypes, eliteTypes) {
     createEliteMonster(
       eliteTypes[index % eliteTypes.length],
       x,
-      y
+      y,
+      balance
     )
   );
 
@@ -166,6 +235,34 @@ function createFarmRouteMonsters(spotTypes, eliteTypes) {
     ...normalMonsters,
     ...eliteMonsters
   ];
+}
+
+function createBalancedBoss(type, balance, overrides = {}) {
+  const template = BOSS_TYPES[type];
+
+  return {
+    ...template,
+    ...overrides,
+    level:
+      (overrides.level || template.level || 1) +
+      (balance.levelBonus || 0),
+    maxHp: scaleReward(
+      overrides.maxHp || template.maxHp,
+      balance.statMultiplier
+    ),
+    damage: scaleReward(
+      overrides.damage || template.damage,
+      balance.statMultiplier
+    ),
+    xp: scaleReward(
+      overrides.xp || template.xp,
+      balance.rewardMultiplier
+    ),
+    gold: scaleReward(
+      overrides.gold || template.gold,
+      balance.rewardMultiplier
+    )
+  };
 }
 
 function createGoblinForestMap() {
@@ -522,7 +619,8 @@ function createOrcCampMonsters() {
       ['orc', 'orcWarrior', 'orc', 'orcBerserker'],
       ['orcBerserker', 'orcWarrior', 'orc', 'orc']
     ],
-    ['orc', 'orcWarrior', 'orcBerserker']
+    ['orc', 'orcWarrior', 'orcBerserker'],
+    ZONE_BALANCE.orcCamp
   );
 }
 
@@ -538,7 +636,8 @@ function createElfWoodsMonsters() {
       ['elf', 'darkElf', 'elf', 'elfMage'],
       ['elfMage', 'darkElf', 'elf', 'elf']
     ],
-    ['elf', 'darkElf', 'elfMage']
+    ['elf', 'darkElf', 'elfMage'],
+    ZONE_BALANCE.elfWoods
   );
 }
 
@@ -554,7 +653,8 @@ function createUndeadCryptMonsters() {
       ['skeleton', 'zombie', 'skeleton', 'ghost'],
       ['ghost', 'zombie', 'skeleton', 'skeleton']
     ],
-    ['skeleton', 'zombie', 'ghost']
+    ['skeleton', 'zombie', 'ghost'],
+    ZONE_BALANCE.undeadCrypt
   );
 }
 
@@ -570,7 +670,8 @@ function createDemonGateMonsters() {
       ['demon', 'demonKnight', 'demon', 'demonMage'],
       ['demonMage', 'demonKnight', 'demon', 'demon']
     ],
-    ['demon', 'demonKnight', 'demonMage']
+    ['demon', 'demonKnight', 'demonMage'],
+    ZONE_BALANCE.demonGate
   );
 }
 
@@ -579,6 +680,7 @@ export const ZONES = {
     key: 'starterTown',
     name: 'Initial City',
     theme: 'Safe stone refuge',
+    recommendedLevel: ZONE_BALANCE.starterTown.recommendedLevel,
     assets: mapAssets.goblinForest,
     map: [
       [C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C],
@@ -618,6 +720,7 @@ export const ZONES = {
     key: 'goblinForest',
     name: 'Goblin Forest',
     theme: 'Misty greenwood',
+    recommendedLevel: ZONE_BALANCE.goblinForest.recommendedLevel,
     assets: mapAssets.goblinForest,
     map: createGoblinForestMap(),
     playerStart: { x: 39, y: 5 },
@@ -653,6 +756,7 @@ export const ZONES = {
     key: 'orcCamp',
     name: 'Orc Camp',
     theme: 'War tents and scorched dirt',
+    recommendedLevel: ZONE_BALANCE.orcCamp.recommendedLevel,
     assets: mapAssets.orcCamp,
     map: createOrcCampMap(),
     playerStart: { x: 3, y: 22 },
@@ -668,6 +772,7 @@ export const ZONES = {
     ],
     monsters: createOrcCampMonsters(),
     boss: {
+      ...createBalancedBoss('orcWarlord', ZONE_BALANCE.orcCamp),
       type: 'orcWarlord',
       x: 40,
       y: 22,
@@ -686,6 +791,7 @@ export const ZONES = {
     key: 'elfWoods',
     name: 'Elf Woods',
     theme: 'Ancient violet canopy',
+    recommendedLevel: ZONE_BALANCE.elfWoods.recommendedLevel,
     assets: mapAssets.elfWoods,
     map: createElfWoodsMap(),
     playerStart: { x: 3, y: 22 },
@@ -701,6 +807,7 @@ export const ZONES = {
     ],
     monsters: createElfWoodsMonsters(),
     boss: {
+      ...createBalancedBoss('ancientElf', ZONE_BALANCE.elfWoods),
       type: 'ancientElf',
       x: 40,
       y: 22,
@@ -719,6 +826,7 @@ export const ZONES = {
     key: 'undeadCrypt',
     name: 'Undead Crypt',
     theme: 'Stone halls and old bones',
+    recommendedLevel: ZONE_BALANCE.undeadCrypt.recommendedLevel,
     assets: mapAssets.undeadCrypt,
     map: createUndeadCryptMap(),
     playerStart: { x: 3, y: 22 },
@@ -733,6 +841,7 @@ export const ZONES = {
     ],
     monsters: createUndeadCryptMonsters(),
     boss: {
+      ...createBalancedBoss('lichKing', ZONE_BALANCE.undeadCrypt),
       type: 'lichKing',
       x: 40,
       y: 22,
@@ -752,6 +861,7 @@ export const ZONES = {
     key: 'demonGate',
     name: 'Demon Gate',
     theme: 'Ash, lava and infernal stone',
+    recommendedLevel: ZONE_BALANCE.demonGate.recommendedLevel,
     assets: mapAssets.demonGate,
     map: createDemonGateMap(),
     playerStart: { x: 3, y: 38 },
@@ -766,6 +876,7 @@ export const ZONES = {
     ],
     monsters: createDemonGateMonsters(),
     boss: {
+      ...createBalancedBoss('demonLord', ZONE_BALANCE.demonGate),
       type: 'demonLord',
       x: 40,
       y: 22,

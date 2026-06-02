@@ -5,6 +5,9 @@
         <div>
           <span class="eyebrow">Drakonys RPG Lite</span>
           <h1>{{ getZoneName() }}</h1>
+          <small class="zone-level-recommendation">
+            Recomendado: {{ activeZone.recommendedLevel }}
+          </small>
         </div>
         <div class="zone-actions">
           <button
@@ -40,6 +43,7 @@
             <span>Entrando em</span>
             <strong>{{ zoneBanner.name }}</strong>
             <small>{{ zoneBanner.theme }}</small>
+            <small>{{ zoneBanner.recommendedLevel }}</small>
           </div>
         </div>
 
@@ -680,6 +684,7 @@
             @click="selectGlobalZone(zone)"
           >
             <span>{{ zone.name }}</span>
+            <em>{{ zone.recommendedLevel }}</em>
             <small v-if="currentZoneKey === zone.key">Voce esta aqui</small>
             <small v-else-if="canTravelToGlobalZone(zone)">Portal direto</small>
           </button>
@@ -703,6 +708,7 @@
               alt=""
             />
             <strong>{{ zone.name }}</strong>
+            <b>{{ zone.recommendedLevel }}</b>
             <span v-if="currentZoneKey === zone.key">Posicao atual</span>
             <span v-else-if="canTravelToGlobalZone(zone)">Portal conectado</span>
             <small>{{ zone.safeZone ? 'Cidade / Safe Zone' : zone.theme }}</small>
@@ -713,6 +719,7 @@
           <div>
             <strong>{{ getSelectedGlobalZone().name }}</strong>
             <span>{{ getSelectedGlobalZone().theme }}</span>
+            <em>{{ getSelectedGlobalZone().recommendedLevel }}</em>
             <small>
               {{ getGlobalZoneMonsterCount(getSelectedGlobalZone()) }} criaturas /
               {{ getGlobalZoneQuestCount(getSelectedGlobalZone()) }} quests
