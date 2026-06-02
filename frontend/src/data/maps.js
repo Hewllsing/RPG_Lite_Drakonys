@@ -1,4 +1,5 @@
 import { mapAssets } from './gameAssets';
+import { MONSTER_TYPES } from './monsters';
 
 const W = 'wall';
 const WD = 'wallDungeon';
@@ -34,8 +35,21 @@ export const BLOCKED_TILES = [
   'lava'
 ];
 
-const GOBLIN_FOREST_WIDTH = 80;
-const GOBLIN_FOREST_HEIGHT = 45;
+const LARGE_ZONE_WIDTH = 80;
+const LARGE_ZONE_HEIGHT = 45;
+const FARM_SPOTS = [
+  [12, 8],
+  [32, 10],
+  [62, 9],
+  [48, 26],
+  [22, 31],
+  [59, 34],
+  [12, 34],
+  [68, 39]
+];
+
+const GOBLIN_FOREST_WIDTH = LARGE_ZONE_WIDTH;
+const GOBLIN_FOREST_HEIGHT = LARGE_ZONE_HEIGHT;
 
 function createFilledMap(width, height, tile) {
   return Array.from({ length: height }, () =>
@@ -64,8 +78,94 @@ function fillRect(map, startX, startY, width, height, tile) {
   }
 }
 
-function clearFarmSpot(map, centerX, centerY) {
-  fillRect(map, centerX - 3, centerY - 2, 7, 5, G);
+function clearFarmSpot(map, centerX, centerY, tile = G) {
+  fillRect(map, centerX - 3, centerY - 2, 7, 5, tile);
+}
+
+function clearFarmSpots(map, tile) {
+  FARM_SPOTS.forEach(([x, y]) =>
+    clearFarmSpot(map, x, y, tile)
+  );
+}
+
+function createBorder(map, width, height, tile) {
+  fillRect(map, 0, 0, width, 1, tile);
+  fillRect(map, 0, height - 1, width, 1, tile);
+  fillRect(map, 0, 0, 1, height, tile);
+  fillRect(map, width - 1, 0, 1, height, tile);
+}
+
+function isFarmSpotArea(x, y) {
+  return FARM_SPOTS.some(([spotX, spotY]) =>
+    Math.abs(x - spotX) <= 4 &&
+    Math.abs(y - spotY) <= 3
+  );
+}
+
+function isMainRouteArea(x, y) {
+  return (
+    (x >= 36 && x <= 43) ||
+    (y >= 20 && y <= 26) ||
+    (x >= 7 && x <= 11 && y >= 24) ||
+    (x >= 62 && x <= 66 && y >= 8)
+  );
+}
+
+function canDecorate(x, y) {
+  return !isMainRouteArea(x, y) && !isFarmSpotArea(x, y);
+}
+
+function addRouteNetwork(map, tile = R) {
+  fillRect(map, 38, 1, 4, 43, tile);
+  fillRect(map, 1, 22, 78, 3, tile);
+  fillRect(map, 8, 24, 3, 19, tile);
+  fillRect(map, 63, 8, 3, 35, tile);
+}
+
+function createEliteMonster(type, x, y) {
+  const template = MONSTER_TYPES[type];
+
+  return {
+    type,
+    x,
+    y,
+    elite: true,
+    name: `Elite ${template.name}`,
+    maxHp: Math.round(template.maxHp * 3),
+    damage: Math.round(template.damage * 3),
+    xp: Math.round(template.xp * 3),
+    gold: Math.round(template.gold * 3),
+    agroRange: Math.max(template.agroRange, 8),
+    attackCooldown: Math.max(1200, template.attackCooldown - 250)
+  };
+}
+
+function createFarmRouteMonsters(spotTypes, eliteTypes) {
+  const offsets = [
+    [-2, -1],
+    [0, -1],
+    [2, 0],
+    [-1, 2]
+  ];
+  const normalMonsters = FARM_SPOTS.flatMap(([spotX, spotY], spotIndex) =>
+    spotTypes[spotIndex % spotTypes.length].map((type, index) => ({
+      type,
+      x: spotX + offsets[index][0],
+      y: spotY + offsets[index][1]
+    }))
+  );
+  const eliteMonsters = FARM_SPOTS.map(([x, y], index) =>
+    createEliteMonster(
+      eliteTypes[index % eliteTypes.length],
+      x,
+      y
+    )
+  );
+
+  return [
+    ...normalMonsters,
+    ...eliteMonsters
+  ];
 }
 
 function createGoblinForestMap() {
@@ -93,7 +193,7 @@ function createGoblinForestMap() {
   }
   fillRect(map, 27, 12, 31, 4, WA);
   fillRect(map, 38, 12, 4, 4, BR);
-  fillRect(map, 24, 22, 5, 3, BR);
+  fillRect(map, 19, 22, 6, 3, BR);
   fillRect(map, 8, 37, 3, 3, BR);
 
   // Ruinas e paredes pequenas para quebrar linha de visao e navegação.
@@ -232,6 +332,248 @@ function createGoblinForestMonsters() {
   ];
 }
 
+function createOrcCampMap() {
+  const map = createFilledMap(
+    LARGE_ZONE_WIDTH,
+    LARGE_ZONE_HEIGHT,
+    D
+  );
+
+  createBorder(map, LARGE_ZONE_WIDTH, LARGE_ZONE_HEIGHT, C);
+  addRouteNetwork(map, R);
+
+  // Acampamentos e paliçadas criam spots fechados sem bloquear as rotas.
+  [
+    [9, 5],
+    [29, 7],
+    [59, 6],
+    [45, 23],
+    [19, 28],
+    [56, 31],
+    [9, 31],
+    [65, 36]
+  ].forEach(([x, y]) => {
+    fillRect(map, x, y, 7, 4, WO);
+    fillRect(map, x, y, 7, 1, C);
+    fillRect(map, x, y + 3, 7, 1, C);
+  });
+
+  for (let y = 4; y < LARGE_ZONE_HEIGHT - 4; y += 4) {
+    for (let x = 5; x < LARGE_ZONE_WIDTH - 5; x += 6) {
+      if (!canDecorate(x, y)) {
+        continue;
+      }
+
+      setTile(
+        map,
+        x,
+        y,
+        (x + y) % 5 === 0 ? C : K
+      );
+    }
+  }
+
+  clearFarmSpots(map, D);
+  setTile(map, 1, 22, OUT);
+  setTile(map, 78, 6, OUT);
+
+  return map;
+}
+
+function createElfWoodsMap() {
+  const map = createFilledMap(
+    LARGE_ZONE_WIDTH,
+    LARGE_ZONE_HEIGHT,
+    DG
+  );
+
+  createBorder(map, LARGE_ZONE_WIDTH, LARGE_ZONE_HEIGHT, W);
+  addRouteNetwork(map, R);
+
+  for (let y = 5; y <= 38; y++) {
+    const curve = Math.floor(Math.sin(y / 5) * 4);
+    fillRect(map, 23 + curve, y, 4, 1, P);
+  }
+  fillRect(map, 28, 12, 28, 3, P);
+  fillRect(map, 38, 12, 4, 3, BR);
+  fillRect(map, 19, 22, 7, 3, BR);
+  fillRect(map, 63, 33, 3, 5, BR);
+
+  for (let y = 3; y < LARGE_ZONE_HEIGHT - 3; y += 4) {
+    for (let x = 4; x < LARGE_ZONE_WIDTH - 4; x += 5) {
+      if (!canDecorate(x, y)) {
+        continue;
+      }
+
+      const tile = (x + y) % 9 === 0
+        ? K
+        : (x + y) % 4 === 0
+          ? B
+          : T;
+
+      setTile(map, x, y, tile);
+    }
+  }
+
+  clearFarmSpots(map, DG);
+  setTile(map, 1, 22, OUT);
+  setTile(map, 78, 38, OUT);
+
+  return map;
+}
+
+function createUndeadCryptMap() {
+  const map = createFilledMap(
+    LARGE_ZONE_WIDTH,
+    LARGE_ZONE_HEIGHT,
+    S
+  );
+
+  createBorder(map, LARGE_ZONE_WIDTH, LARGE_ZONE_HEIGHT, WD);
+  addRouteNetwork(map, S);
+
+  for (let y = 5; y < LARGE_ZONE_HEIGHT - 5; y += 6) {
+    fillRect(map, 5, y, 21, 1, WD);
+    fillRect(map, 32, y + 2, 19, 1, WD);
+    fillRect(map, 57, y, 17, 1, WD);
+
+    setTile(map, 12, y, S);
+    setTile(map, 40, y + 2, S);
+    setTile(map, 64, y, S);
+  }
+
+  for (let x = 14; x < LARGE_ZONE_WIDTH - 10; x += 12) {
+    fillRect(map, x, 6, 1, 11, WD);
+    fillRect(map, x, 28, 1, 10, WD);
+    setTile(map, x, 22, S);
+    setTile(map, x, 34, S);
+  }
+
+  [
+    [54, 30, 10, 1],
+    [54, 30, 1, 7],
+    [63, 30, 1, 7],
+    [12, 27, 8, 1],
+    [12, 27, 1, 6],
+    [19, 27, 1, 6]
+  ].forEach(([x, y, width, height]) =>
+    fillRect(map, x, y, width, height, WD)
+  );
+
+  clearFarmSpots(map, S);
+  setTile(map, 1, 22, OUT);
+  setTile(map, 78, 22, IN);
+
+  return map;
+}
+
+function createDemonGateMap() {
+  const map = createFilledMap(
+    LARGE_ZONE_WIDTH,
+    LARGE_ZONE_HEIGHT,
+    S
+  );
+
+  createBorder(map, LARGE_ZONE_WIDTH, LARGE_ZONE_HEIGHT, WD);
+  addRouteNetwork(map, S);
+
+  for (let y = 4; y <= 39; y++) {
+    const curve = Math.floor(Math.sin(y / 4) * 3);
+    fillRect(map, 21 + curve, y, 5, 1, L);
+    fillRect(map, 55 - curve, y, 4, 1, L);
+  }
+  fillRect(map, 27, 13, 29, 4, L);
+  fillRect(map, 37, 13, 5, 4, BR);
+  fillRect(map, 19, 22, 7, 3, BR);
+  fillRect(map, 55, 22, 7, 3, BR);
+  fillRect(map, 63, 36, 3, 5, BR);
+
+  for (let y = 4; y < LARGE_ZONE_HEIGHT - 4; y += 5) {
+    for (let x = 5; x < LARGE_ZONE_WIDTH - 5; x += 6) {
+      if (!canDecorate(x, y)) {
+        continue;
+      }
+
+      setTile(
+        map,
+        x,
+        y,
+        (x + y) % 6 === 0 ? L : WD
+      );
+    }
+  }
+
+  clearFarmSpots(map, S);
+  setTile(map, 1, 38, OUT);
+  setTile(map, 78, 22, IN);
+
+  return map;
+}
+
+function createOrcCampMonsters() {
+  return createFarmRouteMonsters(
+    [
+      ['orc', 'orc', 'orcWarrior', 'orcBerserker'],
+      ['orcWarrior', 'orc', 'orc', 'orcBerserker'],
+      ['orc', 'orcWarrior', 'orcBerserker', 'orc'],
+      ['orcBerserker', 'orc', 'orcWarrior', 'orc'],
+      ['orc', 'orc', 'orcWarrior', 'orcBerserker'],
+      ['orcWarrior', 'orcBerserker', 'orc', 'orc'],
+      ['orc', 'orcWarrior', 'orc', 'orcBerserker'],
+      ['orcBerserker', 'orcWarrior', 'orc', 'orc']
+    ],
+    ['orc', 'orcWarrior', 'orcBerserker']
+  );
+}
+
+function createElfWoodsMonsters() {
+  return createFarmRouteMonsters(
+    [
+      ['elf', 'elf', 'darkElf', 'elfMage'],
+      ['darkElf', 'elf', 'elf', 'elfMage'],
+      ['elf', 'darkElf', 'elfMage', 'elf'],
+      ['elfMage', 'elf', 'darkElf', 'elf'],
+      ['elf', 'elf', 'darkElf', 'elfMage'],
+      ['darkElf', 'elfMage', 'elf', 'elf'],
+      ['elf', 'darkElf', 'elf', 'elfMage'],
+      ['elfMage', 'darkElf', 'elf', 'elf']
+    ],
+    ['elf', 'darkElf', 'elfMage']
+  );
+}
+
+function createUndeadCryptMonsters() {
+  return createFarmRouteMonsters(
+    [
+      ['skeleton', 'skeleton', 'zombie', 'ghost'],
+      ['zombie', 'skeleton', 'skeleton', 'ghost'],
+      ['skeleton', 'zombie', 'ghost', 'skeleton'],
+      ['ghost', 'skeleton', 'zombie', 'skeleton'],
+      ['skeleton', 'skeleton', 'zombie', 'ghost'],
+      ['zombie', 'ghost', 'skeleton', 'skeleton'],
+      ['skeleton', 'zombie', 'skeleton', 'ghost'],
+      ['ghost', 'zombie', 'skeleton', 'skeleton']
+    ],
+    ['skeleton', 'zombie', 'ghost']
+  );
+}
+
+function createDemonGateMonsters() {
+  return createFarmRouteMonsters(
+    [
+      ['demon', 'demon', 'demonKnight', 'demonMage'],
+      ['demonKnight', 'demon', 'demon', 'demonMage'],
+      ['demon', 'demonKnight', 'demonMage', 'demon'],
+      ['demonMage', 'demon', 'demonKnight', 'demon'],
+      ['demon', 'demon', 'demonKnight', 'demonMage'],
+      ['demonKnight', 'demonMage', 'demon', 'demon'],
+      ['demon', 'demonKnight', 'demon', 'demonMage'],
+      ['demonMage', 'demonKnight', 'demon', 'demon']
+    ],
+    ['demon', 'demonKnight', 'demonMage']
+  );
+}
+
 export const ZONES = {
   starterTown: {
     key: 'starterTown',
@@ -312,41 +654,27 @@ export const ZONES = {
     name: 'Orc Camp',
     theme: 'War tents and scorched dirt',
     assets: mapAssets.orcCamp,
-    map: [
-      [C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C],
-      [C,D,D,D,K,D,D,R,R,R,D,D,K,D,D,D,D,D,D,C],
-      [C,D,WO,WO,D,D,D,R,R,R,D,D,D,D,WO,WO,D,D,D,C],
-      [C,D,WO,WO,D,K,D,R,R,R,D,K,D,D,WO,WO,D,K,D,C],
-      [C,D,D,D,D,D,D,R,R,R,D,D,D,D,D,D,D,D,D,C],
-      [C,D,K,D,D,WO,D,D,D,D,D,WO,D,D,K,D,D,D,D,C],
-      [C,D,D,D,D,WO,D,K,D,D,D,WO,D,D,D,D,D,K,D,C],
-      [C,D,D,R,R,R,R,R,R,R,R,R,R,R,R,D,D,D,D,C],
-      [C,D,K,D,D,D,D,D,D,K,D,D,D,D,R,D,K,D,D,C],
-      [C,D,D,D,WO,WO,D,D,D,D,D,WO,WO,D,R,D,D,D,D,C],
-      [C,D,D,D,WO,WO,D,K,D,D,D,WO,WO,D,R,D,K,D,D,C],
-      [C,D,K,D,D,D,D,D,D,D,D,D,D,D,R,D,D,D,D,C],
-      [C,D,D,D,K,D,D,D,D,K,D,D,D,D,R,R,R,R,D,C],
-      [C,D,D,D,D,D,D,D,D,D,D,D,K,D,D,D,D,D,D,C],
-      [C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C]
-    ],
-    playerStart: { x: 2, y: 12 },
+    map: createOrcCampMap(),
+    playerStart: { x: 3, y: 22 },
     portals: [
-      { x: 1, y: 12, to: 'goblinForest', color: 'blue', label: 'Goblin Forest' },
-      { x: 18, y: 2, to: 'undeadCrypt', color: 'purple', label: 'Undead Crypt' }
+      { x: 1, y: 22, to: 'goblinForest', color: 'blue', label: 'Goblin Forest' },
+      { x: 78, y: 6, to: 'undeadCrypt', color: 'purple', label: 'Undead Crypt' }
     ],
     npcs: [
-      { type: 'questMaster', x: 4, y: 5 },
-      { type: 'blacksmith', x: 5, y: 5 },
-      { type: 'trainer', x: 7, y: 6 },
-      { type: 'guard', x: 2, y: 2 }
+      { type: 'questMaster', x: 6, y: 18 },
+      { type: 'blacksmith', x: 8, y: 18 },
+      { type: 'trainer', x: 6, y: 20 },
+      { type: 'guard', x: 10, y: 20 }
     ],
-    monsters: [
-      { type: 'orc', x: 11, y: 4 },
-      { type: 'orcWarrior', x: 14, y: 7 },
-      { type: 'orcBerserker', x: 12, y: 10 },
-      { type: 'orc', x: 17, y: 12 }
-    ],
-    boss: { type: 'orcWarlord', x: 16, y: 3 },
+    monsters: createOrcCampMonsters(),
+    boss: {
+      type: 'orcWarlord',
+      x: 40,
+      y: 22,
+      name: 'Orc Warlord',
+      visualScale: 1.42,
+      aura: 'boss-large'
+    },
     quests: [
       'defeatOrcs',
       'defeatOrcBerserkers',
@@ -359,39 +687,27 @@ export const ZONES = {
     name: 'Elf Woods',
     theme: 'Ancient violet canopy',
     assets: mapAssets.elfWoods,
-    map: [
-      [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
-      [W,DG,DG,DG,T,DG,DG,R,R,R,DG,DG,T,DG,DG,DG,DG,DG,DG,W],
-      [W,DG,T,DG,T,DG,K,R,R,R,DG,K,T,DG,DG,T,DG,DG,DG,W],
-      [W,DG,DG,DG,DG,DG,DG,R,R,R,DG,DG,DG,DG,DG,T,DG,K,DG,W],
-      [W,DG,DG,K,T,DG,DG,R,R,R,DG,DG,T,T,DG,DG,DG,DG,DG,W],
-      [W,DG,DG,DG,T,DG,P,BR,BR,BR,P,DG,DG,DG,DG,K,DG,DG,DG,W],
-      [W,DG,T,DG,DG,DG,P,P,P,BR,P,DG,K,DG,T,DG,DG,DG,DG,W],
-      [W,DG,DG,DG,T,DG,DG,R,R,R,DG,DG,DG,DG,T,DG,DG,T,DG,W],
-      [W,DG,K,DG,DG,DG,DG,R,R,R,DG,DG,K,DG,DG,DG,DG,DG,DG,W],
-      [W,DG,DG,DG,T,T,DG,R,R,R,DG,DG,T,T,DG,DG,K,DG,DG,W],
-      [W,DG,DG,DG,DG,DG,DG,R,R,R,DG,DG,DG,DG,DG,DG,DG,DG,DG,W],
-      [W,DG,T,DG,K,DG,DG,R,R,R,DG,DG,DG,K,DG,DG,T,DG,DG,W],
-      [W,DG,DG,DG,DG,DG,DG,R,R,R,DG,DG,DG,DG,DG,DG,DG,DG,DG,W],
-      [W,DG,DG,T,DG,DG,DG,R,R,R,DG,DG,DG,DG,T,DG,DG,DG,DG,W],
-      [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W]
-    ],
-    playerStart: { x: 3, y: 12 },
+    map: createElfWoodsMap(),
+    playerStart: { x: 3, y: 22 },
     portals: [
-      { x: 1, y: 13, to: 'goblinForest', color: 'purple', label: 'Goblin Forest' },
-      { x: 18, y: 13, to: 'demonGate', color: 'red', label: 'Demon Gate' }
+      { x: 1, y: 22, to: 'goblinForest', color: 'purple', label: 'Goblin Forest' },
+      { x: 78, y: 38, to: 'demonGate', color: 'red', label: 'Demon Gate' }
     ],
     npcs: [
-      { type: 'healer', x: 5, y: 4 },
-      { type: 'questMaster', x: 7, y: 4 }
+      { type: 'healer', x: 6, y: 18 },
+      { type: 'questMaster', x: 8, y: 18 },
+      { type: 'trainer', x: 6, y: 20 },
+      { type: 'guard', x: 10, y: 20 }
     ],
-    monsters: [
-      { type: 'elf', x: 12, y: 3 },
-      { type: 'darkElf', x: 15, y: 7 },
-      { type: 'elfMage', x: 13, y: 10 },
-      { type: 'darkElf', x: 17, y: 11 }
-    ],
-    boss: { type: 'ancientElf', x: 16, y: 4 },
+    monsters: createElfWoodsMonsters(),
+    boss: {
+      type: 'ancientElf',
+      x: 40,
+      y: 22,
+      name: 'Ancient Elf',
+      visualScale: 1.42,
+      aura: 'boss-large'
+    },
     quests: [
       'defeatElves',
       'defeatElfMages',
@@ -404,39 +720,26 @@ export const ZONES = {
     name: 'Undead Crypt',
     theme: 'Stone halls and old bones',
     assets: mapAssets.undeadCrypt,
-    map: [
-      [WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD],
-      [WD,S,S,S,S,S,S,S,S,S,S,S,S,S,S,S,S,S,S,WD],
-      [WD,S,WD,WD,S,WD,WD,S,WD,WD,S,WD,WD,S,WD,WD,S,WD,S,WD],
-      [WD,S,S,S,S,S,S,S,S,S,S,S,S,S,S,S,S,WD,S,WD],
-      [WD,S,WD,S,WD,WD,S,WD,WD,S,WD,WD,S,WD,WD,S,S,WD,S,WD],
-      [WD,S,WD,S,S,S,S,S,S,S,S,S,S,S,S,S,WD,WD,S,WD],
-      [WD,S,WD,WD,WD,S,WD,WD,S,WD,WD,S,WD,WD,S,S,S,S,S,WD],
-      [WD,S,S,S,S,S,S,S,S,S,S,S,S,S,S,WD,WD,WD,S,WD],
-      [WD,S,WD,WD,S,WD,WD,S,WD,WD,S,WD,WD,S,S,S,S,S,S,WD],
-      [WD,S,S,S,S,S,S,S,S,S,S,S,S,S,WD,WD,S,WD,S,WD],
-      [WD,S,WD,S,WD,WD,S,WD,WD,S,WD,WD,S,S,S,S,S,WD,S,WD],
-      [WD,S,WD,S,S,S,S,S,S,S,S,S,S,WD,WD,S,S,WD,S,WD],
-      [WD,S,S,S,WD,WD,S,WD,WD,S,WD,WD,S,S,S,S,S,S,S,WD],
-      [WD,OUT,S,S,S,S,S,S,S,S,S,S,S,S,S,S,S,S,IN,WD],
-      [WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD]
-    ],
-    playerStart: { x: 2, y: 13 },
+    map: createUndeadCryptMap(),
+    playerStart: { x: 3, y: 22 },
     portals: [
-      { x: 1, y: 13, to: 'orcCamp', color: 'purple', label: 'Orc Camp' },
-      { x: 18, y: 13, to: 'demonGate', color: 'red', label: 'Demon Gate' }
+      { x: 1, y: 22, to: 'orcCamp', color: 'purple', label: 'Orc Camp' },
+      { x: 78, y: 22, to: 'demonGate', color: 'red', label: 'Demon Gate' }
     ],
     npcs: [
-      { type: 'questMaster', x: 4, y: 12 },
-      { type: 'guard', x: 3, y: 12 }
+      { type: 'questMaster', x: 6, y: 20 },
+      { type: 'guard', x: 8, y: 20 },
+      { type: 'healer', x: 6, y: 24 }
     ],
-    monsters: [
-      { type: 'skeleton', x: 8, y: 3 },
-      { type: 'zombie', x: 13, y: 6 },
-      { type: 'ghost', x: 11, y: 10 },
-      { type: 'skeleton', x: 16, y: 12 }
-    ],
-    boss: { type: 'lichKing', x: 16, y: 2 },
+    monsters: createUndeadCryptMonsters(),
+    boss: {
+      type: 'lichKing',
+      x: 40,
+      y: 22,
+      name: 'Lich King',
+      visualScale: 1.42,
+      aura: 'boss-large'
+    },
     quests: [
       'defeatSkeletons',
       'defeatZombies',
@@ -450,39 +753,26 @@ export const ZONES = {
     name: 'Demon Gate',
     theme: 'Ash, lava and infernal stone',
     assets: mapAssets.demonGate,
-    map: [
-      [WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD],
-      [WD,S,S,S,L,L,S,S,S,S,S,S,L,L,S,S,S,S,S,WD],
-      [WD,S,WD,S,L,S,S,WD,WD,S,WD,S,S,L,S,WD,WD,S,S,WD],
-      [WD,S,S,S,L,S,S,S,S,S,S,S,S,L,S,S,S,S,S,WD],
-      [WD,S,WD,S,L,L,S,WD,WD,S,WD,S,L,L,S,WD,S,WD,S,WD],
-      [WD,S,WD,S,S,S,S,S,S,S,S,S,S,S,S,WD,S,WD,S,WD],
-      [WD,S,WD,WD,WD,S,WD,WD,S,L,L,S,WD,WD,S,S,S,S,S,WD],
-      [WD,S,S,S,S,S,S,S,S,L,L,S,S,S,S,WD,WD,WD,S,WD],
-      [WD,S,WD,WD,S,WD,WD,S,S,S,S,S,WD,S,S,S,S,S,S,WD],
-      [WD,S,S,S,S,S,S,S,L,L,L,L,S,S,WD,WD,S,WD,S,WD],
-      [WD,S,WD,S,WD,WD,S,S,S,L,L,S,S,S,S,S,S,WD,S,WD],
-      [WD,S,WD,S,S,S,S,WD,S,S,S,S,S,WD,WD,S,S,WD,S,WD],
-      [WD,S,S,S,WD,WD,S,WD,S,WD,WD,S,S,S,S,S,S,S,S,WD],
-      [WD,OUT,S,S,S,S,S,S,S,S,S,S,S,S,S,S,S,S,IN,WD],
-      [WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD,WD]
-    ],
-    playerStart: { x: 2, y: 13 },
+    map: createDemonGateMap(),
+    playerStart: { x: 3, y: 38 },
     portals: [
-      { x: 1, y: 13, to: 'elfWoods', color: 'red', label: 'Elf Woods' },
-      { x: 18, y: 13, to: 'undeadCrypt', color: 'purple', label: 'Undead Crypt' }
+      { x: 1, y: 38, to: 'elfWoods', color: 'red', label: 'Elf Woods' },
+      { x: 78, y: 22, to: 'undeadCrypt', color: 'purple', label: 'Undead Crypt' }
     ],
     npcs: [
-      { type: 'questMaster', x: 4, y: 12 },
-      { type: 'guard', x: 3, y: 12 }
+      { type: 'questMaster', x: 6, y: 36 },
+      { type: 'guard', x: 8, y: 36 },
+      { type: 'healer', x: 6, y: 40 }
     ],
-    monsters: [
-      { type: 'demon', x: 9, y: 4 },
-      { type: 'demonKnight', x: 14, y: 6 },
-      { type: 'demonMage', x: 11, y: 10 },
-      { type: 'demon', x: 16, y: 12 }
-    ],
-    boss: { type: 'demonLord', x: 16, y: 2 },
+    monsters: createDemonGateMonsters(),
+    boss: {
+      type: 'demonLord',
+      x: 40,
+      y: 22,
+      name: 'Demon Lord',
+      visualScale: 1.5,
+      aura: 'boss-large'
+    },
     quests: [
       'collectDemonKey',
       'defeatDemons',
