@@ -149,21 +149,21 @@ function createGoblinForestMonsters() {
   const eliteStats = {
     goblin: {
       name: 'Elite Goblin',
-      maxHp: 135,
+      maxHp: 270,
       damage: 18,
       xp: 60,
       gold: 12
     },
     goblinArcher: {
       name: 'Elite Goblin Archer',
-      maxHp: 114,
+      maxHp: 228,
       damage: 21,
       xp: 75,
       gold: 15
     },
     goblinShaman: {
       name: 'Elite Goblin Shaman',
-      maxHp: 156,
+      maxHp: 312,
       damage: 27,
       xp: 105,
       gold: 21
@@ -180,61 +180,46 @@ function createGoblinForestMonsters() {
   });
 
   return [
+    // Menos criaturas por spot reduz custo de IA/render sem esvaziar as rotas.
     { type: 'goblin', x: 10, y: 7 },
     { type: 'goblin', x: 12, y: 7 },
     { type: 'goblinArcher', x: 14, y: 8 },
-    { type: 'goblin', x: 11, y: 9 },
     { type: 'goblinShaman', x: 13, y: 10 },
-    { type: 'goblin', x: 15, y: 10 },
 
     { type: 'goblinArcher', x: 30, y: 9 },
     { type: 'goblinArcher', x: 32, y: 9 },
     { type: 'goblin', x: 34, y: 10 },
     { type: 'goblinShaman', x: 31, y: 11 },
-    { type: 'goblin', x: 33, y: 12 },
-    { type: 'goblinArcher', x: 35, y: 12 },
 
     { type: 'goblin', x: 60, y: 8 },
     { type: 'goblin', x: 62, y: 8 },
     { type: 'goblinArcher', x: 64, y: 9 },
     { type: 'goblinShaman', x: 61, y: 10 },
-    { type: 'goblin', x: 63, y: 11 },
-    { type: 'goblinArcher', x: 65, y: 11 },
 
     { type: 'goblin', x: 46, y: 25 },
     { type: 'goblin', x: 48, y: 25 },
     { type: 'goblinArcher', x: 50, y: 26 },
     { type: 'goblinShaman', x: 47, y: 27 },
-    { type: 'goblin', x: 49, y: 28 },
-    { type: 'goblinArcher', x: 51, y: 28 },
 
     { type: 'goblin', x: 20, y: 30 },
     { type: 'goblin', x: 22, y: 30 },
     { type: 'goblinArcher', x: 24, y: 31 },
     { type: 'goblinShaman', x: 21, y: 32 },
-    { type: 'goblin', x: 23, y: 33 },
-    { type: 'goblinArcher', x: 25, y: 33 },
 
     { type: 'goblin', x: 57, y: 33 },
     { type: 'goblinArcher', x: 59, y: 33 },
     { type: 'goblin', x: 61, y: 34 },
     { type: 'goblinShaman', x: 58, y: 35 },
-    { type: 'goblinArcher', x: 60, y: 35 },
-    { type: 'goblin', x: 62, y: 35 },
 
     { type: 'goblin', x: 10, y: 33 },
     { type: 'goblinArcher', x: 12, y: 33 },
     { type: 'goblin', x: 14, y: 34 },
     { type: 'goblinShaman', x: 11, y: 35 },
-    { type: 'goblinArcher', x: 13, y: 36 },
-    { type: 'goblin', x: 15, y: 36 },
 
     { type: 'goblinArcher', x: 66, y: 38 },
     { type: 'goblin', x: 68, y: 38 },
     { type: 'goblinShaman', x: 70, y: 39 },
     { type: 'goblin', x: 67, y: 40 },
-    { type: 'goblinArcher', x: 69, y: 41 },
-    { type: 'goblin', x: 71, y: 41 },
 
     elite('goblin', 12, 8),
     elite('goblinArcher', 32, 10),
@@ -243,11 +228,7 @@ function createGoblinForestMonsters() {
     elite('goblinArcher', 22, 31),
     elite('goblinShaman', 59, 34),
     elite('goblin', 12, 34),
-    elite('goblinArcher', 68, 39),
-    elite('goblinShaman', 18, 36),
-    elite('goblin', 53, 25),
-    elite('goblinArcher', 72, 37),
-    elite('goblinShaman', 40, 20)
+    elite('goblinArcher', 68, 39)
   ];
 }
 
