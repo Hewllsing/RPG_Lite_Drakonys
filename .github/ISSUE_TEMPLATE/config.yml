@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Perguntas e ideias gerais
+    url: https://github.com/Hewllsing/RPG_Lite_Drakonys/discussions
+    about: Use Discussions para conversas abertas quando estiver habilitado no repositorio.

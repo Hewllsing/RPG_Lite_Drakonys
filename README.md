@@ -134,6 +134,8 @@ Tambem consulte:
 - [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 - [SECURITY.md](SECURITY.md)
 - [ASSETS.md](ASSETS.md)
+- [SUPPORT.md](SUPPORT.md)
+- [CHANGELOG.md](CHANGELOG.md)
 
 ## Licenca
 
