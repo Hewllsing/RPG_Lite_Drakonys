@@ -1,6 +1,9 @@
 import axios from 'axios';
+import {
+  apiUrl
+} from './apiConfig';
 
-const API_URL = 'http://localhost:3000/api/auth';
+const API_URL = apiUrl('/api/auth');
 const SESSION_KEY = 'rpg_lite_session';
 
 export function getStoredSession() {
@@ -13,10 +16,17 @@ export function getStoredSession() {
 }
 
 export function saveSession(session) {
+  const sessionWithTime = {
+    ...session,
+    loginAt: session.loginAt || new Date().toISOString()
+  };
+
   localStorage.setItem(
     SESSION_KEY,
-    JSON.stringify(session)
+    JSON.stringify(sessionWithTime)
   );
+
+  return sessionWithTime;
 }
 
 export function clearSession() {
@@ -42,9 +52,7 @@ export async function register({
     }
   );
 
-  saveSession(response.data);
-
-  return response.data;
+  return saveSession(response.data);
 }
 
 export async function login({
@@ -60,7 +68,5 @@ export async function login({
     }
   );
 
-  saveSession(response.data);
-
-  return response.data;
+  return saveSession(response.data);
 }

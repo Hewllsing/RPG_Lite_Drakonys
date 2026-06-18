@@ -25,6 +25,10 @@ function hashPassword(password) {
 
 function verifyPassword(password, storedPassword) {
 
+  if (typeof storedPassword !== 'string') {
+    return false;
+  }
+
   const [
     salt,
     storedHash

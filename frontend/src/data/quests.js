@@ -1,0 +1,405 @@
+const QUEST_REWARD_MULTIPLIERS = {
+  starterTown: 1,
+  goblinForest: 1,
+  orcCamp: 3,
+  elfWoods: 9,
+  undeadCrypt: 27,
+  demonGate: 81
+};
+
+function scaleReward(value, multiplier) {
+  return Math.max(1, Math.round(value * multiplier));
+}
+
+function createRewardText(quest) {
+  const rewards = [];
+
+  if (quest.itemRewards?.length) {
+    rewards.push(
+      quest.itemRewards
+        .map(item => `${item.quantity}x ${item.itemId}`)
+        .join(', ')
+    );
+  }
+
+  if (quest.xpReward) {
+    rewards.push(`${quest.xpReward} XP`);
+  }
+
+  if (quest.goldReward) {
+    rewards.push(`${quest.goldReward} gold`);
+  }
+
+  return rewards.join(', ');
+}
+
+function applyQuestBalance(quest) {
+  const multiplier =
+    QUEST_REWARD_MULTIPLIERS[quest.zone] || 1;
+  const balancedQuest = {
+    ...quest,
+    xpReward: scaleReward(quest.xpReward || 0, multiplier),
+    goldReward: scaleReward(quest.goldReward || 0, multiplier)
+  };
+
+  return {
+    ...balancedQuest,
+    reward: createRewardText(balancedQuest)
+  };
+}
+
+const BASE_QUEST_DEFINITIONS = {
+  defeatGoblins: {
+    id: 'defeatGoblins',
+    title: 'Caca: Goblins da floresta',
+    type: 'Caca',
+    zone: 'goblinForest',
+    description: 'Mate 8 goblins que assombram a rota da floresta.',
+    objectiveType: 'kill',
+    targetTypes: ['goblin'],
+    required: 8,
+    xpReward: 180,
+    goldReward: 70,
+    reward: '180 XP, 70 gold',
+    status: 'available'
+  },
+  defeatGoblinArchers: {
+    id: 'defeatGoblinArchers',
+    title: 'Caca: Arqueiros Goblin',
+    type: 'Caca',
+    zone: 'goblinForest',
+    description: 'Elimine 6 Goblin Archers antes que dominem as pontes.',
+    objectiveType: 'kill',
+    targetTypes: ['goblinArcher'],
+    required: 6,
+    xpReward: 190,
+    goldReward: 75,
+    reward: '190 XP, 75 gold',
+    status: 'available'
+  },
+  collectGoblinTotems: {
+    id: 'collectGoblinTotems',
+    title: 'Coleta: Totens Goblin',
+    type: 'Coleta',
+    zone: 'goblinForest',
+    description: 'Colete 3 Goblin Totems dos rituais da floresta.',
+    objectiveType: 'collect',
+    targetTypes: ['goblinTotem'],
+    required: 3,
+    xpReward: 240,
+    goldReward: 90,
+    reward: '240 XP, 90 gold',
+    status: 'available'
+  },
+  defeatGoblinKing: {
+    id: 'defeatGoblinKing',
+    title: 'Elite: Goblin King',
+    type: 'Elite',
+    zone: 'goblinForest',
+    description: 'A coroa podre da floresta precisa cair.',
+    objectiveType: 'kill',
+    targetTypes: ['goblinKing'],
+    required: 1,
+    xpReward: 420,
+    goldReward: 160,
+    itemRewards: [{ itemId: 'goblinTotem', quantity: 1 }],
+    reward: 'Totem raro, 420 XP, 160 gold',
+    status: 'available'
+  },
+  speakHealer: {
+    id: 'speakHealer',
+    title: 'Exploracao: Falar com o Healer',
+    type: 'Exploracao',
+    zone: 'goblinForest',
+    description: 'Procure o healer e aprenda onde recuperar recursos.',
+    objectiveType: 'talk',
+    targetTypes: ['healer'],
+    required: 1,
+    xpReward: 35,
+    goldReward: 10,
+    itemRewards: [{ itemId: 'healthPotion', quantity: 2 }],
+    reward: '2 potions',
+    status: 'available'
+  },
+  defeatOrcs: {
+    id: 'defeatOrcs',
+    title: 'Caca: Linha de frente Orc',
+    type: 'Caca',
+    zone: 'orcCamp',
+    description: 'Mate 8 Orcs no acampamento de guerra.',
+    objectiveType: 'kill',
+    targetTypes: ['orc', 'orcWarrior'],
+    required: 8,
+    xpReward: 350,
+    goldReward: 130,
+    reward: '350 XP, 130 gold',
+    status: 'available'
+  },
+  defeatOrcBerserkers: {
+    id: 'defeatOrcBerserkers',
+    title: 'Caca: Berserkers Orc',
+    type: 'Caca',
+    zone: 'orcCamp',
+    description: 'Derrube 6 Orc Berserkers antes do proximo ataque.',
+    objectiveType: 'kill',
+    targetTypes: ['orcBerserker'],
+    required: 6,
+    xpReward: 420,
+    goldReward: 160,
+    reward: '420 XP, 160 gold',
+    status: 'available'
+  },
+  defeatOrcWarlord: {
+    id: 'defeatOrcWarlord',
+    title: 'Elite: Orc Warlord',
+    type: 'Elite',
+    zone: 'orcCamp',
+    description: 'Derrote o chefe que mantem o acampamento unido.',
+    objectiveType: 'kill',
+    targetTypes: ['orcWarlord'],
+    required: 1,
+    xpReward: 650,
+    goldReward: 280,
+    reward: '650 XP, 280 gold',
+    status: 'available'
+  },
+  exploreOrcCamp: {
+    id: 'exploreOrcCamp',
+    title: 'Exploracao: Orc Camp',
+    type: 'Exploracao',
+    zone: 'orcCamp',
+    description: 'Visite o territorio dos orcs e marque uma rota segura.',
+    objectiveType: 'explore',
+    targetTypes: ['orcCamp'],
+    required: 1,
+    xpReward: 90,
+    goldReward: 35,
+    reward: '90 XP, 35 gold',
+    status: 'available'
+  },
+  defeatElves: {
+    id: 'defeatElves',
+    title: 'Caca: Patrulha Elfica',
+    type: 'Caca',
+    zone: 'elfWoods',
+    description: 'Derrote 7 Elves que protegem os caminhos proibidos da copa violeta.',
+    objectiveType: 'kill',
+    targetTypes: ['elf', 'darkElf'],
+    required: 7,
+    xpReward: 380,
+    goldReward: 145,
+    reward: '380 XP, 145 gold',
+    status: 'available'
+  },
+  defeatElfMages: {
+    id: 'defeatElfMages',
+    title: 'Caca: Magos Elficos',
+    type: 'Caca',
+    zone: 'elfWoods',
+    description: 'Interrompa 4 Elf Mages antes que o ritual contamine a floresta.',
+    objectiveType: 'kill',
+    targetTypes: ['elfMage'],
+    required: 4,
+    xpReward: 430,
+    goldReward: 170,
+    reward: '430 XP, 170 gold',
+    status: 'available'
+  },
+  exploreElfWoods: {
+    id: 'exploreElfWoods',
+    title: 'Exploracao: Elf Woods',
+    type: 'Exploracao',
+    zone: 'elfWoods',
+    description: 'Atravesse Elf Woods e encontre uma rota ate os portais vermelhos.',
+    objectiveType: 'explore',
+    targetTypes: ['elfWoods'],
+    required: 1,
+    xpReward: 100,
+    goldReward: 40,
+    reward: '100 XP, 40 gold',
+    status: 'available'
+  },
+  defeatAncientElf: {
+    id: 'defeatAncientElf',
+    title: 'Elite: Ancient Elf',
+    type: 'Elite',
+    zone: 'elfWoods',
+    description: 'Enfrente o Ancient Elf e quebre o pacto antigo da mata.',
+    objectiveType: 'kill',
+    targetTypes: ['ancientElf'],
+    required: 1,
+    xpReward: 760,
+    goldReward: 340,
+    reward: '760 XP, 340 gold',
+    status: 'available'
+  },
+  defeatSkeletons: {
+    id: 'defeatSkeletons',
+    title: 'Caca: Skeletons',
+    type: 'Caca',
+    zone: 'undeadCrypt',
+    description: 'Quebre 8 Skeletons nas galerias antigas.',
+    objectiveType: 'kill',
+    targetTypes: ['skeleton'],
+    required: 8,
+    xpReward: 400,
+    goldReward: 150,
+    reward: '400 XP, 150 gold',
+    status: 'available'
+  },
+  defeatZombies: {
+    id: 'defeatZombies',
+    title: 'Caca: Zombies',
+    type: 'Caca',
+    zone: 'undeadCrypt',
+    description: 'Limpe 6 Zombies antes que alcancem a saida.',
+    objectiveType: 'kill',
+    targetTypes: ['zombie'],
+    required: 6,
+    xpReward: 380,
+    goldReward: 145,
+    reward: '380 XP, 145 gold',
+    status: 'available'
+  },
+  defeatGhosts: {
+    id: 'defeatGhosts',
+    title: 'Caca: Ecos da Cripta',
+    type: 'Caca',
+    zone: 'undeadCrypt',
+    description: 'Dissipe 4 Ghosts que rondam os saloes fundos.',
+    objectiveType: 'kill',
+    targetTypes: ['ghost'],
+    required: 4,
+    xpReward: 430,
+    goldReward: 170,
+    reward: '430 XP, 170 gold',
+    status: 'available'
+  },
+  exploreUndeadCrypt: {
+    id: 'exploreUndeadCrypt',
+    title: 'Exploracao: Undead Crypt',
+    type: 'Exploracao',
+    zone: 'undeadCrypt',
+    description: 'Mapeie a passagem principal da cripta sem virar parte dela.',
+    objectiveType: 'explore',
+    targetTypes: ['undeadCrypt'],
+    required: 1,
+    xpReward: 110,
+    goldReward: 45,
+    reward: '110 XP, 45 gold',
+    status: 'available'
+  },
+  defeatLichKing: {
+    id: 'defeatLichKing',
+    title: 'Elite: Lich King',
+    type: 'Elite',
+    zone: 'undeadCrypt',
+    description: 'Silencie o rei morto da cripta.',
+    objectiveType: 'kill',
+    targetTypes: ['lichKing'],
+    required: 1,
+    xpReward: 900,
+    goldReward: 420,
+    reward: '900 XP, 420 gold',
+    status: 'available'
+  },
+  reachLevel5: {
+    id: 'reachLevel5',
+    title: 'Progressao: Nivel 5',
+    type: 'Progressao',
+    zone: 'starterTown',
+    description: 'Alcance o nivel 5 e prove que esta pronto para contratos maiores.',
+    objectiveType: 'level',
+    targetTypes: ['5'],
+    required: 5,
+    xpReward: 160,
+    goldReward: 80,
+    reward: '160 XP, 80 gold',
+    status: 'available'
+  },
+  collectDemonKey: {
+    id: 'collectDemonKey',
+    title: 'Coleta: Demon Key',
+    type: 'Coleta',
+    zone: 'demonGate',
+    description: 'Recolha 3 Demon Keys para abrir os portoes internos.',
+    objectiveType: 'collect',
+    targetTypes: ['demonKey'],
+    required: 3,
+    xpReward: 520,
+    goldReward: 220,
+    reward: '520 XP, 220 gold',
+    status: 'available'
+  },
+  defeatDemons: {
+    id: 'defeatDemons',
+    title: 'Caca: Guarda Infernal',
+    type: 'Caca',
+    zone: 'demonGate',
+    description: 'Mate 8 Demons ou Demon Knights antes que avancem pelos portais.',
+    objectiveType: 'kill',
+    targetTypes: ['demon', 'demonKnight'],
+    required: 8,
+    xpReward: 720,
+    goldReward: 320,
+    reward: '720 XP, 320 gold',
+    status: 'available'
+  },
+  defeatDemonMages: {
+    id: 'defeatDemonMages',
+    title: 'Caca: Magia do Abismo',
+    type: 'Caca',
+    zone: 'demonGate',
+    description: 'Derrote 4 Demon Mages e reduza a pressao do portal.',
+    objectiveType: 'kill',
+    targetTypes: ['demonMage'],
+    required: 4,
+    xpReward: 780,
+    goldReward: 350,
+    reward: '780 XP, 350 gold',
+    status: 'available'
+  },
+  exploreDemonGate: {
+    id: 'exploreDemonGate',
+    title: 'Exploracao: Demon Gate',
+    type: 'Exploracao',
+    zone: 'demonGate',
+    description: 'Atravesse o portal vermelho e sobreviva ao primeiro passo.',
+    objectiveType: 'explore',
+    targetTypes: ['demonGate'],
+    required: 1,
+    xpReward: 120,
+    goldReward: 45,
+    reward: '120 XP',
+    status: 'available'
+  },
+  defeatDemonLord: {
+    id: 'defeatDemonLord',
+    title: 'Elite: Demon Lord',
+    type: 'Elite',
+    zone: 'demonGate',
+    description: 'Derrote o senhor do portal e segure a invasao.',
+    objectiveType: 'kill',
+    targetTypes: ['demonLord'],
+    required: 1,
+    xpReward: 1500,
+    goldReward: 700,
+    reward: '1500 XP, 700 gold',
+    status: 'available'
+  }
+};
+
+export const QUEST_DEFINITIONS = Object.fromEntries(
+  Object.entries(BASE_QUEST_DEFINITIONS).map(([id, quest]) => [
+    id,
+    applyQuestBalance(quest)
+  ])
+);
+
+export function createQuestState() {
+  return Object.values(QUEST_DEFINITIONS).map(quest => ({
+    ...quest,
+    progress: 0,
+    rewardClaimed: false
+  }));
+}

@@ -1,0 +1,64 @@
+{
+  "packName": "dark-fantasy-rpg-asset-pack",
+  "status": "partial",
+  "style": {
+    "theme": "Dark Fantasy",
+    "references": [
+      "Diablo 2 Resurrected",
+      "Path of Exile",
+      "Last Epoch",
+      "Grim Dawn"
+    ],
+    "avoid": [
+      "Roblox",
+      "Cartoon",
+      "Chibi",
+      "Mobile Casual"
+    ]
+  },
+  "generated": [
+    {
+      "path": "assets/classes/warrior/portrait.png",
+      "type": "class-portrait",
+      "background": "transparent"
+    },
+    {
+      "path": "assets/classes/mage/portrait.png",
+      "type": "class-portrait",
+      "background": "transparent"
+    },
+    {
+      "path": "assets/classes/archer/portrait.png",
+      "type": "class-portrait",
+      "background": "transparent",
+      "note": "Built-in chroma-key removal leaves minor edge contamination on green-adjacent details."
+    }
+  ],
+  "generatedSources": [
+    "assets/_generated_sources/warrior_portrait_chroma.png",
+    "assets/_generated_sources/mage_portrait_chroma.png",
+    "assets/_generated_sources/archer_portrait_chroma.png"
+  ],
+  "readyStructure": [
+    "assets/classes",
+    "assets/monsters",
+    "assets/bosses",
+    "assets/items",
+    "assets/ui",
+    "assets/tilesets",
+    "assets/npcs"
+  ],
+  "nextBatches": [
+    "class icons and class cards",
+    "class animation sprites",
+    "monster portraits and animation sets",
+    "boss portraits and special attack sets",
+    "item icon set",
+    "dark fantasy UI set",
+    "forest, cemetery, dungeon and castle tiles"
+  ],
+  "recommendedPipeline": {
+    "mode": "cli-fallback-with-native-transparency",
+    "requiresOpenAiApiKey": true
+  }
+}

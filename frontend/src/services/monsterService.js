@@ -2,8 +2,11 @@ import axios from 'axios';
 import {
   getAuthToken
 } from './authService';
+import {
+  apiUrl
+} from './apiConfig';
 
-const API_URL = 'http://localhost:3000/api/monsters';
+const API_URL = apiUrl('/api/monsters');
 
 export async function getMonsters(zone) {
 
