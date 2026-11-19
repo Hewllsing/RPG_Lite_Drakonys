@@ -62,6 +62,11 @@ desktop.ini
 *.iml
 
 # =========================
+# WORKTREES / FERRAMENTAS LOCAIS
+# =========================
+.worktrees/
+
+# =========================
 # TEMPORÁRIOS
 # =========================
 tmp/
