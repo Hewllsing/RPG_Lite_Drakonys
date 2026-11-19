@@ -23,6 +23,7 @@ npm run dev:frontend
 - Atualize `backend/database/schema.sql`, seeds ou migrations quando houver mudanca no banco.
 - Evite dependencias novas sem explicar o motivo no pull request.
 - Use JavaScript simples e siga o estilo atual do projeto.
+- Scripts npm devem funcionar em macOS, Linux e Windows (evite paths com `\\` ou wrappers `.cmd` nos `package.json`).
 
 ## Validacao
 
