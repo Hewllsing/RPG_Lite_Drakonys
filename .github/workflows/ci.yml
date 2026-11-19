@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: Build and syntax check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci --prefix backend
+
+      - name: Install frontend dependencies
+        run: npm ci --prefix frontend
+
+      - name: Build frontend
+        # Run from frontend/ so Vite resolves index.html. Avoids package.json
+        # scripts that still wrap Windows-only node20.cmd on main.
+        working-directory: frontend
+        run: npx vite build
+
+      - name: Syntax-check backend character service
+        run: node --check backend/src/services/characterService.js
+
+      - name: Syntax-check frontend Game module
+        run: node --check frontend/src/components/Game/Game.js
