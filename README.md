@@ -39,7 +39,8 @@ Atualmente o jogo possui:
 - MySQL ou MariaDB
 - Git
 
-O projeto inclui scripts em `scripts/` para usar Node 20 local quando disponivel.
+Use Node 20+ (`nvm use` / `fnm use` leem `.nvmrc` e `.node-version`).
+No Windows, `scripts/use-node20.ps1` e `scripts/node20.cmd` ainda podem apontar para um Node local em `.tools/` se voce usar esse fluxo.
 
 ## Instalar dependencias
 
@@ -56,6 +57,10 @@ Isso instala as dependencias do backend e do frontend.
 Copie o arquivo de exemplo do backend:
 
 ```bash
+# macOS / Linux
+cp backend/.env.example backend/.env
+
+# Windows (cmd)
 copy backend\.env.example backend\.env
 ```
 
@@ -74,6 +79,10 @@ DB_CONNECTION_LIMIT=10
 Opcionalmente, configure o frontend:
 
 ```bash
+# macOS / Linux
+cp frontend/.env.example frontend/.env
+
+# Windows (cmd)
 copy frontend\.env.example frontend\.env
 ```
 
